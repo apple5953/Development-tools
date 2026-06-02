@@ -1,13 +1,13 @@
 [Setup]
 AppName=Room Tile System v3
 AppVersion=1.0.0
-DefaultDirName=C:\ProgramData\DevelopmentTools
+DefaultDirName={localappdata}\DevelopmentTools
 DefaultGroupName=Room Tile System
 OutputDir=..\..\dist
 OutputBaseFilename=DevelopmentTools_Setup
 Compression=lzma
 SolidCompression=yes
-PrivilegesRequired=admin
+PrivilegesRequired=lowest
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 
@@ -80,7 +80,7 @@ begin
       '<RevitAddIns>' + #13#10 +
       '  <AddIn Type="Application">' + #13#10 +
       '    <Name>Development Tools</Name>' + #13#10 +
-      '    <Assembly>C:\ProgramData\DevelopmentTools\App\DevelopmentTools.Addin.dll</Assembly>' + #13#10 +
+      '    <Assembly>' + ExpandConstant('{localappdata}') + '\DevelopmentTools\App\DevelopmentTools.Addin.dll</Assembly>' + #13#10 +
       '    <FullClassName>DevelopmentTools.App</FullClassName>' + #13#10 +
       '    <ClientId>c2d5d85c-4d33-4f9e-a89e-21ef1ea3b361</ClientId>' + #13#10 +
       '    <VendorId>MAYOUCHR</VendorId>' + #13#10 +
@@ -91,7 +91,7 @@ begin
     for I := 0 to 2 do
     begin
       RevitVersion := RevitVersions[I];
-      AddinPath := 'C:\ProgramData\Autodesk\Revit\Addins\' + RevitVersion;
+      AddinPath := ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersion;
       if DirExists(AddinPath) then
       begin
         SaveStringToFile(AddinPath + '\DevelopmentTools.addin', AddinContent, False);
@@ -117,7 +117,7 @@ begin
     for I := 0 to 2 do
     begin
       RevitVersion := RevitVersions[I];
-      AddinPath := 'C:\ProgramData\Autodesk\Revit\Addins\' + RevitVersion + '\DevelopmentTools.addin';
+      AddinPath := ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersion + '\DevelopmentTools.addin';
       if FileExists(AddinPath) then
       begin
         DeleteFile(AddinPath);

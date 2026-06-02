@@ -37,6 +37,15 @@ namespace DevelopmentTools.Updater
             {
                 string rawJson = File.ReadAllText(pendingJsonPath);
                 info = JsonSerializer.Deserialize<PendingUpdateInfo>(rawJson);
+                
+                // 展開環境變數以支援免管理員 LocalAppData 路徑
+                if (info != null)
+                {
+                    info.zip_path = Environment.ExpandEnvironmentVariables(info.zip_path ?? "");
+                    info.install_dir = Environment.ExpandEnvironmentVariables(info.install_dir ?? "");
+                    info.backup_dir = Environment.ExpandEnvironmentVariables(info.backup_dir ?? "");
+                    info.version_file_path = Environment.ExpandEnvironmentVariables(info.version_file_path ?? "");
+                }
             }
             catch (Exception ex)
             {
@@ -247,7 +256,7 @@ namespace DevelopmentTools.Updater
 
             try
             {
-                string logDir = @"C:\ProgramData\DevelopmentTools\Update\Logs";
+                string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Update", "Logs");
                 Directory.CreateDirectory(logDir);
                 File.AppendAllText(Path.Combine(logDir, "update_log.txt"), logText + Environment.NewLine);
             }
@@ -263,7 +272,7 @@ namespace DevelopmentTools.Updater
 
             try
             {
-                string logDir = @"C:\ProgramData\DevelopmentTools\Update\Logs";
+                string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Update", "Logs");
                 Directory.CreateDirectory(logDir);
                 File.AppendAllText(Path.Combine(logDir, "update_log.txt"), logText + Environment.NewLine);
             }

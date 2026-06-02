@@ -9,11 +9,12 @@ namespace DevelopmentTools.Core
 {
     public class UpdateManager
     {
-        private const string LocalVersionPath = @"C:\ProgramData\DevelopmentTools\App\version.json";
-        private const string StagingDir = @"C:\ProgramData\DevelopmentTools\Update\Staging";
-        private const string BackupDir = @"C:\ProgramData\DevelopmentTools\Update\Backup";
-        private const string PendingUpdatePath = @"C:\ProgramData\DevelopmentTools\Update\pending_update.json";
-        private const string AppSettingsPath = @"C:\ProgramData\DevelopmentTools\Config\appsettings.json";
+        private static readonly string BaseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools");
+        private static readonly string LocalVersionPath = Path.Combine(BaseDir, "App", "version.json");
+        private static readonly string StagingDir = Path.Combine(BaseDir, "Update", "Staging");
+        private static readonly string BackupDir = Path.Combine(BaseDir, "Update", "Backup");
+        private static readonly string PendingUpdatePath = Path.Combine(BaseDir, "Update", "pending_update.json");
+        private static readonly string AppSettingsPath = Path.Combine(BaseDir, "Config", "appsettings.json");
 
         public class UpdateCheckResult
         {
@@ -127,7 +128,7 @@ namespace DevelopmentTools.Core
                 {
                     zip_path = destinationZip,
                     sha256 = manifest.sha256,
-                    install_dir = @"C:\ProgramData\DevelopmentTools\App",
+                    install_dir = Path.Combine(BaseDir, "App"),
                     backup_dir = BackupDir,
                     version_file_path = LocalVersionPath,
                     new_version = manifest.latest_version,
@@ -139,7 +140,7 @@ namespace DevelopmentTools.Core
 
                 string localJson = File.ReadAllText(LocalVersionPath);
                 var localVersion = JsonSerializer.Deserialize<LocalVersionInfo>(localJson);
-                string updaterExe = localVersion.updater_path;
+                string updaterExe = Environment.ExpandEnvironmentVariables(localVersion.updater_path);
 
                 if (!File.Exists(updaterExe))
                 {
@@ -152,8 +153,7 @@ namespace DevelopmentTools.Core
                     FileName = updaterExe,
                     Arguments = $"--pending \"{PendingUpdatePath}\"",
                     UseShellExecute = true,
-                    CreateNoWindow = false,
-                    Verb = "runas"
+                    CreateNoWindow = false
                 };
 
                 Process.Start(startInfo);

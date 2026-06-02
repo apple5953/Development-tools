@@ -75,6 +75,16 @@ New-Item -ItemType Directory -Path $zipTempDir | Out-Null
 Copy-Item -LiteralPath $obfDll -Destination $zipTempDir
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\TileJointSharedParam.txt") -Destination $zipTempDir
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\platform_config.json") -Destination $zipTempDir
+Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\appsettings.json") -Destination $zipTempDir -ErrorAction SilentlyContinue
+
+# Copy Updater and all dependency DLLs into ZIP so it acts as both AutoUpdate package and Portable Green package
+$updaterBinDir = Join-Path $parentRoot "DevelopmentTools.Updater\bin\Release\net48"
+Copy-Item -Path (Join-Path $updaterBinDir "DevelopmentTools.Updater.exe") -Destination $zipTempDir
+Copy-Item -Path (Join-Path $updaterBinDir "DevelopmentTools.Updater.exe.config") -Destination $zipTempDir
+Copy-Item -Path (Join-Path $updaterBinDir "*.dll") -Destination $zipTempDir
+
+# Copy install.bat to ZIP
+Copy-Item -LiteralPath (Join-Path $parentRoot "installer\install.bat") -Destination $zipTempDir
 
 # Generate version.json
 $versionJson = @{
@@ -83,8 +93,9 @@ $versionJson = @{
     "current_version" = $Version
     "channel" = $Channel
     "main_dll" = "DevelopmentTools.Addin.dll"
-    "install_folder" = "C:\ProgramData\DevelopmentTools\App"
-    "updater_path" = "C:\ProgramData\DevelopmentTools\Updater\DevelopmentTools.Updater.exe"
+    "install_folder" = "%LOCALAPPDATA%\DevelopmentTools\App"
+    "updater_path" = "%LOCALAPPDATA%\DevelopmentTools\Updater\DevelopmentTools.Updater.exe"
+    "manifest_url" = "https://raw.githubusercontent.com/$Owner/$Repo/main/update_manifest.json"
     "updated_at" = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
 }
 $versionJson | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $zipTempDir "version.json") -Encoding utf8
