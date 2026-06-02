@@ -1,19 +1,19 @@
 @echo off
-title Development Tools - 免管理員一鍵安裝程式
+title Development Tools - One-Click Installer
 chcp 65001 >nul
 echo ====================================================
-echo   正在為您安裝 Development Tools Revit 增益集... (免管理員版)
+echo   Installing Development Tools Revit Addin... (Non-Admin)
 echo ====================================================
 
 set TARGET_DIR=%LOCALAPPDATA%\DevelopmentTools
 set ADDIN_NAME=DevelopmentTools.addin
 
-echo 1. 建立目標資料夾...
+echo 1. Creating target directories...
 if not exist "%TARGET_DIR%\App" mkdir "%TARGET_DIR%\App"
 if not exist "%TARGET_DIR%\Config" mkdir "%TARGET_DIR%\Config"
 if not exist "%TARGET_DIR%\Updater" mkdir "%TARGET_DIR%\Updater"
 
-echo 2. 複製外掛檔案...
+echo 2. Copying plugin files...
 copy /Y "*.dll" "%TARGET_DIR%\App\" >nul
 copy /Y "TileJointSharedParam.txt" "%TARGET_DIR%\App\" >nul
 copy /Y "version.json" "%TARGET_DIR%\App\" >nul
@@ -23,7 +23,7 @@ if not exist "%TARGET_DIR%\Config\appsettings.json" (
     copy /Y "appsettings.json" "%TARGET_DIR%\Config\" >nul
 )
 
-echo 3. 複製更新程式...
+echo 3. Copying updater files...
 copy /Y "DevelopmentTools.Updater.exe" "%TARGET_DIR%\Updater\" >nul
 copy /Y "DevelopmentTools.Updater.exe.config" "%TARGET_DIR%\Updater\" >nul
 copy /Y "*.dll" "%TARGET_DIR%\Updater\" >nul
@@ -31,7 +31,7 @@ if exist "%TARGET_DIR%\Updater\DevelopmentTools.Addin.dll" (
     del /F /Q "%TARGET_DIR%\Updater\DevelopmentTools.Addin.dll" >nul 2>nul
 )
 
-echo 4. 產生與註冊 Revit Addin 描述檔...
+echo 4. Registering Revit Addin manifest...
 (
 echo ^<?xml version="1.0" encoding="utf-8"?^>
 echo ^<RevitAddIns^>
@@ -50,16 +50,16 @@ set REVIT_ADDINS_BASE=%APPDATA%\Autodesk\Revit\Addins
 for %%V in (2024 2025 2026) do (
     if exist "%REVIT_ADDINS_BASE%\%%V" (
         copy /Y "%TEMP%\%ADDIN_NAME%" "%REVIT_ADDINS_BASE%\%%V\" >nul
-        echo   [已註冊] Revit %%V 增益集
+        echo   [Registered] Revit %%V Addin
         
-        rem 清理舊版更名前的殘留
+        rem Clean legacy RoomTileSystem.addin
         if exist "%REVIT_ADDINS_BASE%\%%V\RoomTileSystem.addin" (
             del /F "%REVIT_ADDINS_BASE%\%%V\RoomTileSystem.addin"
         )
     )
 )
 
-rem 清理舊版 Updater
+rem Clean legacy Updater
 if exist "%TARGET_DIR%\Updater\RoomTileSystem.Updater.exe" (
     del /F "%TARGET_DIR%\Updater\RoomTileSystem.Updater.exe"
 )
@@ -67,6 +67,6 @@ if exist "%TARGET_DIR%\Updater\RoomTileSystem.Updater.exe" (
 del "%TEMP%\%ADDIN_NAME%"
 
 echo ====================================================
-echo   安裝完成！現在請開啟 Revit 即可開始使用！
+echo   Installation complete! Please open Revit to start using the plugin.
 echo ====================================================
 pause
