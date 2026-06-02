@@ -22,6 +22,7 @@ Name: "{app}\Modules"
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\Obfuscated\DevelopmentTools.Addin.dll"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Addin\TileJointSharedParam.txt"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\version.json"; DestDir: "{app}\App"; Flags: ignoreversion
+Source: "..\..\DevelopmentTools.Addin\platform_config.json"; DestDir: "{app}\App"; Flags: ignoreversion
 ; 複製設定檔 (若使用者原本已有則不覆蓋)
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\appsettings.json"; DestDir: "{app}\Config"; Flags: onlyifdoesntexist
 ; 複製 Updater

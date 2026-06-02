@@ -74,6 +74,7 @@ New-Item -ItemType Directory -Path $zipTempDir | Out-Null
 # Copy obfuscated DLL and shared parameters
 Copy-Item -LiteralPath $obfDll -Destination $zipTempDir
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\TileJointSharedParam.txt") -Destination $zipTempDir
+Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\platform_config.json") -Destination $zipTempDir
 
 # Generate version.json
 $versionJson = @{
