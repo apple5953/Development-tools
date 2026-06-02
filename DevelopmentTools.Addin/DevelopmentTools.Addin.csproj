@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>DevelopmentTools.Addin</AssemblyName>
+    <RootNamespace>DevelopmentTools</RootNamespace>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 引用 Revit 2024 API -->
+    <Reference Include="RevitAPI">
+      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Net.Http">
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\System.Net.Http\v4.0\System.Net.Http.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 引用 System.Text.Json 用於 JSON 序列化 -->
+    <PackageReference Include="System.Text.Json" Version="8.0.3" />
+    <PackageReference Include="Obfuscar" Version="2.2.38" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="platform_config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="version.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Target Name="Obfuscate" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Release'">
+    <Message Text="[Obfuscar] Starting obfuscation..." Importance="High" />
+    <Exec Command="&quot;$(Obfuscar)&quot; &quot;$(ProjectDir)obfuscar.xml&quot;" />
+    <Message Text="[Obfuscar] Obfuscation finished." Importance="High" />
+  </Target>
+</Project>

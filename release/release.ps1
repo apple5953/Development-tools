@@ -54,11 +54,11 @@ if (-not $env:GH_TOKEN -and -not $env:GITHUB_TOKEN) {
 
 # 2. Build entire Solution
 Write-Host "[RTS] Building Solution in Release mode..."
-dotnet build (Join-Path $parentRoot "RoomTileSystem.sln") -c Release
+dotnet build (Join-Path $parentRoot "DevelopmentTools.sln") -c Release
 
 # 3. Ensure obfuscated DLL is generated
-$releaseDir = Join-Path $parentRoot "RoomTileSystem.Addin\bin\Release\net48"
-$obfDll = Join-Path $releaseDir "Obfuscated\RoomTileSystem.Addin.dll"
+$releaseDir = Join-Path $parentRoot "DevelopmentTools.Addin\bin\Release\net48"
+$obfDll = Join-Path $releaseDir "Obfuscated\DevelopmentTools.Addin.dll"
 if (-not (Test-Path $obfDll)) {
     throw "Obfuscated DLL not found at: $obfDll"
 }
@@ -73,24 +73,24 @@ New-Item -ItemType Directory -Path $zipTempDir | Out-Null
 
 # Copy obfuscated DLL and shared parameters
 Copy-Item -LiteralPath $obfDll -Destination $zipTempDir
-Copy-Item -LiteralPath (Join-Path $parentRoot "RoomTileSystem.Addin\TileJointSharedParam.txt") -Destination $zipTempDir
+Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\TileJointSharedParam.txt") -Destination $zipTempDir
 
 # Generate version.json
 $versionJson = @{
-    "app_id" = "room_tile_system"
+    "app_id" = "development_tools"
     "product_name" = "Room Tile System v3"
     "current_version" = $Version
     "channel" = $Channel
-    "main_dll" = "RoomTileSystem.Addin.dll"
-    "install_folder" = "C:\ProgramData\RoomTileSystem\App"
-    "updater_path" = "C:\ProgramData\RoomTileSystem\Updater\RoomTileSystem.Updater.exe"
+    "main_dll" = "DevelopmentTools.Addin.dll"
+    "install_folder" = "C:\ProgramData\DevelopmentTools\App"
+    "updater_path" = "C:\ProgramData\DevelopmentTools\Updater\DevelopmentTools.Updater.exe"
     "manifest_url" = "https://raw.githubusercontent.com/$Owner/$Repo/main/update_manifest.json"
     "updated_at" = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
 }
 $versionJson | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $zipTempDir "version.json") -Encoding utf8
 
 # Compress to ZIP
-$zipName = "RoomTileSystem_v$Version.zip"
+$zipName = "DevelopmentTools_v$Version.zip"
 $zipPath = Join-Path $distDir $zipName
 if (Test-Path $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
 Compress-Archive -Path (Join-Path $zipTempDir "*") -DestinationPath $zipPath
@@ -102,7 +102,7 @@ $fileHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvarian
 # 5. Update update_manifest.json
 Write-Host "[RTS] Generating Remote Manifest..."
 $manifest = @{
-    "app_id" = "room_tile_system"
+    "app_id" = "development_tools"
     "product_name" = "Room Tile System v3"
     "latest_version" = $Version
     "channel" = $Channel
@@ -120,11 +120,11 @@ Remove-Item -LiteralPath $zipTempDir -Recurse -Force
 
 # 6. Compile Inno Setup Installer
 Write-Host "[RTS] Generating Inno Installer..."
-$issPath = Join-Path $parentRoot "installer\inno\RoomTileSystem_Setup.iss"
+$issPath = Join-Path $parentRoot "installer\inno\DevelopmentTools_Setup.iss"
 if (Get-Command ISCC.exe -ErrorAction SilentlyContinue) {
     & ISCC.exe $issPath
 } else {
-    Write-Warning "Inno Setup Compiler (ISCC.exe) is not in PATH. Skipping installer compilation. Please build manually using RoomTileSystem_Setup.iss."
+    Write-Warning "Inno Setup Compiler (ISCC.exe) is not in PATH. Skipping installer compilation. Please build manually using DevelopmentTools_Setup.iss."
 }
 
 # 7. Push release changes to Git

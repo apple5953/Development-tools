@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Development tools</Name>
+    <Assembly>D:\Room Tile Local 3 System\DevelopmentTools.Addin\bin\Debug\net48\DevelopmentTools.Addin.dll</Assembly>
+    <FullClassName>DevelopmentTools.App</FullClassName>
+    <ClientId>c2d5d85c-4d33-4f9e-a89e-21ef1ea3b361</ClientId>
+    <VendorId>DeepMind</VendorId>
+    <VendorDescription>Google DeepMind Advanced Agentic Coding Team</VendorDescription>
+  </AddIn>
+</RevitAddIns>

@@ -83,7 +83,7 @@
 | **TotalDurationMinutes** | 累計在 Revit 中的開啟使用時長 (分鐘) | `45.5` |
 
 ### 2. 雲端 Apps Script 部署步驟
-1.  將本機 [google_apps_script.js](file:///d:/Room%20Tile%20Local%203%20System/RoomTileSystem.Addin/google_apps_script.js) 的完整程式碼複製。
+1.  將本機 [google_apps_script.js](file:///d:/Room%20Tile%20Local%203%20System/DevelopmentTools.Addin/google_apps_script.js) 的完整程式碼複製。
 2.  貼入試算表中的 **「擴充功能 > Apps Script」**，儲存。
 3.  點擊右上角 **「部署 > 新增部署」**，類型選擇「網頁應用程式」，將存取權限設為 **「所有人」** (Anyone)。
 4.  複製產生的部署網頁 URL，填入外掛設定檔 `platform_config.json` 的 `GoogleSheetApiUrl` 中。
