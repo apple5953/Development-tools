@@ -33,6 +33,7 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   AddinContent: string;
   AddinPath: string;
+  OldAddinPath: string;
   RevitVersion: string;
   I: Integer;
   RevitVersions: array[0..2] of string;
@@ -43,6 +44,27 @@ begin
     RevitVersions[1] := '2025';
     RevitVersions[2] := '2026';
     
+    // 1. 清理舊版殘留的 RoomTileSystem.addin
+    for I := 0 to 2 do
+    begin
+      RevitVersion := RevitVersions[I];
+      
+      // 清理 ProgramData 殘留
+      OldAddinPath := 'C:\ProgramData\Autodesk\Revit\Addins\' + RevitVersion + '\RoomTileSystem.addin';
+      if FileExists(OldAddinPath) then
+      begin
+        DeleteFile(OldAddinPath);
+      end;
+      
+      // 清理 AppData Roaming 殘留
+      OldAddinPath := ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersion + '\RoomTileSystem.addin';
+      if FileExists(OldAddinPath) then
+      begin
+        DeleteFile(OldAddinPath);
+      end;
+    end;
+
+    // 2. 註冊新版 DevelopmentTools.addin
     AddinContent := 
       '<?xml version="1.0" encoding="utf-8"?>' + #13#10 +
       '<RevitAddIns>' + #13#10 +
