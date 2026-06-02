@@ -85,8 +85,8 @@ $versionJson = @{
     "main_dll" = "DevelopmentTools.Addin.dll"
     "install_folder" = "C:\ProgramData\DevelopmentTools\App"
     "updater_path" = "C:\ProgramData\DevelopmentTools\Updater\DevelopmentTools.Updater.exe"
-    "manifest_url" = "https://raw.githubusercontent.com/$Owner/$Repo/main/update_manifest.json"
     "updated_at" = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
+}
 $versionJson | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $zipTempDir "version.json") -Encoding utf8
 
 # 同步將產生的真實 version.json 複製到 bin/Release/net48，確保 Inno Setup 封裝時寫入正確的版本號
