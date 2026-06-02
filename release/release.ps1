@@ -1,0 +1,112 @@
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$Version,
+    [string]$Channel = "stable",
+    [string]$Owner = "apple5953",
+    [string]$Repo = "Development-tools"
+)
+
+$ErrorActionPreference = "Stop"
+$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$parentRoot = Split-Path -Parent $root
+
+# 1. Check Git workspace status (Disabled by default for local testing)
+# $gitStatus = git status --porcelain
+# if ($gitStatus) {
+#     Write-Warning "Git status is not clean! Please commit your changes first."
+#     exit 1
+# }
+
+# 2. Build entire Solution
+Write-Host "[RTS] Building Solution in Release mode..."
+dotnet build (Join-Path $parentRoot "RoomTileSystem.sln") -c Release
+
+# 3. Ensure obfuscated DLL is generated
+$releaseDir = Join-Path $parentRoot "RoomTileSystem.Addin\bin\Release\net48"
+$obfDll = Join-Path $releaseDir "Obfuscated\RoomTileSystem.Addin.dll"
+if (-not (Test-Path $obfDll)) {
+    throw "Obfuscated DLL not found at: $obfDll"
+}
+
+# 4. Staging files
+$distDir = Join-Path $parentRoot "dist"
+if (-not (Test-Path $distDir)) { New-Item -ItemType Directory -Path $distDir | Out-Null }
+
+$zipTempDir = Join-Path $parentRoot "dist\temp_zip"
+if (Test-Path $zipTempDir) { Remove-Item -LiteralPath $zipTempDir -Recurse -Force }
+New-Item -ItemType Directory -Path $zipTempDir | Out-Null
+
+# Copy obfuscated DLL and shared parameters
+Copy-Item -LiteralPath $obfDll -Destination $zipTempDir
+Copy-Item -LiteralPath (Join-Path $parentRoot "RoomTileSystem.Addin\TileJointSharedParam.txt") -Destination $zipTempDir
+
+# Generate version.json
+$versionJson = @{
+    "app_id" = "room_tile_system"
+    "product_name" = "Room Tile System v3"
+    "current_version" = $Version
+    "channel" = $Channel
+    "main_dll" = "RoomTileSystem.Addin.dll"
+    "install_folder" = "C:\ProgramData\RoomTileSystem\App"
+    "updater_path" = "C:\ProgramData\RoomTileSystem\Updater\RoomTileSystem.Updater.exe"
+    "manifest_url" = "https://raw.githubusercontent.com/$Owner/$Repo/main/update_manifest.json"
+    "updated_at" = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
+}
+$versionJson | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $zipTempDir "version.json") -Encoding utf8
+
+# Compress to ZIP
+$zipName = "RoomTileSystem_v$Version.zip"
+$zipPath = Join-Path $distDir $zipName
+if (Test-Path $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
+Compress-Archive -Path (Join-Path $zipTempDir "*") -DestinationPath $zipPath
+
+# Calculate SHA256
+Write-Host "[RTS] Calculating ZIP SHA256 hash..."
+$fileHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+
+# 5. Update update_manifest.json
+Write-Host "[RTS] Generating Remote Manifest..."
+$manifest = @{
+    "app_id" = "room_tile_system"
+    "product_name" = "Room Tile System v3"
+    "latest_version" = $Version
+    "channel" = $Channel
+    "release_url" = "https://github.com/$Owner/$Repo/releases/download/v$Version/$zipName"
+    "sha256" = $fileHash
+    "force_update" = $false
+    "minimum_supported_version" = "1.0.0"
+    "release_note" = "Remote update release v$Version."
+    "published_at" = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
+}
+$manifest | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $parentRoot "update_manifest.json") -Encoding utf8
+
+# Clean up temp files
+Remove-Item -LiteralPath $zipTempDir -Recurse -Force
+
+# 6. Compile Inno Setup Installer
+Write-Host "[RTS] Generating Inno Installer..."
+$issPath = Join-Path $parentRoot "installer\inno\RoomTileSystem_Setup.iss"
+if (Get-Command ISCC.exe -ErrorAction SilentlyContinue) {
+    & ISCC.exe $issPath
+} else {
+    Write-Warning "Inno Setup Compiler (ISCC.exe) is not in PATH. Skipping installer compilation. Please build manually using RoomTileSystem_Setup.iss."
+}
+
+# 7. Push release changes to Git
+Write-Host "[RTS] Committing and pushing tag to GitHub..."
+git add (Join-Path $parentRoot "update_manifest.json")
+git commit -m "release: v$Version remote update manifest"
+git push
+
+git tag "v$Version"
+git push origin "v$Version"
+
+# 8. Create GitHub Release using gh CLI
+if (Get-Command gh -ErrorAction SilentlyContinue) {
+    Write-Host "[RTS] Creating GitHub Release using gh CLI..."
+    gh release create "v$Version" $zipPath --title "v$Version" --notes "Auto release v$Version"
+} else {
+    Write-Warning "gh CLI is not installed. Please upload the ZIP file manually to: https://github.com/$Owner/$Repo/releases/tag/v$Version"
+}
+
+Write-Host "[RTS] Release process successfully completed!"

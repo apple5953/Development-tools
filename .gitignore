@@ -1,0 +1,21 @@
+# Build outputs
+[Bb]in/
+[Oo]bj/
+dist/
+temp_zip/
+
+# User-specific files
+*.user
+*.userosscache
+*.sln.docstate
+*.suo
+
+# Visual Studio Cache
+.vs/
+
+# Installer & Release temporary folders
+RTS_OneClick_Installer/
+RTS_OneClick_Installer.zip
+Backup_v1/
+extracted_strings.txt
+C:/Users/User/.gemini/antigravity/
