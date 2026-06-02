@@ -23,6 +23,7 @@ Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\Obfuscated\DevelopmentTo
 Source: "..\..\DevelopmentTools.Addin\TileJointSharedParam.txt"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\version.json"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Addin\platform_config.json"; DestDir: "{app}\App"; Flags: ignoreversion
+Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\*.dll"; DestDir: "{app}\App"; Excludes: "DevelopmentTools.Addin.dll"; Flags: ignoreversion
 ; 複製設定檔 (若使用者原本已有則不覆蓋)
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\appsettings.json"; DestDir: "{app}\Config"; Flags: onlyifdoesntexist
 ; 複製 Updater 與其所需的依賴 DLL

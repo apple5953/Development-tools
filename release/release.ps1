@@ -77,6 +77,9 @@ Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\TileJointS
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\platform_config.json") -Destination $zipTempDir
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\appsettings.json") -Destination $zipTempDir -ErrorAction SilentlyContinue
 
+# Copy all dependent DLLs from the Addin build (excluding the un-obfuscated main DLL)
+Copy-Item -Path (Join-Path $releaseDir "*.dll") -Destination $zipTempDir -Exclude "DevelopmentTools.Addin.dll"
+
 # Copy Updater and all dependency DLLs into ZIP so it acts as both AutoUpdate package and Portable Green package
 $updaterBinDir = Join-Path $parentRoot "DevelopmentTools.Updater\bin\Release\net48"
 Copy-Item -Path (Join-Path $updaterBinDir "DevelopmentTools.Updater.exe") -Destination $zipTempDir

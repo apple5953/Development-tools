@@ -14,7 +14,7 @@ if not exist "%TARGET_DIR%\Config" mkdir "%TARGET_DIR%\Config"
 if not exist "%TARGET_DIR%\Updater" mkdir "%TARGET_DIR%\Updater"
 
 echo 2. 複製外掛檔案...
-copy /Y "DevelopmentTools.Addin.dll" "%TARGET_DIR%\App\" >nul
+copy /Y "*.dll" "%TARGET_DIR%\App\" >nul
 copy /Y "TileJointSharedParam.txt" "%TARGET_DIR%\App\" >nul
 copy /Y "version.json" "%TARGET_DIR%\App\" >nul
 copy /Y "platform_config.json" "%TARGET_DIR%\App\" >nul
@@ -26,15 +26,10 @@ if not exist "%TARGET_DIR%\Config\appsettings.json" (
 echo 3. 複製更新程式...
 copy /Y "DevelopmentTools.Updater.exe" "%TARGET_DIR%\Updater\" >nul
 copy /Y "DevelopmentTools.Updater.exe.config" "%TARGET_DIR%\Updater\" >nul
-copy /Y "System.Text.Json.dll" "%TARGET_DIR%\Updater\" >nul
-copy /Y "System.Memory.dll" "%TARGET_DIR%\Updater\" >nul
-copy /Y "System.Buffers.dll" "%TARGET_DIR%\Updater\" >nul
-copy /Y "System.Numerics.Vectors.dll" "%TARGET_DIR%\Updater\" >nul
-copy /Y "System.Runtime.CompilerServices.Unsafe.dll" "%TARGET_DIR%\Updater\" >nul
-copy /Y "System.Text.Encodings.Web.dll" "%TARGET_DIR%\Updater\" >nul
-copy /Y "System.Threading.Tasks.Extensions.dll" "%TARGET_DIR%\Updater\" >nul
-copy /Y "System.ValueTuple.dll" "%TARGET_DIR%\Updater\" >nul
-copy /Y "Microsoft.Bcl.AsyncInterfaces.dll" "%TARGET_DIR%\Updater\" >nul
+copy /Y "*.dll" "%TARGET_DIR%\Updater\" >nul
+if exist "%TARGET_DIR%\Updater\DevelopmentTools.Addin.dll" (
+    del /F /Q "%TARGET_DIR%\Updater\DevelopmentTools.Addin.dll" >nul 2>nul
+)
 
 echo 4. 產生與註冊 Revit Addin 描述檔...
 (
