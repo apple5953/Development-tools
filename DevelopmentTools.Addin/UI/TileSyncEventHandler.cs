@@ -2020,7 +2020,7 @@ namespace DevelopmentTools.UI
 					streamWriter.WriteLine("*GROUP\tID\tNAME");
 					streamWriter.WriteLine("GROUP\t1\t磁磚系統");
 					streamWriter.WriteLine("*PARAM\tGUID\tNAME\tDATATYPE\tDATACATEGORY\tGROUP\tVISIBLE\tDESCRIPTION\tUSERMODIFIABLE");
-					streamWriter.WriteLine("PARAM\ta2b3c4d5-0001-4ebc-9999-tile0000001a\tTile_Joint_Width\tNUMBER\t\t1\t1\t磁磚縫隙寬度(mm)\t1");
+					streamWriter.WriteLine("PARAM\ta2b3c4d5-0001-4ebc-9999-ad1e0000001a\tTile_Joint_Width\tNUMBER\t\t1\t1\t磁磚縫隙寬度(mm)\t1");
 				}
 			}
 		}
