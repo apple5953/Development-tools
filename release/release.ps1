@@ -10,6 +10,41 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $parentRoot = Split-Path -Parent $root
 
+# Ensure GitHub CLI path is in process PATH
+$ghPath = "C:\Program Files\GitHub CLI"
+if (Test-Path (Join-Path $ghPath "gh.exe")) {
+    if ($env:Path -notlike "*$ghPath*") {
+        $env:Path = "$env:Path;$ghPath"
+    }
+}
+
+# Ensure Inno Setup path is in process PATH
+$innoPath = "C:\Users\User\AppData\Local\Programs\Inno Setup 6"
+if (Test-Path (Join-Path $innoPath "ISCC.exe")) {
+    if ($env:Path -notlike "*$innoPath*") {
+        $env:Path = "$env:Path;$innoPath"
+    }
+}
+
+# Automatically retrieve GitHub token from Git Credential Manager if not already set
+if (-not $env:GH_TOKEN -and -not $env:GITHUB_TOKEN) {
+    try {
+        $inputStr = "protocol=https`nhost=github.com`n`n"
+        $credOutput = $inputStr | git credential fill 2>$null
+        foreach ($line in $credOutput) {
+            if ($line -like "password=*") {
+                $token = $line.Substring("password=".Length).Trim()
+                if ($token) {
+                    $env:GH_TOKEN = $token
+                    Write-Host "[RTS] Automatically loaded GitHub token from Git Credential Manager."
+                }
+            }
+        }
+    } catch {
+        # Silently ignore and let gh fail later if no token is found
+    }
+}
+
 # 1. Check Git workspace status (Disabled by default for local testing)
 # $gitStatus = git status --porcelain
 # if ($gitStatus) {

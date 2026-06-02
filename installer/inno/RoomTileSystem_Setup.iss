@@ -20,7 +20,7 @@ Name: "{app}\Modules"
 [Files]
 ; 複製主程式與依賴 DLL
 Source: "..\..\RoomTileSystem.Addin\bin\Release\net48\Obfuscated\RoomTileSystem.Addin.dll"; DestDir: "{app}\App"; Flags: ignoreversion
-Source: "..\..\RoomTileSystem.Addin\bin\Release\net48\TileJointSharedParam.txt"; DestDir: "{app}\App"; Flags: ignoreversion
+Source: "..\..\RoomTileSystem.Addin\TileJointSharedParam.txt"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\RoomTileSystem.Addin\bin\Release\net48\version.json"; DestDir: "{app}\App"; Flags: ignoreversion
 ; 複製設定檔 (若使用者原本已有則不覆蓋)
 Source: "..\..\RoomTileSystem.Addin\bin\Release\net48\appsettings.json"; DestDir: "{app}\Config"; Flags: onlyifdoesntexist
