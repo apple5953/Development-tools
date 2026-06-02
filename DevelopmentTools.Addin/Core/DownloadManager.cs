@@ -12,6 +12,15 @@ namespace DevelopmentTools.Core
 
         static DownloadManager()
         {
+            // 強制啟用 TLS 1.2 與 TLS 1.3 (3072)，解決部分 Windows Client 未啟用 TLS 連線 GitHub 握手失敗的經典問題
+            try
+            {
+                System.Net.ServicePointManager.SecurityProtocol |= 
+                    System.Net.SecurityProtocolType.Tls12 | 
+                    (System.Net.SecurityProtocolType)3072;
+            }
+            catch { }
+
             HttpClientInstance.Timeout = TimeSpan.FromSeconds(30);
             HttpClientInstance.DefaultRequestHeaders.UserAgent.ParseAdd("RevitUpdater/1.0");
         }

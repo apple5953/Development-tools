@@ -57,7 +57,7 @@ namespace DevelopmentTools.Commands
             catch (Exception ex)
             {
                 UpdateLogger.Log("檢查更新命令觸發失敗", ex);
-                TaskDialog.Show("更新錯誤", "無法連線至更新伺服器或解析 Manifest。");
+                TaskDialog.Show("更新錯誤", $"無法連線至更新伺服器。\n詳細原因：{ex.Message}");
             }
             return Result.Succeeded;
         }
