@@ -25,8 +25,10 @@ Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\version.json"; DestDir: 
 Source: "..\..\DevelopmentTools.Addin\platform_config.json"; DestDir: "{app}\App"; Flags: ignoreversion
 ; 複製設定檔 (若使用者原本已有則不覆蓋)
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\appsettings.json"; DestDir: "{app}\Config"; Flags: onlyifdoesntexist
-; 複製 Updater
+; 複製 Updater 與其所需的依賴 DLL
 Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\DevelopmentTools.Updater.exe"; DestDir: "{app}\Updater"; Flags: ignoreversion
+Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\*.dll"; DestDir: "{app}\Updater"; Flags: ignoreversion
+Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\DevelopmentTools.Updater.exe.config"; DestDir: "{app}\Updater"; Flags: ignoreversion
 
 [Code]
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -34,6 +36,7 @@ var
   AddinContent: string;
   AddinPath: string;
   OldAddinPath: string;
+  OldUpdaterPath: string;
   RevitVersion: string;
   I: Integer;
   RevitVersions: array[0..2] of string;
@@ -43,6 +46,13 @@ begin
     RevitVersions[0] := '2024';
     RevitVersions[1] := '2025';
     RevitVersions[2] := '2026';
+
+    // 1.1. 清理舊版殘留的 Updater
+    OldUpdaterPath := 'C:\ProgramData\DevelopmentTools\Updater\RoomTileSystem.Updater.exe';
+    if FileExists(OldUpdaterPath) then
+    begin
+      DeleteFile(OldUpdaterPath);
+    end;
     
     // 1. 清理舊版殘留的 RoomTileSystem.addin
     for I := 0 to 2 do
