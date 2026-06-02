@@ -2211,7 +2211,7 @@ namespace DevelopmentTools.UI
 				using (Transaction transaction = new Transaction(doc, "建立磁磚明細表"))
 				{
 					transaction.Start();
-					ViewSchedule viewSchedule = ViewSchedule.CreateSchedule(doc, new ElementId(BuiltInCategory.OST_GenericModel));
+					ViewSchedule viewSchedule = ViewSchedule.CreateSchedule(doc, ElementId.InvalidElementId);
 					viewSchedule.Name = "磁磚統計明細表_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
 					IList<SchedulableField> schedulableFields = viewSchedule.Definition.GetSchedulableFields();
 					ScheduleField scheduleField = null;
