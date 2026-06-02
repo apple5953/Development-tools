@@ -44,16 +44,16 @@ begin
     
     AddinContent := 
       '<?xml version="1.0" encoding="utf-8"?>' + #13#10 +
-      '<RevitAddIn>' + #13#10 +
+      '<RevitAddIns>' + #13#10 +
       '  <AddIn Type="Application">' + #13#10 +
-      '    <Name>Room Tile System</Name>' + #13#10 +
+      '    <Name>Development Tools</Name>' + #13#10 +
       '    <Assembly>C:\ProgramData\DevelopmentTools\App\DevelopmentTools.Addin.dll</Assembly>' + #13#10 +
       '    <FullClassName>DevelopmentTools.App</FullClassName>' + #13#10 +
-      '    <ClientId>a2b3c4d5-0001-4ebc-9999-tile0000001a</ClientId>' + #13#10 +
+      '    <ClientId>c2d5d85c-4d33-4f9e-a89e-21ef1ea3b361</ClientId>' + #13#10 +
       '    <VendorId>MAYOUCHR</VendorId>' + #13#10 +
       '    <VendorDescription>MAYOUCHR, Revit Tile Tool Developer</VendorDescription>' + #13#10 +
       '  </AddIn>' + #13#10 +
-      '</RevitAddIn>';
+      '</RevitAddIns>';
 
     for I := 0 to 2 do
     begin
