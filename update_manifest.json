@@ -1,5 +1,5 @@
-{
-    "published_at":  "2026-06-02T08:52:41",
+﻿{
+    "published_at":  "2026-06-02T13:14:09",
     "release_url":  "https://github.com/apple5953/Development-tools/releases/download/v1.0.0/RoomTileSystem_v1.0.0.zip",
     "release_note":  "Remote update release v1.0.0.",
     "product_name":  "Room Tile System v3",
@@ -7,6 +7,6 @@
     "app_id":  "room_tile_system",
     "latest_version":  "1.0.0",
     "channel":  "stable",
-    "sha256":  "f982428a07c7bd7f51f3af94916541f60bb06be28590ff74c30d5ae7220d5468",
+    "sha256":  "09cefd33420a65a851199691e340cc76f1ec8ae17891233b9c7d0a33b0189747",
     "force_update":  false
 }
