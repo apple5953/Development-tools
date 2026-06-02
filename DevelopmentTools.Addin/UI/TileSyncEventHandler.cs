@@ -2211,40 +2211,71 @@ namespace DevelopmentTools.UI
 				using (Transaction transaction = new Transaction(doc, "建立磁磚明細表"))
 				{
 					transaction.Start();
-					ViewSchedule viewSchedule = ViewSchedule.CreateSchedule(doc, ElementId.InvalidElementId);
-					viewSchedule.Name = "磁磚統計明細表_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
-					IList<SchedulableField> schedulableFields = viewSchedule.Definition.GetSchedulableFields();
-					ScheduleField scheduleField = null;
-					ScheduleField scheduleField2 = null;
-					ScheduleField scheduleField3 = null;
-					ScheduleField scheduleField4 = null;
-					ScheduleField scheduleField5 = null;
-					ScheduleField scheduleField6 = null;
-					foreach (SchedulableField current in schedulableFields)
+					var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType();
+					HashSet<BuiltInCategory> activeCategories = new HashSet<BuiltInCategory>();
+					foreach (Element elem in collector)
 					{
-						bool flag = current.ParameterId == new ElementId(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS);
-						if (flag)
+						Parameter commentParam = elem.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS);
+						if (commentParam != null && commentParam.HasValue)
 						{
-							try
+							string val = commentParam.AsString();
+							if (!string.IsNullOrEmpty(val) && (val.Contains("Tile_ID:") || val.StartsWith("Tile_")))
 							{
-								scheduleField = viewSchedule.Definition.AddField(current);
-								scheduleField.IsHidden = true;
+								if (elem.Category != null)
+								{
+									BuiltInCategory bCat = (BuiltInCategory)elem.Category.Id.IntegerValue;
+									activeCategories.Add(bCat);
+								}
 							}
-							catch
-							{
-							}
+						}
+					}
+					if (activeCategories.Count == 0)
+					{
+						activeCategories.Add(BuiltInCategory.OST_Walls);
+						activeCategories.Add(BuiltInCategory.OST_Floors);
+					}
+					ViewSchedule lastCreatedSchedule = null;
+					string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+					foreach (BuiltInCategory cat in activeCategories)
+					{
+						string catName = "其它";
+						if (cat == BuiltInCategory.OST_Walls)
+						{
+							catName = "牆面";
+						}
+						else if (cat == BuiltInCategory.OST_Floors)
+						{
+							catName = "地面";
+						}
+						else if (cat == BuiltInCategory.OST_GenericModel)
+						{
+							catName = "一般模型";
 						}
 						else
 						{
-							string name = current.GetName(doc);
-							bool flag2 = name.Equals("Count", StringComparison.OrdinalIgnoreCase) || name.Equals("數量", StringComparison.OrdinalIgnoreCase) || name.Equals("合計", StringComparison.OrdinalIgnoreCase);
-							if (flag2)
+							Category categoryObject = Category.GetCategory(doc, cat);
+							if (categoryObject != null)
+							{
+								catName = categoryObject.Name;
+							}
+						}
+						ViewSchedule viewSchedule = ViewSchedule.CreateSchedule(doc, new ElementId(cat));
+						viewSchedule.Name = $"磁磚統計明細表({catName})_{timestamp}";
+						IList<SchedulableField> schedulableFields = viewSchedule.Definition.GetSchedulableFields();
+						ScheduleField scheduleField = null;
+						ScheduleField scheduleField2 = null;
+						ScheduleField scheduleField3 = null;
+						ScheduleField scheduleField4 = null;
+						ScheduleField scheduleField5 = null;
+						ScheduleField scheduleField6 = null;
+						foreach (SchedulableField current in schedulableFields)
+						{
+							if (current.ParameterId == new ElementId(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS))
 							{
 								try
 								{
-									ScheduleField scheduleField7 = viewSchedule.Definition.AddField(current);
-									scheduleField7.ColumnHeading = "數量";
-									scheduleField7.DisplayType = ScheduleFieldDisplayType.Totals;
+									scheduleField = viewSchedule.Definition.AddField(current);
+									scheduleField.IsHidden = true;
 								}
 								catch
 								{
@@ -2252,8 +2283,21 @@ namespace DevelopmentTools.UI
 							}
 							else
 							{
-								bool flag3 = name.Equals("Room_ID", StringComparison.OrdinalIgnoreCase);
-								if (flag3)
+								string name = current.GetName(doc);
+								bool isCount = name.Equals("Count", StringComparison.OrdinalIgnoreCase) || name.Equals("數量", StringComparison.OrdinalIgnoreCase) || name.Equals("合計", StringComparison.OrdinalIgnoreCase);
+								if (isCount)
+								{
+									try
+									{
+										ScheduleField scheduleField7 = viewSchedule.Definition.AddField(current);
+										scheduleField7.ColumnHeading = "數量";
+										scheduleField7.DisplayType = ScheduleFieldDisplayType.Totals;
+									}
+									catch
+									{
+									}
+								}
+								else if (name.Equals("Room_ID", StringComparison.OrdinalIgnoreCase))
 								{
 									try
 									{
@@ -2264,126 +2308,104 @@ namespace DevelopmentTools.UI
 									{
 									}
 								}
-								else
+								else if (name.Equals("Tile_Material", StringComparison.OrdinalIgnoreCase))
 								{
-									bool flag4 = name.Equals("Tile_Material", StringComparison.OrdinalIgnoreCase);
-									if (flag4)
+									try
 									{
-										try
-										{
-											scheduleField3 = viewSchedule.Definition.AddField(current);
-											scheduleField3.ColumnHeading = "磁磚材質";
-										}
-										catch
-										{
-										}
+										scheduleField3 = viewSchedule.Definition.AddField(current);
+										scheduleField3.ColumnHeading = "磁磚材質";
 									}
-									else
+									catch
 									{
-										bool flag5 = name.Equals("Tile_Type", StringComparison.OrdinalIgnoreCase);
-										if (flag5)
-										{
-											try
-											{
-												scheduleField4 = viewSchedule.Definition.AddField(current);
-												scheduleField4.ColumnHeading = "磁磚類型";
-											}
-											catch
-											{
-											}
-										}
-										else
-										{
-											bool flag6 = name.Equals("Tile_Width", StringComparison.OrdinalIgnoreCase);
-											if (flag6)
-											{
-												try
-												{
-													scheduleField5 = viewSchedule.Definition.AddField(current);
-													scheduleField5.ColumnHeading = "規格寬(mm)";
-												}
-												catch
-												{
-												}
-											}
-											else
-											{
-												bool flag7 = name.Equals("Tile_Height", StringComparison.OrdinalIgnoreCase);
-												if (flag7)
-												{
-													try
-													{
-														scheduleField6 = viewSchedule.Definition.AddField(current);
-														scheduleField6.ColumnHeading = "規格高(mm)";
-													}
-													catch
-													{
-													}
-												}
-												else
-												{
-													bool flag8 = name.Equals("Tile_Thickness", StringComparison.OrdinalIgnoreCase);
-													if (flag8)
-													{
-														try
-														{
-															ScheduleField scheduleField8 = viewSchedule.Definition.AddField(current);
-															scheduleField8.ColumnHeading = "規格厚(mm)";
-														}
-														catch
-														{
-														}
-													}
-												}
-											}
-										}
+									}
+								}
+								else if (name.Equals("Tile_Type", StringComparison.OrdinalIgnoreCase))
+								{
+									try
+									{
+										scheduleField4 = viewSchedule.Definition.AddField(current);
+										scheduleField4.ColumnHeading = "磁磚類型";
+									}
+									catch
+									{
+									}
+								}
+								else if (name.Equals("Tile_Width", StringComparison.OrdinalIgnoreCase))
+								{
+									try
+									{
+										scheduleField5 = viewSchedule.Definition.AddField(current);
+										scheduleField5.ColumnHeading = "規格寬(mm)";
+									}
+									catch
+									{
+									}
+								}
+								else if (name.Equals("Tile_Height", StringComparison.OrdinalIgnoreCase))
+								{
+									try
+									{
+										scheduleField6 = viewSchedule.Definition.AddField(current);
+										scheduleField6.ColumnHeading = "規格高(mm)";
+									}
+									catch
+									{
+									}
+								}
+								else if (name.Equals("Tile_Thickness", StringComparison.OrdinalIgnoreCase))
+								{
+									try
+									{
+										ScheduleField scheduleField8 = viewSchedule.Definition.AddField(current);
+										scheduleField8.ColumnHeading = "規格厚(mm)";
+									}
+									catch
+									{
 									}
 								}
 							}
 						}
-					}
-					viewSchedule.Definition.IsItemized = false;
-					viewSchedule.Definition.ShowGrandTotal = true;
-					bool flag9 = scheduleField2 != null;
-					if (flag9)
-					{
-						ScheduleSortGroupField scheduleSortGroupField = new ScheduleSortGroupField(scheduleField2.FieldId);
-						scheduleSortGroupField.ShowHeader = true;
-						scheduleSortGroupField.ShowFooter = true;
-						viewSchedule.Definition.AddSortGroupField(scheduleSortGroupField);
-					}
-					bool flag10 = scheduleField3 != null;
-					if (flag10)
-					{
-						ScheduleSortGroupField sortGroupField = new ScheduleSortGroupField(scheduleField3.FieldId);
-						viewSchedule.Definition.AddSortGroupField(sortGroupField);
-					}
-					bool flag11 = scheduleField4 != null;
-					if (flag11)
-					{
-						ScheduleSortGroupField sortGroupField2 = new ScheduleSortGroupField(scheduleField4.FieldId);
-						viewSchedule.Definition.AddSortGroupField(sortGroupField2);
-					}
-					bool flag12 = scheduleField5 != null;
-					if (flag12)
-					{
-						ScheduleSortGroupField sortGroupField3 = new ScheduleSortGroupField(scheduleField5.FieldId);
-						viewSchedule.Definition.AddSortGroupField(sortGroupField3);
-					}
-					bool flag13 = scheduleField6 != null;
-					if (flag13)
-					{
-						ScheduleSortGroupField sortGroupField4 = new ScheduleSortGroupField(scheduleField6.FieldId);
-						viewSchedule.Definition.AddSortGroupField(sortGroupField4);
-					}
-					bool flag14 = scheduleField != null;
-					if (flag14)
-					{
-						ScheduleFilter filter = new ScheduleFilter(scheduleField.FieldId, ScheduleFilterType.Contains, "Tile_ID:");
-						viewSchedule.Definition.AddFilter(filter);
+						viewSchedule.Definition.IsItemized = false;
+						viewSchedule.Definition.ShowGrandTotal = true;
+						if (scheduleField2 != null)
+						{
+							ScheduleSortGroupField scheduleSortGroupField = new ScheduleSortGroupField(scheduleField2.FieldId);
+							scheduleSortGroupField.ShowHeader = true;
+							scheduleSortGroupField.ShowFooter = true;
+							viewSchedule.Definition.AddSortGroupField(scheduleSortGroupField);
+						}
+						if (scheduleField3 != null)
+						{
+							ScheduleSortGroupField sortGroupField = new ScheduleSortGroupField(scheduleField3.FieldId);
+							viewSchedule.Definition.AddSortGroupField(sortGroupField);
+						}
+						if (scheduleField4 != null)
+						{
+							ScheduleSortGroupField sortGroupField2 = new ScheduleSortGroupField(scheduleField4.FieldId);
+							viewSchedule.Definition.AddSortGroupField(sortGroupField2);
+						}
+						if (scheduleField5 != null)
+						{
+							ScheduleSortGroupField sortGroupField3 = new ScheduleSortGroupField(scheduleField5.FieldId);
+							viewSchedule.Definition.AddSortGroupField(sortGroupField3);
+						}
+						if (scheduleField6 != null)
+						{
+							ScheduleSortGroupField sortGroupField4 = new ScheduleSortGroupField(scheduleField6.FieldId);
+							viewSchedule.Definition.AddSortGroupField(sortGroupField4);
+						}
+						if (scheduleField != null)
+						{
+							ScheduleFilter filter = new ScheduleFilter(scheduleField.FieldId, ScheduleFilterType.Contains, "Tile_ID:");
+							viewSchedule.Definition.AddFilter(filter);
+						}
+						lastCreatedSchedule = viewSchedule;
 					}
 					transaction.Commit();
-					uidoc.ActiveView = viewSchedule;
+					if (lastCreatedSchedule != null)
+					{
+						uidoc.ActiveView = lastCreatedSchedule;
+					}
 				}
 				this.ViewModel.SetStatus("建立 Revit 磁磚明細表完成。");
 			}
