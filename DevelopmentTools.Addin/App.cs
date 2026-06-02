@@ -20,8 +20,44 @@ namespace DevelopmentTools
         private static MainWindow _window;
         private static MainViewModel _viewModel;
 
+        private static bool _hasCheckedUpdateThisSession = false;
+
+        private static void TriggerSilentUpdateCheck()
+        {
+            if (_hasCheckedUpdateThisSession) return;
+            _hasCheckedUpdateThisSession = true;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(2000);
+                    var result = await UpdateManager.CheckForUpdatesAsync();
+                    if (result.HasUpdate)
+                    {
+                        TaskDialog td = new TaskDialog("遠端更新提示");
+                        td.MainInstruction = $"發現新版本 v{result.LatestVersion}！";
+                        td.MainContent = $"目前本機版本: v{result.CurrentVersion}\n\n更新內容:\n{result.ReleaseNotes}\n\n是否下載新版並準備安裝？";
+                        td.CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No;
+                        td.DefaultButton = TaskDialogResult.Yes;
+
+                        if (td.Show() == TaskDialogResult.Yes)
+                        {
+                            await UpdateManager.StartUpdateProcessAsync(result.Manifest);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    UpdateLogger.Log("背景自動檢查更新失敗", ex);
+                }
+            });
+        }
+
         public static void ShowOrActivateWindow(ExternalCommandData commandData)
         {
+            TriggerSilentUpdateCheck();
+
             if (_window != null && _window.IsLoaded)
             {
                 _window.Activate();
