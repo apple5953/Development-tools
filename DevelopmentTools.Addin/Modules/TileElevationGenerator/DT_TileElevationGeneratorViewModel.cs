@@ -83,6 +83,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public Floor SelectedFloor { get; private set; }
         public List<Wall> SelectedWalls { get; private set; } = new List<Wall>();
 
+        public bool IsConfirmed { get; private set; } = false;
+
         // 用於控制視窗顯示/隱藏的委派事件
         public Action RequestHide { get; set; }
         public Action RequestShow { get; set; }
@@ -90,6 +92,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
         public ICommand SelectSourceCommand { get; }
         public ICommand GenerateCommand { get; }
+        public ICommand OpenHelpCommand { get; }
 
         public DT_TileElevationGeneratorViewModel(ExternalCommandData commandData)
         {
@@ -108,6 +111,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             // 2. 初始化 Commands
             SelectSourceCommand = new RelayCommand(OnSelectSource);
             GenerateCommand = new RelayCommand(OnGenerate);
+            OpenHelpCommand = new RelayCommand(OnOpenHelp);
         }
 
         private void OnSelectSource()
@@ -169,55 +173,45 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
         private void OnGenerate()
         {
-            try
+            if (IsFloorMode)
             {
-                var service = new DT_TileElevationGeneratorService();
-                TileElevationResult result;
-
-                if (IsFloorMode)
+                if (SelectedFloor == null)
                 {
-                    if (SelectedFloor == null)
-                    {
-                        MessageBox.Show("Please select a Floor first!", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
-                    }
-                    StatusText = "Generating elevations (Floor Mode)...";
-                    result = service.GenerateElevationsForFloor(_doc, SelectedFloor, Settings);
-                }
-                else
-                {
-                    if (SelectedWalls.Count == 0)
-                    {
-                        MessageBox.Show("Please select at least one Wall first!", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
-                    }
-                    StatusText = "Generating elevations (Wall Mode)...";
-                    result = service.GenerateElevationsForWalls(_doc, SelectedWalls, Settings);
-                }
-
-                if (result.Success)
-                {
-                    string msg = $"Successfully created {result.CreatedViewsCount} Elevation Section Views:\n" +
-                                 string.Join("\n", result.CreatedViewNames);
-                    if (result.SkippedWallsCount > 0)
-                    {
-                        msg += $"\n\nSkipped {result.SkippedWallsCount} walls (e.g. too short or duplicate name).";
-                    }
-
-                    MessageBox.Show(msg, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    RequestClose?.Invoke();
-                }
-                else
-                {
-                    MessageBox.Show($"Failed to generate elevations:\n{result.ErrorMessage}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    StatusText = "Generation failed.";
+                    MessageBox.Show("請先選擇一個地板元件 (Floor)！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show($"Unexpected error:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                StatusText = "Error occurred.";
+                if (SelectedWalls.Count == 0)
+                {
+                    MessageBox.Show("請先選取至少一面牆元件 (Walls)！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
             }
+
+            IsConfirmed = true;
+            RequestClose?.Invoke();
+        }
+
+        private void OnOpenHelp()
+        {
+            TaskDialog td = new TaskDialog("展開圖生成器 - 使用指南");
+            td.MainInstruction = "磁磚展開圖生成器 (DT_TileElevationGenerator) 新手快速入門";
+            td.MainContent = "本工具專為快速建立室內空間牆面之磁磚展開圖設計，提供以下兩種來源模式：\n\n" +
+                             "1. Floor 模式 (自動相鄰牆模式)：\n" +
+                             "   - 選擇此模式並點選「選取 Revit 目標物件」，在 Revit 視圖中選取一個地板元件 (Floor)。\n" +
+                             "   - 系統將自動抓取與該地板相鄰的牆面，以地板中心為原點進行「順時針排序」，並依序以 A、B、C、D 後綴進行展開圖命名 (如 TE_101_A, TE_101_B)。\n\n" +
+                             "2. Wall 模式 (手動多選牆模式)：\n" +
+                             "   - 選擇此模式並點選「選取 Revit 目標物件」，在 Revit 中多選幾面牆體，按右上角「完成」儲存。\n\n" +
+                             "3. 參數說明：\n" +
+                             "   - View Template: 生成展開圖剖面時自動套用的視圖樣板。\n" +
+                             "   - View Depth: 剖切深度（向牆體內部看的深度，預設 600mm）。\n" +
+                             "   - Wall Offset: 剖切線位置在牆體表面前方的內縮距離 (預設 30mm)。\n" +
+                             "   - Bottom Offset: 展開圖裁剪框底部向下拉的距離 (如考慮裝修高差或地磚，預設 0mm)。\n" +
+                             "   - Name Prefix: 展開圖剖面命名首碼 (如輸入房間編號 TE_101，生成 TE_101_A 等)。\n\n" +
+                             "設定完成後，點擊下方「一鍵產生磁磚展開圖」即可自動生成！";
+            td.Show();
         }
 
         // --- INotifyPropertyChanged 實作 ---

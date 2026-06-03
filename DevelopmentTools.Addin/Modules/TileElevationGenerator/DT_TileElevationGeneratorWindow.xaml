@@ -81,15 +81,31 @@
         </Grid.RowDefinitions>
 
         <!-- 標題 -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,10">
-            <TextBlock Text="🖼️  DT_TileElevationGenerator"
-                       FontSize="14" FontWeight="Bold"
-                       Foreground="#CBA6F7"/>
-            <TextBlock Text="磁磚展開圖自動化生成系統"
-                       FontSize="9" FontWeight="Medium"
-                       Foreground="#89B4FA"
-                       Margin="2,2,0,0"/>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="🖼️  DT_TileElevationGenerator"
+                           FontSize="14" FontWeight="Bold"
+                           Foreground="#CBA6F7"/>
+                <TextBlock Text="磁磚展開圖自動化生成系統"
+                           FontSize="9" FontWeight="Medium"
+                           Foreground="#89B4FA"
+                           Margin="2,2,0,0"/>
+            </StackPanel>
+            <Button Grid.Column="1" 
+                    Content="❓ 新手教學"
+                    Command="{Binding OpenHelpCommand}"
+                    Style="{StaticResource PrimaryBtn}"
+                    Background="#F9E2AF"
+                    Foreground="#1E1E2E"
+                    Height="24"
+                    Padding="8,0"
+                    VerticalAlignment="Center"
+                    ToolTip="點擊開啟磁磚展開圖生成器快速入門與使用指南"/>
+        </Grid>
 
         <!-- 來源選取 -->
         <Border Grid.Row="1" Background="#181825" CornerRadius="6" Padding="10" Margin="0,0,0,10">

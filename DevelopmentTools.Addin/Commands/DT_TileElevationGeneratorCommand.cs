@@ -17,35 +17,33 @@ namespace DevelopmentTools.Commands
             ref string message,
             ElementSet elements)
         {
-            var uiDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
-
-            // 啟動非同步驗證，防止卡死 Revit 主執行緒
-            System.Threading.Tasks.Task.Run(async () =>
+            try
             {
-                try
+                bool isAuthorized = true;
+                if (GoogleAuthManager.IsAuthEnabled())
                 {
-                    // 驗證使用者是否具有 Tiling (磁磚鋪設與相關模組) 的存取權限
-                    if (GoogleAuthManager.IsAuthEnabled())
+                    // 同步等待非同步驗證，保留 Revit API Context 鎖
+                    isAuthorized = System.Threading.Tasks.Task.Run(async () =>
                     {
-                        bool isAuthorized = await GoogleAuthManager.VerifyAccessAsync("Tiling", "磁磚展開圖生成器");
-                        if (!isAuthorized) return;
-                    }
-
-                    uiDispatcher.Invoke(() =>
-                    {
-                        DoShowElevationDialog(commandData);
-                    });
+                        return await GoogleAuthManager.VerifyAccessAsync("Tiling", "磁磚展開圖生成器");
+                    }).GetAwaiter().GetResult();
                 }
-                catch (Exception ex)
+
+                if (!isAuthorized)
                 {
-                    uiDispatcher.Invoke(() =>
-                    {
-                        TaskDialog.Show("驗證錯誤", $"驗證過程發生異常：{ex.Message}");
-                    });
+                    return Result.Failed;
                 }
-            });
 
-            return Result.Succeeded;
+                // 驗證成功，此時 100% 處於 API Context 中
+                DoShowElevationDialog(commandData);
+
+                return Result.Succeeded;
+            }
+            catch (Exception ex)
+            {
+                message = ex.Message;
+                return Result.Failed;
+            }
         }
 
         private void DoShowElevationDialog(ExternalCommandData commandData)
@@ -66,11 +64,44 @@ namespace DevelopmentTools.Commands
                     window.Close();
                 };
 
-                window.ShowDialog();
+                bool? dialogResult = window.ShowDialog();
+
+                if (dialogResult == true && viewModel.IsConfirmed)
+                {
+                    UIDocument uidoc = commandData.Application.ActiveUIDocument;
+                    Document doc = uidoc.Document;
+
+                    var service = new DT_TileElevationGeneratorService();
+                    TileElevationResult result;
+
+                    if (viewModel.IsFloorMode)
+                    {
+                        result = service.GenerateElevationsForFloor(doc, viewModel.SelectedFloor, viewModel.Settings);
+                    }
+                    else
+                    {
+                        result = service.GenerateElevationsForWalls(doc, viewModel.SelectedWalls, viewModel.Settings);
+                    }
+
+                    if (result.Success)
+                    {
+                        string msg = $"成功建立 {result.CreatedViewsCount} 個磁磚展開圖視圖：\n" +
+                                     string.Join("\n", result.CreatedViewNames);
+                        if (result.SkippedWallsCount > 0)
+                        {
+                            msg += $"\n\n跳過了 {result.SkippedWallsCount} 面牆。";
+                        }
+                        TaskDialog.Show("生成成功", msg);
+                    }
+                    else
+                    {
+                        TaskDialog.Show("生成失敗", $"無法生成展開圖：\n{result.ErrorMessage}");
+                    }
+                }
             }
             catch (Exception ex)
             {
-                TaskDialog.Show("錯誤", $"無法啟動磁磚展開圖生成器視窗：{ex.Message}");
+                TaskDialog.Show("錯誤", $"執行展開圖生成時發生異常：{ex.Message}");
             }
         }
     }
