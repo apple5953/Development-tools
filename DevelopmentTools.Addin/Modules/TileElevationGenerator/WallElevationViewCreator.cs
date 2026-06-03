@@ -22,23 +22,27 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double lengthFeet = data.WallLength;
             double wallThickness = data.WallThickness;
 
+            // 讀取 UI 設定參數並轉為英呎 (Revit 內部單位)
+            double userWallOffsetFeet = settings.WallOffset / 304.8;
+            double userViewDepthFeet = settings.ViewDepth / 304.8;
+            
             double offsetFeet;
             double depthFeet;
             if (data.WallElement == null)
             {
                 // 樓板外廓剖切 (無牆體)
-                offsetFeet = 20.0 / 304.8;  // 前移 20mm
-                depthFeet = 100.0 / 304.8;  // 深度 100mm
+                offsetFeet = userWallOffsetFeet;  // 前移偏移量
+                depthFeet = userViewDepthFeet;    // 剖切深度
             }
             else
             {
                 // 牆面剖切
-                offsetFeet = (wallThickness / 2.0) + (20.0 / 304.8); // 牆體半寬 + 20mm
-                depthFeet = wallThickness + (50.0 / 304.8);          // 牆厚度 + 50mm
+                offsetFeet = (wallThickness / 2.0) + userWallOffsetFeet; // 牆體半寬 + 前移偏移量
+                depthFeet = wallThickness + userViewDepthFeet;          // 牆厚度 + 剖切深度，確保切透牆面
             }
-            double bottomOffsetFeet = 50.0 / 304.8;                     // 底部延伸 50mm
-            double topOffsetFeet = 50.0 / 304.8;                        // 頂部延伸 50mm
-            double leftRightExtensionFeet = 300.0 / 304.8;              // 左右延伸 300mm
+            double bottomOffsetFeet = settings.BottomOffset / 304.8;            // 底部延伸量
+            double topOffsetFeet = 50.0 / 304.8;                        // 頂部延伸預設維持 50mm
+            double leftRightExtensionFeet = 0.0;                        // 左右延伸改為 0.0，使多面牆能完美連續接合不重疊
 
             XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.MidPoint.Z + heightFeet / 2.0);
             t.Origin = midPointWithZ + data.RoomSideDirection * offsetFeet;
