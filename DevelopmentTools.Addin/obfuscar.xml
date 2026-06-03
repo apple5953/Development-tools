@@ -21,10 +21,13 @@
     <Type name="DevelopmentTools.Commands.FeedbackCommand" skip="true" />
     <Type name="DevelopmentTools.Commands.WallFinishCommand" skip="true" />
     <Type name="DevelopmentTools.Commands.CheckUpdateCommand" skip="true" />
+    <Type name="DevelopmentTools.Commands.DT_TileElevationGeneratorCommand" skip="true" />
     <Type name="DevelopmentTools.App" skip="true" />
     <SkipType name="DevelopmentTools.UI.MainWindow" skipFields="true" skipMethods="true" skipProperties="true" skipEvents="true" skipStringHiding="true" />
     <SkipType name="DevelopmentTools.UI.FeedbackWindow" skipFields="true" skipMethods="true" skipProperties="true" skipEvents="true" skipStringHiding="true" />
     <SkipType name="DevelopmentTools.UI.MainViewModel" skipFields="true" skipMethods="true" skipProperties="true" skipEvents="true" skipStringHiding="true" />
+    <SkipType name="DevelopmentTools.UI.DT_TileElevationGeneratorWindow" skipFields="true" skipMethods="true" skipProperties="true" skipEvents="true" skipStringHiding="true" />
+    <SkipType name="DevelopmentTools.Modules.TileElevationGenerator.DT_TileElevationGeneratorViewModel" skipFields="true" skipMethods="true" skipProperties="true" skipEvents="true" skipStringHiding="true" />
     
     <!-- 排除 JSON 序列化類別，避免混淆後反序列化失效導致程式損壞 -->
     <Type name="DevelopmentTools.Core.AuthConfig" skip="true" />

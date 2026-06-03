@@ -1,0 +1,48 @@
+using System;
+using Autodesk.Revit.DB;
+
+namespace DevelopmentTools.Modules.TileElevationGenerator
+{
+    public enum SourceMode
+    {
+        Floor,
+        Wall
+    }
+
+    public class WallElevationData
+    {
+        public ElementId WallId { get; set; }
+        public string WallName { get; set; }
+        
+        // 以下均為 Revit 內部單位 (Feet)
+        public XYZ StartPoint { get; set; }
+        public XYZ EndPoint { get; set; }
+        public XYZ MidPoint { get; set; }
+        
+        public double WallLength { get; set; } // Feet
+        public double WallHeight { get; set; } // Feet
+        
+        public XYZ WallDirection { get; set; }
+        public XYZ WallNormal { get; set; }
+        public XYZ RoomSideDirection { get; set; }
+    }
+
+    public class GeneratorSettings
+    {
+        public SourceMode SourceMode { get; set; } = SourceMode.Floor;
+        public ElementId SelectedViewTemplateId { get; set; } = ElementId.InvalidElementId;
+        
+        // 以下為使用者輸入單位 (mm)
+        public double ViewDepth { get; set; } = 600.0;
+        public double WallOffset { get; set; } = 30.0;
+        
+        public bool AutoWallHeight { get; set; } = true;
+        public bool AutoWallLength { get; set; } = true;
+        
+        public double BottomOffset { get; set; } = 0.0;
+        public string NamePrefix { get; set; } = "TE";
+        
+        public bool SkipShortWall { get; set; } = true;
+        public double MinWallLength { get; set; } = 500.0; // mm
+    }
+}

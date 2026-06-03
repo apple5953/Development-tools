@@ -167,6 +167,12 @@ namespace DevelopmentTools
                 mainBtn.ToolTip = "開啟空間磁磚鋪設主控台（選 Room → 自動偵測裝修面 → Paint .pat）";
                 layoutPanel.AddItem(mainBtn);
 
+                PushButtonData elevationBtn = new PushButtonData(
+                    "TileElevationGenerator", "展開圖生成",
+                    assemblyPath, "DevelopmentTools.Commands.DT_TileElevationGeneratorCommand");
+                elevationBtn.ToolTip = "快速建立室內空間各面牆之磁磚展開圖。";
+                layoutPanel.AddItem(elevationBtn);
+
                 // Panel 3: 粉刷裝修
                 RibbonPanel finishPanel = application.CreateRibbonPanel(tabName, "粉刷裝修");
                 
