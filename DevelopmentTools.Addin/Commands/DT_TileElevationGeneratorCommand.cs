@@ -64,40 +64,7 @@ namespace DevelopmentTools.Commands
                     window.Close();
                 };
 
-                bool? dialogResult = window.ShowDialog();
-
-                if (dialogResult == true && viewModel.IsConfirmed)
-                {
-                    UIDocument uidoc = commandData.Application.ActiveUIDocument;
-                    Document doc = uidoc.Document;
-
-                    var service = new DT_TileElevationGeneratorService();
-                    TileElevationResult result;
-
-                    if (viewModel.IsFloorMode)
-                    {
-                        result = service.GenerateElevationsForFloor(doc, viewModel.SelectedFloor, viewModel.Settings);
-                    }
-                    else
-                    {
-                        result = service.GenerateElevationsForWalls(doc, viewModel.SelectedWalls, viewModel.Settings);
-                    }
-
-                    if (result.Success)
-                    {
-                        string msg = $"成功建立 {result.CreatedViewsCount} 個磁磚展開圖視圖：\n" +
-                                     string.Join("\n", result.CreatedViewNames);
-                        if (result.SkippedWallsCount > 0)
-                        {
-                            msg += $"\n\n跳過了 {result.SkippedWallsCount} 面牆。";
-                        }
-                        TaskDialog.Show("生成成功", msg);
-                    }
-                    else
-                    {
-                        TaskDialog.Show("生成失敗", $"無法生成展開圖：\n{result.ErrorMessage}");
-                    }
-                }
+                window.ShowDialog();
             }
             catch (Exception ex)
             {
