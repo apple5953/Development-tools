@@ -11,17 +11,13 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             var result = new TileElevationResult();
             try
             {
-                // 1. 搜尋相鄰的牆面
-                var adjacentWalls = AdjacentWallFinder.FindAdjacentWalls(doc, floor, settings.MinWallLength, settings.SkipShortWall);
-                if (adjacentWalls.Count == 0)
+                // 1. 直接從樓板邊界建立數據列表 (已含樓高自適應與順時針排序)
+                var wallDataList = WallElevationDataBuilder.BuildDataFromFloorBoundary(doc, floor, settings);
+                if (wallDataList.Count == 0)
                 {
-                    result.ErrorMessage = "在選定的地板周圍找不到任何相鄰牆體！";
+                    result.ErrorMessage = "在選定的地板上找不到任何有效的邊界線！";
                     return result;
                 }
-
-                // 2. 計算 Floor 的幾何中心點，並建立牆體幾何數據 (含順時針排序)
-                XYZ floorCenter = GetFloorCenter(floor);
-                var wallDataList = WallElevationDataBuilder.BuildData(doc, adjacentWalls, settings, floorCenter);
 
                 // 3. 啟動 Transaction 建立剖面視圖
                 using (var tx = new Transaction(doc, "Generate Tile Elevations (Floor Mode)"))

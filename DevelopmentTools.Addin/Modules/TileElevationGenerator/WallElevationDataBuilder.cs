@@ -86,6 +86,138 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             return dataList;
         }
 
+        public static List<WallElevationData> BuildDataFromFloorBoundary(Document doc, Floor floor, GeneratorSettings settings)
+        {
+            var dataList = new List<WallElevationData>();
+
+            // 1. 取得 Floor 的邊界線 CurveLoop
+            var boundaryLoops = FloorBoundaryExtractor.GetFloorBoundaryLoops(floor);
+            if (boundaryLoops.Count == 0) return dataList;
+
+            // 2. 計算 Floor 的幾何中心點，並決定當層樓高
+            XYZ floorCenter = GetFloorCenter(floor);
+            double height = DetectLevelHeight(doc, floor); // 取得自適應樓高 (Feet)
+
+            int index = 1;
+            foreach (var loop in boundaryLoops)
+            {
+                foreach (Curve curve in loop)
+                {
+                    XYZ start = curve.GetEndPoint(0);
+                    XYZ end = curve.GetEndPoint(1);
+                    XYZ mid = (start + end) / 2.0;
+                    XYZ dir = (end - start).Normalize();
+
+                    // 指向 Floor 中心的方向
+                    XYZ toCenter = new XYZ(floorCenter.X - mid.X, floorCenter.Y - mid.Y, 0).Normalize();
+
+                    // 計算邊界的法線並確保指向樓板中心 (向房間內側看)
+                    XYZ normal = new XYZ(-dir.Y, dir.X, 0).Normalize();
+                    if (normal.DotProduct(toCenter) < 0)
+                    {
+                        normal = -normal;
+                    }
+
+                    var data = new WallElevationData
+                    {
+                        WallId = ElementId.InvalidElementId,
+                        WallName = $"FloorBoundary_{index}",
+                        StartPoint = start,
+                        EndPoint = end,
+                        MidPoint = mid,
+                        WallLength = curve.Length,
+                        WallHeight = height, // 自適應樓高
+                        WallDirection = dir,
+                        WallNormal = normal,
+                        RoomSideDirection = normal,
+                        WallThickness = 0.0, // 樓板邊界沒有牆厚度
+                        WallElement = null,
+                        BoundaryCurve = curve
+                    };
+
+                    dataList.Add(data);
+                    index++;
+                }
+            }
+
+            // 順時針排序 (依據中點與 floorCenter 角度)
+            if (floorCenter != null)
+            {
+                SortClockwise(dataList, floorCenter);
+            }
+
+            return dataList;
+        }
+
+        private static XYZ GetFloorCenter(Floor floor)
+        {
+            var bbox = floor.get_BoundingBox(null);
+            if (bbox != null)
+            {
+                return (bbox.Min + bbox.Max) / 2.0;
+            }
+            var loc = floor.Location as LocationPoint;
+            if (loc != null) return loc.Point;
+            return XYZ.Zero;
+        }
+
+        private static double DetectLevelHeight(Document doc, Floor floor)
+        {
+            double defaultHeightFeet = 3000.0 / 304.8; // 預設 3.0 米
+            try
+            {
+                ElementId currentLevelId = floor.LevelId;
+                if (currentLevelId == ElementId.InvalidElementId) return defaultHeightFeet;
+
+                Level currentLevel = doc.GetElement(currentLevelId) as Level;
+                if (currentLevel == null) return defaultHeightFeet;
+
+                double currentElevation = currentLevel.Elevation;
+
+                // 獲取所有 Level，並按照 Elevation 排序
+                var levelCollector = new FilteredElementCollector(doc)
+                    .OfClass(typeof(Level))
+                    .WhereElementIsNotElementType();
+
+                var levels = new List<Level>();
+                foreach (var elem in levelCollector)
+                {
+                    if (elem is Level lvl)
+                    {
+                        levels.Add(lvl);
+                    }
+                }
+
+                levels.Sort((a, b) => a.Elevation.CompareTo(b.Elevation));
+
+                // 找出 elevation 大於 currentElevation，且最接近的下一個 Level
+                Level nextLevel = null;
+                foreach (var lvl in levels)
+                {
+                    if (lvl.Elevation > currentElevation + 0.01)
+                    {
+                        nextLevel = lvl;
+                        break;
+                    }
+                }
+
+                if (nextLevel != null)
+                {
+                    double delta = nextLevel.Elevation - currentElevation;
+                    if (delta > 1.0)
+                    {
+                        return delta;
+                    }
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+
+            return defaultHeightFeet;
+        }
+
         private static void SortClockwise(List<WallElevationData> list, XYZ center)
         {
             // 計算相對於中心點的角度，並依角度從大到小 (順時針) 排序

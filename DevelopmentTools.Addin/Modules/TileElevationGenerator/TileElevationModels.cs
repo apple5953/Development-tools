@@ -9,6 +9,13 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         Wall
     }
 
+    public class ViewTemplateItem
+    {
+        public View View { get; set; }
+        public string Name => View != null ? View.Name : "<專案預設 (無樣板)>";
+        public ElementId Id => View != null ? View.Id : ElementId.InvalidElementId;
+    }
+
     public class WallElevationData
     {
         public ElementId WallId { get; set; }
@@ -28,6 +35,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         
         public double WallThickness { get; set; } // Feet
         public Wall WallElement { get; set; }
+        public Curve BoundaryCurve { get; set; }
     }
 
     public class GeneratorSettings

@@ -153,14 +153,9 @@
                     <TextBlock Grid.Column="0" Text="視圖樣板" Style="{StaticResource NormalText}"/>
                     <ComboBox Grid.Column="1" ItemsSource="{Binding ViewTemplates}" 
                               SelectedItem="{Binding SelectedTemplate}" 
+                              DisplayMemberPath="Name" 
                               Height="24" Background="#313244" Foreground="#CDD6F4"
-                              BorderThickness="1" BorderBrush="#45475A">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name, TargetNullValue='&lt;專案預設 (無樣板)&gt;'}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                              BorderThickness="1" BorderBrush="#45475A"/>
                 </Grid>
 
                 <Grid Margin="0,4">

@@ -22,9 +22,20 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double lengthFeet = data.WallLength;
             double wallThickness = data.WallThickness;
 
-            // 自適應物理幾何計算 (牆厚度與 20mm/50mm 物理量)
-            double offsetFeet = (wallThickness / 2.0) + (20.0 / 304.8); // 牆體半寬 + 20mm 前移
-            double depthFeet = wallThickness + (50.0 / 304.8);          // 牆厚度 + 50mm 剖切深度
+            double offsetFeet;
+            double depthFeet;
+            if (data.WallElement == null)
+            {
+                // 樓板外廓剖切 (無牆體)
+                offsetFeet = 20.0 / 304.8;  // 前移 20mm
+                depthFeet = 100.0 / 304.8;  // 深度 100mm
+            }
+            else
+            {
+                // 牆面剖切
+                offsetFeet = (wallThickness / 2.0) + (20.0 / 304.8); // 牆體半寬 + 20mm
+                depthFeet = wallThickness + (50.0 / 304.8);          // 牆厚度 + 50mm
+            }
             double bottomOffsetFeet = 50.0 / 304.8;                     // 底部延伸 50mm
             double topOffsetFeet = 50.0 / 304.8;                        // 頂部延伸 50mm
             double leftRightExtensionFeet = 300.0 / 304.8;              // 左右延伸 300mm

@@ -20,10 +20,10 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public GeneratorSettings Settings { get; set; } = new GeneratorSettings();
         
         // UI 綁定列表與選取項
-        public List<View> ViewTemplates { get; private set; }
+        public List<ViewTemplateItem> ViewTemplates { get; private set; }
         
-        private View _selectedTemplate;
-        public View SelectedTemplate
+        private ViewTemplateItem _selectedTemplate;
+        public ViewTemplateItem SelectedTemplate
         {
             get => _selectedTemplate;
             set
@@ -121,12 +121,17 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             _uidoc = commandData.Application.ActiveUIDocument;
             _doc = _uidoc.Document;
 
-            // 1. 取得 Section View Templates 並插入 null 代表無樣板
+            // 1. 取得 Section View Templates 並包裝為 ViewTemplateItem
             var templates = ViewTemplateSelector.GetSectionViewTemplates(_doc);
-            templates.Insert(0, null);
-            ViewTemplates = templates;
-            _selectedTemplate = null;
-            Settings.SelectedViewTemplateId = ElementId.InvalidElementId;
+            var items = new List<ViewTemplateItem>();
+            items.Add(new ViewTemplateItem { View = null }); // 插入無樣板選項
+            foreach (var view in templates)
+            {
+                items.Add(new ViewTemplateItem { View = view });
+            }
+            ViewTemplates = items;
+            _selectedTemplate = items[0];
+            Settings.SelectedViewTemplateId = _selectedTemplate.Id;
 
             // 2. 初始化 Commands
             SelectSourceCommand = new RelayCommand(OnSelectSource);
