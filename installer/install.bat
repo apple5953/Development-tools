@@ -56,6 +56,11 @@ for %%V in (2024 2025 2026) do (
         if exist "%REVIT_ADDINS_BASE%\%%V\RoomTileSystem.addin" (
             del /F "%REVIT_ADDINS_BASE%\%%V\RoomTileSystem.addin"
         )
+        
+        rem Clean legacy system-wide addin if exists to prevent double loading
+        if exist "C:\ProgramData\Autodesk\Revit\Addins\%%V\DevelopmentTools.addin" (
+            del /F "C:\ProgramData\Autodesk\Revit\Addins\%%V\DevelopmentTools.addin" >nul 2>nul
+        )
     )
 )
 

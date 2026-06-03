@@ -67,6 +67,13 @@ begin
         DeleteFile(OldAddinPath);
       end;
       
+      // 清理 ProgramData 的舊版 DevelopmentTools.addin 殘留，避免重複載入
+      OldAddinPath := 'C:\ProgramData\Autodesk\Revit\Addins\' + RevitVersion + '\DevelopmentTools.addin';
+      if FileExists(OldAddinPath) then
+      begin
+        DeleteFile(OldAddinPath);
+      end;
+      
       // 清理 AppData Roaming 殘留
       OldAddinPath := ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersion + '\RoomTileSystem.addin';
       if FileExists(OldAddinPath) then
