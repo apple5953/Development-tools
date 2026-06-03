@@ -19,6 +19,12 @@ copy /Y "TileJointSharedParam.txt" "%TARGET_DIR%\App\" >nul
 copy /Y "version.json" "%TARGET_DIR%\App\" >nul
 copy /Y "platform_config.json" "%TARGET_DIR%\App\" >nul
 
+echo   Cleaning conflicting system DLLs from App folder...
+del /F /Q "%TARGET_DIR%\App\System.Buffers.dll" >nul 2>nul
+del /F /Q "%TARGET_DIR%\App\System.Memory.dll" >nul 2>nul
+del /F /Q "%TARGET_DIR%\App\System.Numerics.Vectors.dll" >nul 2>nul
+del /F /Q "%TARGET_DIR%\App\System.Runtime.CompilerServices.Unsafe.dll" >nul 2>nul
+
 if not exist "%TARGET_DIR%\Config\appsettings.json" (
     copy /Y "appsettings.json" "%TARGET_DIR%\Config\" >nul
 )
@@ -27,6 +33,13 @@ echo 3. Copying updater files...
 copy /Y "DevelopmentTools.Updater.exe" "%TARGET_DIR%\Updater\" >nul
 copy /Y "DevelopmentTools.Updater.exe.config" "%TARGET_DIR%\Updater\" >nul
 copy /Y "*.dll" "%TARGET_DIR%\Updater\" >nul
+
+echo   Cleaning conflicting system DLLs from Updater folder...
+del /F /Q "%TARGET_DIR%\Updater\System.Buffers.dll" >nul 2>nul
+del /F /Q "%TARGET_DIR%\Updater\System.Memory.dll" >nul 2>nul
+del /F /Q "%TARGET_DIR%\Updater\System.Numerics.Vectors.dll" >nul 2>nul
+del /F /Q "%TARGET_DIR%\Updater\System.Runtime.CompilerServices.Unsafe.dll" >nul 2>nul
+
 if exist "%TARGET_DIR%\Updater\DevelopmentTools.Addin.dll" (
     del /F /Q "%TARGET_DIR%\Updater\DevelopmentTools.Addin.dll" >nul 2>nul
 )
