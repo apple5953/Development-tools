@@ -186,7 +186,10 @@ namespace DevelopmentTools
                 _updater = new TileUpdater(application.ActiveAddInId);
                 UpdaterRegistry.RegisterUpdater(_updater);
 
-                ElementClassFilter gmFilter = new ElementClassFilter(typeof(FamilyInstance));
+                ElementClassFilter classFilter = new ElementClassFilter(typeof(FamilyInstance));
+                ElementCategoryFilter categoryFilter = new ElementCategoryFilter(BuiltInCategory.OST_GenericModel);
+                LogicalAndFilter gmFilter = new LogicalAndFilter(classFilter, categoryFilter);
+
                 UpdaterRegistry.AddTrigger(_updater.GetUpdaterId(), gmFilter, Element.GetChangeTypeAny());
 
                 return Result.Succeeded;
