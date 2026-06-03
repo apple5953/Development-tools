@@ -20,10 +20,14 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             // 將原點 Origin 設定在牆體高度的中心點，並朝向房間內部（RoomSideDirection）微調 WallOffset 距離
             double heightFeet = data.WallHeight;
             double lengthFeet = data.WallLength;
-            double offsetFeet = settings.WallOffset / 304.8;
-            double depthFeet = settings.ViewDepth / 304.8;
-            double bottomOffsetFeet = settings.BottomOffset / 304.8;
-            double leftRightExtensionFeet = 300.0 / 304.8; // 左右延伸 300mm
+            double wallThickness = data.WallThickness;
+
+            // 自適應物理幾何計算 (牆厚度與 20mm/50mm 物理量)
+            double offsetFeet = (wallThickness / 2.0) + (20.0 / 304.8); // 牆體半寬 + 20mm 前移
+            double depthFeet = wallThickness + (50.0 / 304.8);          // 牆厚度 + 50mm 剖切深度
+            double bottomOffsetFeet = 50.0 / 304.8;                     // 底部延伸 50mm
+            double topOffsetFeet = 50.0 / 304.8;                        // 頂部延伸 50mm
+            double leftRightExtensionFeet = 300.0 / 304.8;              // 左右延伸 300mm
 
             XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.MidPoint.Z + heightFeet / 2.0);
             t.Origin = midPointWithZ + data.RoomSideDirection * offsetFeet;
@@ -45,7 +49,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
             // 設定裁剪邊界
             bbox.Min = new XYZ(-(lengthFeet / 2.0) - leftRightExtensionFeet, -(heightFeet / 2.0) - bottomOffsetFeet, -depthFeet);
-            bbox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, (heightFeet / 2.0), 0.1 / 304.8);
+            bbox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, (heightFeet / 2.0) + topOffsetFeet, 0.1 / 304.8);
 
             // 4. 建立 Section View
             ViewSection section = ViewSection.CreateSection(doc, sectionTypeId, bbox);

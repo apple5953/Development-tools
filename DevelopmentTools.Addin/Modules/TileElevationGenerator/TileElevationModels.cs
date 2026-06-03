@@ -25,6 +25,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public XYZ WallDirection { get; set; }
         public XYZ WallNormal { get; set; }
         public XYZ RoomSideDirection { get; set; }
+        
+        public double WallThickness { get; set; } // Feet
+        public Wall WallElement { get; set; }
     }
 
     public class GeneratorSettings

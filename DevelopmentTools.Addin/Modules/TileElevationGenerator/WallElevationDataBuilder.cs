@@ -69,7 +69,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     WallHeight = height,
                     WallDirection = dir,
                     WallNormal = normal,
-                    RoomSideDirection = normal
+                    RoomSideDirection = normal,
+                    WallThickness = wall.Width,
+                    WallElement = wall
                 };
 
                 dataList.Add(data);

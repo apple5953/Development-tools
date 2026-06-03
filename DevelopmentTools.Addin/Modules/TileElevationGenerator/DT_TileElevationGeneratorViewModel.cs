@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
 
@@ -29,6 +30,16 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             {
                 _selectedTemplate = value;
                 Settings.SelectedViewTemplateId = value?.Id ?? ElementId.InvalidElementId;
+                OnPropertyChanged();
+            }
+        }
+
+        public string NamePrefix
+        {
+            get => Settings.NamePrefix;
+            set
+            {
+                Settings.NamePrefix = value;
                 OnPropertyChanged();
             }
         }
@@ -58,6 +69,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 {
                     Settings.SourceMode = SourceMode.Floor;
                     SelectedElementText = SelectedFloor != null ? $"Floor: {SelectedFloor.Name}" : "No Floor selected.";
+                    if (SelectedFloor != null)
+                    {
+                        string roomNum = DetectRoomNumber(SelectedFloor);
+                        NamePrefix = !string.IsNullOrEmpty(roomNum) ? $"TE_{roomNum}" : "TE";
+                    }
                 }
                 OnPropertyChanged();
             }
@@ -73,6 +89,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 {
                     Settings.SourceMode = SourceMode.Wall;
                     SelectedElementText = SelectedWalls.Count > 0 ? $"{SelectedWalls.Count} Walls selected." : "No Walls selected.";
+                    if (SelectedWalls.Count > 0)
+                    {
+                        string roomNum = DetectRoomNumber(SelectedWalls);
+                        NamePrefix = !string.IsNullOrEmpty(roomNum) ? $"TE_{roomNum}" : "TE";
+                    }
                 }
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsFloorMode));
@@ -100,13 +121,12 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             _uidoc = commandData.Application.ActiveUIDocument;
             _doc = _uidoc.Document;
 
-            // 1. 取得 Section View Templates
-            ViewTemplates = ViewTemplateSelector.GetSectionViewTemplates(_doc);
-            if (ViewTemplates.Count > 0)
-            {
-                _selectedTemplate = ViewTemplates[0];
-                Settings.SelectedViewTemplateId = _selectedTemplate.Id;
-            }
+            // 1. 取得 Section View Templates 並插入 null 代表無樣板
+            var templates = ViewTemplateSelector.GetSectionViewTemplates(_doc);
+            templates.Insert(0, null);
+            ViewTemplates = templates;
+            _selectedTemplate = null;
+            Settings.SelectedViewTemplateId = ElementId.InvalidElementId;
 
             // 2. 初始化 Commands
             SelectSourceCommand = new RelayCommand(OnSelectSource);
@@ -133,6 +153,10 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             SelectedFloor = floor;
                             SelectedElementText = $"Floor: {floor.Name} (ID: {floor.Id})";
                             StatusText = "Floor selected successfully.";
+                            
+                            // 自動偵測房號
+                            string roomNum = DetectRoomNumber(floor);
+                            NamePrefix = !string.IsNullOrEmpty(roomNum) ? $"TE_{roomNum}" : "TE";
                         }
                     }
                 }
@@ -153,6 +177,10 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         }
                         SelectedElementText = $"{SelectedWalls.Count} Walls selected.";
                         StatusText = "Walls selected successfully.";
+                        
+                        // 自動偵測房號
+                        string roomNum = DetectRoomNumber(SelectedWalls);
+                        NamePrefix = !string.IsNullOrEmpty(roomNum) ? $"TE_{roomNum}" : "TE";
                     }
                 }
             }
@@ -212,6 +240,103 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                              "   - Name Prefix: 展開圖剖面命名首碼 (如輸入房間編號 TE_101，生成 TE_101_A 等)。\n\n" +
                              "設定完成後，點擊下方「一鍵產生磁磚展開圖」即可自動生成！";
             td.Show();
+        }
+
+        // --- 房號自動偵測輔助函式 ---
+        private string DetectRoomNumber(Floor floor)
+        {
+            if (floor == null) return null;
+            try
+            {
+                XYZ floorCenter = GetFloorCenter(floor);
+                XYZ checkPoint = new XYZ(floorCenter.X, floorCenter.Y, floorCenter.Z + 2.0); // 向上拉高 2 呎
+                return GetRoomNumberAtPoint(checkPoint);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private string DetectRoomNumber(List<Wall> walls)
+        {
+            if (walls == null || walls.Count == 0) return null;
+            try
+            {
+                var wall = walls[0];
+                var wallLoc = wall.Location as LocationCurve;
+                if (wallLoc == null || wallLoc.Curve == null) return null;
+                XYZ mid = wallLoc.Curve.Evaluate(0.5, true);
+                
+                XYZ averageCenter = GetWallsAverageCenter(walls);
+                XYZ toCenter = new XYZ(averageCenter.X - mid.X, averageCenter.Y - mid.Y, 0).Normalize();
+                
+                XYZ checkPoint = mid + toCenter * 2.0;
+                checkPoint = new XYZ(checkPoint.X, checkPoint.Y, mid.Z + 2.0);
+                return GetRoomNumberAtPoint(checkPoint);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private string GetRoomNumberAtPoint(XYZ pt)
+        {
+            try
+            {
+                Room room = _doc.GetRoomAtPoint(pt);
+                if (room != null) return room.Number;
+
+                var roomCollector = new FilteredElementCollector(_doc)
+                    .OfClass(typeof(SpatialElement))
+                    .OfCategory(BuiltInCategory.OST_Rooms);
+
+                foreach (SpatialElement elem in roomCollector)
+                {
+                    if (elem is Room r && r.Area > 0 && r.IsPointInRoom(pt))
+                    {
+                        return r.Number;
+                    }
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+            return null;
+        }
+
+        private static XYZ GetFloorCenter(Floor floor)
+        {
+            var bbox = floor.get_BoundingBox(null);
+            if (bbox != null)
+            {
+                return (bbox.Min + bbox.Max) / 2.0;
+            }
+            var loc = floor.Location as LocationPoint;
+            if (loc != null) return loc.Point;
+            return XYZ.Zero;
+        }
+
+        private static XYZ GetWallsAverageCenter(List<Wall> walls)
+        {
+            double sumX = 0, sumY = 0, sumZ = 0;
+            int count = 0;
+            foreach (var wall in walls)
+            {
+                var wallLoc = wall.Location as LocationCurve;
+                if (wallLoc != null && wallLoc.Curve != null)
+                {
+                    XYZ mid = (wallLoc.Curve.GetEndPoint(0) + wallLoc.Curve.GetEndPoint(1)) / 2.0;
+                    sumX += mid.X;
+                    sumY += mid.Y;
+                    sumZ += mid.Z;
+                    count++;
+                }
+            }
+            if (count == 0) return XYZ.Zero;
+            return new XYZ(sumX / count, sumY / count, sumZ / count);
         }
 
         // --- INotifyPropertyChanged 實作 ---
