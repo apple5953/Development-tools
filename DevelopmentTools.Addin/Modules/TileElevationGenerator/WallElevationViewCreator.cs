@@ -50,7 +50,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             // X 軸平行於牆面，Y 軸為 Z 正向 (朝上)
             t.BasisX = data.WallDirection;
             t.BasisY = XYZ.BasisZ;
-            t.BasisZ = data.RoomSideDirection; // 觀看方向為 -BasisZ (朝向牆面)
+            t.BasisZ = -data.RoomSideDirection; // 觀看方向為 BasisZ (向外朝向牆面，即樓板向外看)
 
             // 確保 BasisX、BasisY、BasisZ 為右手坐標系 (X x Y = Z)
             if (!t.BasisX.CrossProduct(t.BasisY).IsAlmostEqualTo(t.BasisZ))
