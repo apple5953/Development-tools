@@ -16,6 +16,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         private readonly ExternalCommandData _commandData;
         private readonly Document _doc;
         private readonly UIDocument _uidoc;
+        
+        private readonly GeneratorExternalEventHandler _externalEventHandler;
+        private readonly ExternalEvent _externalEvent;
 
         public GeneratorSettings Settings { get; set; } = new GeneratorSettings();
         
@@ -148,6 +151,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             _uidoc = commandData.Application.ActiveUIDocument;
             _doc = _uidoc.Document;
 
+            _externalEventHandler = new GeneratorExternalEventHandler(this);
+            _externalEvent = ExternalEvent.Create(_externalEventHandler);
+
             // 1. 取得 Section View Templates 並包裝為 ViewTemplateItem
             var templates = ViewTemplateSelector.GetSectionViewTemplates(_doc);
             var items = new List<ViewTemplateItem>();
@@ -232,36 +238,118 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             }
             finally
             {
-                // 重現設定視窗
                 RequestShow?.Invoke();
             }
         }
 
         private void OnGenerate()
         {
-            try
+            _externalEventHandler.SetAction(() =>
             {
-                StatusText = "開始一鍵自動生成流程...";
+                try
+                {
+                    StatusText = "開始一鍵自動生成流程...";
 
-                // 1. 分析幾何
-                OnStep1Analyze();
-                if (!_isStep1Ok) return;
+                    // 1. 分析幾何
+                    _tempWallDataList.Clear();
+                    _tempCreatedViews.Clear();
+                    _isStep1Ok = false;
+                    _isStep2Ok = false;
+                    _isStep3Ok = false;
+                    _isStep4Ok = false;
 
-                // 2. 建立視圖
-                OnStep2Create();
-                if (!_isStep2Ok) return;
+                    if (IsFloorMode)
+                    {
+                        if (SelectedFloor == null)
+                        {
+                            MessageBox.Show("請先選擇一個地板元件 (Floor)！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+                        _tempWallDataList = WallElevationDataBuilder.BuildDataFromFloorBoundary(_doc, SelectedFloor, Settings);
+                    }
+                    else
+                    {
+                        if (SelectedWalls.Count == 0)
+                        {
+                            MessageBox.Show("請先選取至少一面牆元件 (Walls)！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+                        XYZ referenceCenter = GetWallsAverageCenter(SelectedWalls);
+                        _tempWallDataList = WallElevationDataBuilder.BuildData(_doc, SelectedWalls, Settings, referenceCenter);
+                    }
 
-                // 3. 套用樣板
-                OnStep3ApplyTemplate();
-                if (!_isStep3Ok) return;
+                    if (_tempWallDataList.Count == 0)
+                      {
+                        StatusText = "[步驟 1 失敗] 未分析出任何有效的幾何邊界！";
+                        RefreshStepButtons();
+                        return;
+                    }
+                    _isStep1Ok = true;
 
-                // 4. 重新命名
-                OnStep4Rename();
-            }
-            catch (Exception ex)
-            {
-                StatusText = $"一鍵生成錯誤: {ex.Message}";
-            }
+                    // 2. 建立視圖
+                    using (var tx = new Transaction(_doc, "DT: Create Section Views"))
+                    {
+                        tx.Start();
+                        foreach (var wallData in _tempWallDataList)
+                        {
+                            string tempName = $"DT_TempElevation_{Guid.NewGuid().ToString().Substring(0, 8)}";
+                            var view = WallElevationViewCreator.CreateElevationView(_doc, wallData, Settings, tempName);
+                            if (view != null)
+                            {
+                                _tempCreatedViews.Add(view);
+                            }
+                        }
+                        tx.Commit();
+                        _isStep2Ok = true;
+                    }
+
+                    // 3. 套用樣板
+                    ElementId templateId = SelectedTemplate?.Id ?? ElementId.InvalidElementId;
+                    if (templateId != ElementId.InvalidElementId)
+                    {
+                        using (var tx = new Transaction(_doc, "DT: Apply View Templates"))
+                        {
+                            tx.Start();
+                            foreach (var view in _tempCreatedViews)
+                            {
+                                view.ViewTemplateId = templateId;
+                            }
+                            tx.Commit();
+                            _isStep3Ok = true;
+                        }
+                    }
+                    else
+                    {
+                        _isStep3Ok = true;
+                    }
+
+                    // 4. 重新命名
+                    using (var tx = new Transaction(_doc, "DT: Rename Section Views"))
+                    {
+                        tx.Start();
+                        int count = 0;
+                        for (int i = 0; i < _tempCreatedViews.Count; i++)
+                        {
+                            var view = _tempCreatedViews[i];
+                            string finalName = ElevationNamingService.GenerateViewName(_doc, NamePrefix, i);
+                            view.Name = finalName;
+                            count++;
+                        }
+                        tx.Commit();
+                        _isStep4Ok = true;
+                        StatusText = $"[一鍵產生成功] 成功生成並命名了 {count} 個剖面視圖！";
+                        RefreshStepButtons();
+                        MessageBox.Show($"展開圖建置成功！\n共生成並命名了 {count} 個剖面視圖。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    StatusText = $"一鍵生成錯誤: {ex.Message}";
+                    RefreshStepButtons();
+                }
+            });
+
+            _externalEvent.Raise();
         }
 
         // --- 逐步製作分解方法 ---
@@ -298,7 +386,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                 if (_tempWallDataList.Count == 0)
                 {
-                    StatusText = "[步驟 1 失敗] 未分析出任何有效的幾何邊界！";
+                    StatusText = "[步驟 1 失敗] 未分析出 any 有效的幾何邊界！";
                     RefreshStepButtons();
                     return;
                 }
@@ -318,114 +406,128 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         {
             if (!_isStep1Ok || _tempWallDataList.Count == 0) return;
 
-            using (var tx = new Transaction(_doc, "DT: Create Section Views"))
+            _externalEventHandler.SetAction(() =>
             {
-                try
+                using (var tx = new Transaction(_doc, "DT: Create Section Views"))
                 {
-                    tx.Start();
-                    _tempCreatedViews.Clear();
-
-                    int index = 0;
-                    foreach (var wallData in _tempWallDataList)
+                    try
                     {
-                        // 步驟二暫時使用臨時名稱 (防止命名衝突，命名交給步驟四)
-                        string tempName = $"DT_TempElevation_{Guid.NewGuid().ToString().Substring(0, 8)}";
-                        var view = WallElevationViewCreator.CreateElevationView(_doc, wallData, Settings, tempName);
-                        if (view != null)
-                        {
-                            _tempCreatedViews.Add(view);
-                        }
-                        index++;
-                    }
+                        tx.Start();
+                        _tempCreatedViews.Clear();
 
-                    tx.Commit();
-                    _isStep2Ok = true;
-                    StatusText = $"[步驟 2 成功] 成功建立 {_tempCreatedViews.Count} 個剖面視圖。請執行 [步驟 3] 或 [步驟 4]。";
-                    RefreshStepButtons();
+                        int index = 0;
+                        foreach (var wallData in _tempWallDataList)
+                        {
+                            string tempName = $"DT_TempElevation_{Guid.NewGuid().ToString().Substring(0, 8)}";
+                            var view = WallElevationViewCreator.CreateElevationView(_doc, wallData, Settings, tempName);
+                            if (view != null)
+                            {
+                                _tempCreatedViews.Add(view);
+                            }
+                            index++;
+                        }
+
+                        tx.Commit();
+                        _isStep2Ok = true;
+                        StatusText = $"[步驟 2 成功] 成功建立 {_tempCreatedViews.Count} 個剖面視圖。請執行 [步驟 3] 或 [步驟 4]。";
+                        RefreshStepButtons();
+                    }
+                    catch (Exception ex)
+                    {
+                        tx.RollBack();
+                        StatusText = $"[步驟 2 錯誤] 建立視圖失敗: {ex.Message}";
+                        RefreshStepButtons();
+                    }
                 }
-                catch (Exception ex)
-                {
-                    tx.RollBack();
-                    StatusText = $"[步驟 2 錯誤] 建立視圖失敗: {ex.Message}";
-                    RefreshStepButtons();
-                }
-            }
+            });
+
+            _externalEvent.Raise();
         }
 
         private void OnStep3ApplyTemplate()
         {
             if (!_isStep2Ok || _tempCreatedViews.Count == 0) return;
 
-            using (var tx = new Transaction(_doc, "DT: Apply View Templates"))
+            _externalEventHandler.SetAction(() =>
             {
-                try
+                using (var tx = new Transaction(_doc, "DT: Apply View Templates"))
                 {
-                    tx.Start();
-
-                    ElementId templateId = SelectedTemplate?.Id ?? ElementId.InvalidElementId;
-                    if (templateId == ElementId.InvalidElementId)
+                    try
                     {
-                        StatusText = "[步驟 3 提示] 未選取任何視圖樣板，已略過套用步驟。";
+                        tx.Start();
+
+                        ElementId templateId = SelectedTemplate?.Id ?? ElementId.InvalidElementId;
+                        if (templateId == ElementId.InvalidElementId)
+                        {
+                            StatusText = "[步驟 3 提示] 未選取任何視圖樣板，已略過套用步驟。";
+                            tx.Commit();
+                            _isStep3Ok = true;
+                            RefreshStepButtons();
+                            return;
+                        }
+
+                        int count = 0;
+                        foreach (var view in _tempCreatedViews)
+                        {
+                            view.ViewTemplateId = templateId;
+                            count++;
+                        }
+
                         tx.Commit();
                         _isStep3Ok = true;
+                        StatusText = $"[步驟 3 成功] 已套用樣板「{SelectedTemplate.Name}」至 {count} 個剖面視圖。";
                         RefreshStepButtons();
-                        return;
                     }
-
-                    int count = 0;
-                    foreach (var view in _tempCreatedViews)
+                    catch (Exception ex)
                     {
-                        view.ViewTemplateId = templateId;
-                        count++;
+                        tx.RollBack();
+                        StatusText = $"[步驟 3 錯誤] 套用樣板失敗: {ex.Message}";
+                        RefreshStepButtons();
                     }
+                }
+            });
 
-                    tx.Commit();
-                    _isStep3Ok = true;
-                    StatusText = $"[步驟 3 成功] 已套用樣板「{SelectedTemplate.Name}」至 {count} 個剖面視圖。";
-                    RefreshStepButtons();
-                }
-                catch (Exception ex)
-                {
-                    tx.RollBack();
-                    StatusText = $"[步驟 3 錯誤] 套用樣板失敗: {ex.Message}";
-                    RefreshStepButtons();
-                }
-            }
+            _externalEvent.Raise();
         }
 
         private void OnStep4Rename()
         {
             if (!_isStep2Ok || _tempCreatedViews.Count == 0) return;
 
-            using (var tx = new Transaction(_doc, "DT: Rename Section Views"))
+            _externalEventHandler.SetAction(() =>
             {
-                try
+                using (var tx = new Transaction(_doc, "DT: Rename Section Views"))
                 {
-                    tx.Start();
-
-                    int count = 0;
-                    for (int i = 0; i < _tempCreatedViews.Count; i++)
+                    try
                     {
-                        var view = _tempCreatedViews[i];
-                        string finalName = ElevationNamingService.GenerateViewName(_doc, NamePrefix, i);
-                        view.Name = finalName;
-                        count++;
+                        tx.Start();
+
+                        int count = 0;
+                        for (int i = 0; i < _tempCreatedViews.Count; i++)
+                        {
+                            var view = _tempCreatedViews[i];
+                            string finalName = ElevationNamingService.GenerateViewName(_doc, NamePrefix, i);
+                            view.Name = finalName;
+                            count++;
+                        }
+
+                        tx.Commit();
+                        _isStep4Ok = true;
+                        StatusText = $"[步驟 4 成功] 成功命名 {count} 個剖面視圖！展開圖建置工作已完全結束。";
+                        RefreshStepButtons();
+
+                        MessageBox.Show($"展開圖建置成功！\n共生成並命名了 {count} 個剖面視圖。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
-
-                    tx.Commit();
-                    _isStep4Ok = true;
-                    StatusText = $"[步驟 4 成功] 成功命名 {count} 個剖面視圖！展開圖建置工作已完全結束。";
-                    RefreshStepButtons();
-
-                    MessageBox.Show($"展開圖建置成功！\n共生成並命名了 {count} 個剖面視圖。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                    catch (Exception ex)
+                    {
+                        tx.RollBack();
+                        StatusText = $"[步驟 4 錯誤] 視圖命名失敗: {ex.Message}";
+                        RefreshStepButtons();
+                    }
                 }
-                catch (Exception ex)
-                {
-                    tx.RollBack();
-                    StatusText = $"[步驟 4 錯誤] 視圖命名失敗: {ex.Message}";
-                    RefreshStepButtons();
-                }
-            }
+            });
+
+            _externalEvent.Raise();
         }
 
         private void OnCloseWindow()
@@ -557,19 +659,50 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-
-        // --- Revit 元素篩選器 ---
-        private class FloorSelectionFilter : ISelectionFilter
-        {
-            public bool AllowElement(Element elem) => elem is Floor;
-            public bool AllowReference(Reference reference, XYZ position) => false;
-        }
-
         private class WallSelectionFilter : ISelectionFilter
         {
             public bool AllowElement(Element elem) => elem is Wall;
             public bool AllowReference(Reference reference, XYZ position) => false;
         }
+        private class FloorSelectionFilter : ISelectionFilter
+        {
+            public bool AllowElement(Element elem) => elem is Floor;
+            public bool AllowReference(Reference reference, XYZ position) => false;
+        }
+    }
+
+    // --- Revit API Context 執行緒事件代理 ---
+    public class GeneratorExternalEventHandler : IExternalEventHandler
+    {
+        private readonly DT_TileElevationGeneratorViewModel _viewModel;
+        private Action _action;
+
+        public GeneratorExternalEventHandler(DT_TileElevationGeneratorViewModel viewModel)
+        {
+            _viewModel = viewModel;
+        }
+
+        public void SetAction(Action action)
+        {
+            _action = action;
+        }
+
+        public void Execute(UIApplication app)
+        {
+            if (_action != null)
+            {
+                try
+                {
+                    _action.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    _viewModel.StatusText = $"執行失敗: {ex.Message}";
+                }
+            }
+        }
+
+        public string GetName() => "TileElevationGeneratorExternalEvent";
     }
 
     // --- RelayCommand 簡化版 ---
