@@ -374,9 +374,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         sheet.SheetNumber = sheetNum;
                         sheet.Name = $"磁磚展開圖_{NamePrefix}";
 
-                        double xStart = 0.5; // feet
-                        double yPos = 1.0;   // feet
-                        double xSpacing = 1.5; // feet
+                        double xCurrent = 0.5; // feet (圖紙左邊起始邊界)
+                        double yPos = 1.0;     // feet (圖紙高度中點)
 
                         int placedCount = 0;
                         for (int i = 0; i < _tempCreatedViews.Count; i++)
@@ -384,8 +383,20 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             var view = _tempCreatedViews[i];
                             if (Viewport.CanAddViewToSheet(_doc, sheet.Id, view.Id))
                             {
-                                XYZ point = new XYZ(xStart + i * xSpacing, yPos, 0);
+                                // 依據 view 裁剪區的 model 寬度與 view 比例，動態計算圖紙上的寬度 (英呎)
+                                double modelWidthFeet = view.CropBox.Max.X - view.CropBox.Min.X;
+                                double scale = (double)view.Scale;
+                                if (scale <= 0) scale = 50.0;
+                                double viewportWidthOnSheet = modelWidthFeet / scale;
+
+                                // 目前視圖的置中點 X 座標為：當前左邊界 + 視圖在圖紙寬度的一半
+                                double xCenter = xCurrent + (viewportWidthOnSheet / 2.0);
+
+                                XYZ point = new XYZ(xCenter, yPos, 0);
                                 Viewport.Create(_doc, sheet.Id, view.Id, point);
+
+                                // 將左邊界移至此視圖の右邊界，達到左右緊鄰對齊效果
+                                xCurrent += viewportWidthOnSheet;
                                 placedCount++;
                             }
                         }
@@ -621,9 +632,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         sheet.SheetNumber = sheetNum;
                         sheet.Name = $"磁磚展開圖_{NamePrefix}";
 
-                        double xStart = 0.5; // feet
-                        double yPos = 1.0;   // feet
-                        double xSpacing = 1.5; // feet
+                        double xCurrent = 0.5; // feet (圖紙左邊起始邊界)
+                        double yPos = 1.0;     // feet (圖紙高度中點)
 
                         int placedCount = 0;
                         for (int i = 0; i < _tempCreatedViews.Count; i++)
@@ -631,8 +641,20 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             var view = _tempCreatedViews[i];
                             if (Viewport.CanAddViewToSheet(_doc, sheet.Id, view.Id))
                             {
-                                XYZ point = new XYZ(xStart + i * xSpacing, yPos, 0);
+                                // 依據 view 裁剪區的 model 寬度與 view 比例，動態計算圖紙上的寬度 (英呎)
+                                double modelWidthFeet = view.CropBox.Max.X - view.CropBox.Min.X;
+                                double scale = (double)view.Scale;
+                                if (scale <= 0) scale = 50.0;
+                                double viewportWidthOnSheet = modelWidthFeet / scale;
+
+                                // 目前視圖的置中點 X 座標為：當前左邊界 + 視圖在圖紙寬度的一半
+                                double xCenter = xCurrent + (viewportWidthOnSheet / 2.0);
+
+                                XYZ point = new XYZ(xCenter, yPos, 0);
                                 Viewport.Create(_doc, sheet.Id, view.Id, point);
+
+                                // 將左邊界移至此視圖的右邊界，達到左右緊鄰對齊效果
+                                xCurrent += viewportWidthOnSheet;
                                 placedCount++;
                             }
                         }
