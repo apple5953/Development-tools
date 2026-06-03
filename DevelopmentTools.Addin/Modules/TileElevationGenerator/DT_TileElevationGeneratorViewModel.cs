@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -116,16 +117,19 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         private bool _isStep2Ok = false;
         private bool _isStep3Ok = false;
         private bool _isStep4Ok = false;
+        private bool _isStep5Ok = false;
 
         public bool IsStep2Enabled => _isStep1Ok;
         public bool IsStep3Enabled => _isStep2Ok;
         public bool IsStep4Enabled => _isStep2Ok;
+        public bool IsStep5Enabled => _isStep2Ok && _tempCreatedViews.Count > 0;
 
         private void RefreshStepButtons()
         {
             OnPropertyChanged(nameof(IsStep2Enabled));
             OnPropertyChanged(nameof(IsStep3Enabled));
             OnPropertyChanged(nameof(IsStep4Enabled));
+            OnPropertyChanged(nameof(IsStep5Enabled));
         }
 
         public bool IsConfirmed { get; private set; } = false;
@@ -143,6 +147,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public ICommand Step2CreateCommand { get; }
         public ICommand Step3ApplyTemplateCommand { get; }
         public ICommand Step4RenameCommand { get; }
+        public ICommand Step5CreateSheetCommand { get; }
         public ICommand CloseWindowCommand { get; }
 
         public DT_TileElevationGeneratorViewModel(ExternalCommandData commandData)
@@ -175,6 +180,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             Step2CreateCommand = new RelayCommand(OnStep2Create);
             Step3ApplyTemplateCommand = new RelayCommand(OnStep3ApplyTemplate);
             Step4RenameCommand = new RelayCommand(OnStep4Rename);
+            Step5CreateSheetCommand = new RelayCommand(OnStep5CreateSheet);
             CloseWindowCommand = new RelayCommand(OnCloseWindow);
         }
 
@@ -337,9 +343,58 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         }
                         tx.Commit();
                         _isStep4Ok = true;
-                        StatusText = $"[一鍵產生成功] 成功生成並命名了 {count} 個剖面視圖！";
+                    }
+
+                    // 5. 建立圖紙並置入視圖
+                    using (var tx = new Transaction(_doc, "DT: Create Sheet and Place Viewports"))
+                    {
+                        tx.Start();
+
+                        FilteredElementCollector collector = new FilteredElementCollector(_doc);
+                        collector.OfCategory(BuiltInCategory.OST_TitleBlocks);
+                        collector.OfClass(typeof(FamilySymbol));
+                        FamilySymbol titleBlockSymbol = collector.FirstElement() as FamilySymbol;
+
+                        ViewSheet sheet = null;
+                        if (titleBlockSymbol != null)
+                        {
+                            sheet = ViewSheet.Create(_doc, titleBlockSymbol.Id);
+                        }
+                        else
+                        {
+                            sheet = ViewSheet.Create(_doc, ElementId.InvalidElementId);
+                        }
+
+                        if (sheet == null)
+                        {
+                            throw new InvalidOperationException("無法建立圖紙。");
+                        }
+
+                        string sheetNum = GenerateUniqueSheetNumber(_doc);
+                        sheet.SheetNumber = sheetNum;
+                        sheet.Name = $"磁磚展開圖_{NamePrefix}";
+
+                        double xStart = 0.5; // feet
+                        double yPos = 1.0;   // feet
+                        double xSpacing = 1.5; // feet
+
+                        int placedCount = 0;
+                        for (int i = 0; i < _tempCreatedViews.Count; i++)
+                        {
+                            var view = _tempCreatedViews[i];
+                            if (Viewport.CanAddViewToSheet(_doc, sheet.Id, view.Id))
+                            {
+                                XYZ point = new XYZ(xStart + i * xSpacing, yPos, 0);
+                                Viewport.Create(_doc, sheet.Id, view.Id, point);
+                                placedCount++;
+                            }
+                        }
+
+                        tx.Commit();
+                        _isStep5Ok = true;
+                        StatusText = $"[一鍵產生成功] 成功建立圖紙 {sheetNum} 並放置了 {placedCount} 個展開圖剖面！";
                         RefreshStepButtons();
-                        MessageBox.Show($"展開圖建置成功！\n共生成並命名了 {count} 個剖面視圖。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                        MessageBox.Show($"展開圖與圖紙建置成功！\n圖紙編號：{sheetNum}\n共放置了 {placedCount} 個視圖。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                 }
                 catch (Exception ex)
@@ -528,6 +583,99 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             });
 
             _externalEvent.Raise();
+        }
+
+        private void OnStep5CreateSheet()
+        {
+            if (!_isStep2Ok || _tempCreatedViews.Count == 0) return;
+
+            _externalEventHandler.SetAction(() =>
+            {
+                using (var tx = new Transaction(_doc, "DT: Create Sheet and Place Viewports"))
+                {
+                    try
+                    {
+                        tx.Start();
+
+                        FilteredElementCollector collector = new FilteredElementCollector(_doc);
+                        collector.OfCategory(BuiltInCategory.OST_TitleBlocks);
+                        collector.OfClass(typeof(FamilySymbol));
+                        FamilySymbol titleBlockSymbol = collector.FirstElement() as FamilySymbol;
+
+                        ViewSheet sheet = null;
+                        if (titleBlockSymbol != null)
+                        {
+                            sheet = ViewSheet.Create(_doc, titleBlockSymbol.Id);
+                        }
+                        else
+                        {
+                            sheet = ViewSheet.Create(_doc, ElementId.InvalidElementId);
+                        }
+
+                        if (sheet == null)
+                        {
+                            throw new InvalidOperationException("無法建立圖紙。");
+                        }
+
+                        string sheetNum = GenerateUniqueSheetNumber(_doc);
+                        sheet.SheetNumber = sheetNum;
+                        sheet.Name = $"磁磚展開圖_{NamePrefix}";
+
+                        double xStart = 0.5; // feet
+                        double yPos = 1.0;   // feet
+                        double xSpacing = 1.5; // feet
+
+                        int placedCount = 0;
+                        for (int i = 0; i < _tempCreatedViews.Count; i++)
+                        {
+                            var view = _tempCreatedViews[i];
+                            if (Viewport.CanAddViewToSheet(_doc, sheet.Id, view.Id))
+                            {
+                                XYZ point = new XYZ(xStart + i * xSpacing, yPos, 0);
+                                Viewport.Create(_doc, sheet.Id, view.Id, point);
+                                placedCount++;
+                            }
+                        }
+
+                        tx.Commit();
+                        _isStep5Ok = true;
+                        StatusText = $"[步驟 5 成功] 已建立圖紙 {sheetNum}，並放置了 {placedCount} 個剖面視圖。";
+                        RefreshStepButtons();
+                        MessageBox.Show($"圖紙建置成功！\n圖紙編號：{sheetNum}\n共放置了 {placedCount} 個視圖。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        tx.RollBack();
+                        StatusText = $"[步驟 5 錯誤] 建立圖紙失敗: {ex.Message}";
+                        RefreshStepButtons();
+                    }
+                }
+            });
+
+            _externalEvent.Raise();
+        }
+
+        private string GenerateUniqueSheetNumber(Document doc)
+        {
+            var sheetNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var sheets = new FilteredElementCollector(doc)
+                .OfClass(typeof(ViewSheet))
+                .Cast<ViewSheet>();
+            foreach (var s in sheets)
+            {
+                sheetNumbers.Add(s.SheetNumber);
+            }
+
+            int index = 101;
+            while (true)
+            {
+                string num = $"T-{index}";
+                if (!sheetNumbers.Contains(num))
+                {
+                    return num;
+                }
+                index++;
+            }
         }
 
         private void OnCloseWindow()

@@ -1,7 +1,7 @@
 <Window x:Class="DevelopmentTools.UI.DT_TileElevationGeneratorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="磁磚展開圖生成器 v3" Height="530" Width="380"
+        Title="磁磚展開圖生成器 v3" Height="570" Width="380"
         Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Segoe UI"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize">
@@ -188,6 +188,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
                         <Button Grid.Column="0" Grid.Row="0" Content="1. 分析幾何" 
@@ -207,6 +208,11 @@
                         <Button Grid.Column="1" Grid.Row="1" Content="4. 重新命名" 
                                 Command="{Binding Step4RenameCommand}"
                                 IsEnabled="{Binding IsStep4Enabled}"
+                                Style="{StaticResource PrimaryBtn}" Margin="2"/>
+
+                        <Button Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2" Content="5. 建立圖紙並置入視圖" 
+                                Command="{Binding Step5CreateSheetCommand}"
+                                IsEnabled="{Binding IsStep5Enabled}"
                                 Style="{StaticResource PrimaryBtn}" Margin="2"/>
                     </Grid>
                 </StackPanel>
