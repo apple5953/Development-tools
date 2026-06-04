@@ -101,6 +101,7 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
     public class SheetViewPlacerViewModel : INotifyPropertyChanged
     {
         private readonly Document _doc;
+        public Document Doc => _doc;
         private Window _window;
 
         public ObservableCollection<TreeItemViewModel> TreeItems { get; } = new ObservableCollection<TreeItemViewModel>();

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -253,6 +254,42 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                 else
                 {
                     StatusText.Text = "狀態：重新命名失敗。";
+                }
+            }
+        }
+
+        private void TreeViewItem_ToolTipOpening(object sender, ToolTipEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.ToolTip is ToolTip toolTip && fe.DataContext is TreeItemViewModel item)
+            {
+                if (item.Type == "Sheet" || item.Type == "View" || item.Type == "Schedule")
+                {
+                    var stackPanel = toolTip.Content as StackPanel;
+                    if (stackPanel == null) return;
+
+                    var previewImg = stackPanel.Children.OfType<Image>().FirstOrDefault();
+                    var loadingText = stackPanel.Children.OfType<TextBlock>().LastOrDefault();
+
+                    if (previewImg != null && loadingText != null)
+                    {
+                        var bitmap = DevelopmentTools.Core.ViewPreviewCacheManager.GetPreviewImage(_viewModel.Doc, item.Id);
+                        if (bitmap != null)
+                        {
+                            previewImg.Source = bitmap;
+                            previewImg.Visibility = Visibility.Visible;
+                            loadingText.Visibility = Visibility.Collapsed;
+                        }
+                        else
+                        {
+                            previewImg.Visibility = Visibility.Collapsed;
+                            loadingText.Text = "無法產生此視圖的預覽圖";
+                            loadingText.Visibility = Visibility.Visible;
+                        }
+                    }
+                }
+                else
+                {
+                    e.Handled = true;
                 }
             }
         }

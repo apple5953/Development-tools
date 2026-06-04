@@ -151,6 +151,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickViewCreator
     public class QuickViewCreatorViewModel : INotifyPropertyChanged
     {
         private readonly Document _doc;
+        public Document Doc => _doc;
         private readonly Window _window;
         private readonly List<ViewPlan> _allViews;
         private readonly HashSet<ElementId> _selectedSourceViewIds = new HashSet<ElementId>();
