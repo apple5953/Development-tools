@@ -22,6 +22,12 @@ namespace DevelopmentTools.Core
         public void Execute(UpdaterData data)
         {
             Document doc = data.GetDocument();
+            bool isSyncing = DevelopmentTools.App.IsSyncingOrLoading(doc);
+            DevelopmentTools.App.Log($"[TileUpdater.Execute] doc: '{doc?.PathName}', IsSyncingOrLoading: {isSyncing}");
+
+            // 若目前正處於開檔、與中央同步或載入最新變更的狀態，則直接返回，不進行背景重新計算
+            // 避免因 updater 修改物件而觸發 Revit 向雲端伺服器（BIM 360/ACC）同步發送元素借用（Borrow）要求，導致嚴重的網絡卡頓
+            if (isSyncing) return;
             
             // 取得活動的 3D 視圖，若無 3D 視圖則不更新 (ReferenceIntersector 必須)
             View3D view3D = doc.ActiveView as View3D;

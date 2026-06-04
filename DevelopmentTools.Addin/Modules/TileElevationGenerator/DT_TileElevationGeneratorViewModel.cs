@@ -111,6 +111,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         // 暫存中間產物
         private List<WallElevationData> _tempWallDataList = new List<WallElevationData>();
         private List<ViewSection> _tempCreatedViews = new List<ViewSection>();
+        private System.Collections.Generic.Dictionary<ElementId, WallElevationData> _viewToDataMap = new System.Collections.Generic.Dictionary<ElementId, WallElevationData>();
 
         // 步驟是否完成的狀態 flags
         private bool _isStep1Ok = false;
@@ -296,6 +297,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     using (var tx = new Transaction(_doc, "DT: Create Section Views"))
                     {
                         tx.Start();
+                        _viewToDataMap.Clear();
                         foreach (var wallData in _tempWallDataList)
                         {
                             string tempName = $"DT_TempElevation_{Guid.NewGuid().ToString().Substring(0, 8)}";
@@ -303,6 +305,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             if (view != null)
                             {
                                 _tempCreatedViews.Add(view);
+                                _viewToDataMap[view.Id] = wallData;
                             }
                         }
                         tx.Commit();
@@ -375,28 +378,48 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         sheet.Name = $"磁磚展開圖_{NamePrefix}";
 
                         double xCurrent = 0.5; // feet (圖紙左邊起始邊界)
-                        double yPos = 1.0;     // feet (圖紙高度中點)
+                        double yPos = 1.0;     // feet (圖紙基準高度，樓板完成面對齊線)
 
                         int placedCount = 0;
                         for (int i = 0; i < _tempCreatedViews.Count; i++)
                         {
                             var view = _tempCreatedViews[i];
+                            WallElevationData data = null;
+                            _viewToDataMap.TryGetValue(view.Id, out data);
+
                             if (Viewport.CanAddViewToSheet(_doc, sheet.Id, view.Id))
                             {
-                                // 依據 view 裁剪區的 model 寬度與 view 比例，動態計算圖紙上的寬度 (英呎)
-                                double modelWidthFeet = view.CropBox.Max.X - view.CropBox.Min.X;
+                                // 1. 暫存原先註解隱藏狀態，並將其隱藏以取得乾淨的裁剪區 Outline
+                                bool origAnnHidden = view.AreAnnotationCategoriesHidden;
+                                view.AreAnnotationCategoriesHidden = true;
+
+                                // 2. 在臨時位置建立 Viewport，以讀取 Outline
+                                Viewport vp = Viewport.Create(_doc, sheet.Id, view.Id, new XYZ(0, 0, 0));
+                                Outline cropBoxOutline = vp.GetBoxOutline();
+
+                                double w = cropBoxOutline.MaximumPoint.X - cropBoxOutline.MinimumPoint.X;
+                                double h = cropBoxOutline.MaximumPoint.Y - cropBoxOutline.MinimumPoint.Y;
+
+                                // 3. 計算樓高對齊的 Y 偏移量
                                 double scale = (double)view.Scale;
                                 if (scale <= 0) scale = 50.0;
-                                double viewportWidthOnSheet = modelWidthFeet / scale;
 
-                                // 目前視圖的置中點 X 座標為：當前左邊界 + 視圖在圖紙寬度的一半
-                                double xCenter = xCurrent + (viewportWidthOnSheet / 2.0);
+                                double yFloorOffset = 0.0;
+                                if (data != null)
+                                {
+                                    double originZ = data.MidPoint.Z + data.WallHeight / 2.0;
+                                    yFloorOffset = (data.LevelElevation - originZ) / scale;
+                                }
 
-                                XYZ point = new XYZ(xCenter, yPos, 0);
-                                Viewport.Create(_doc, sheet.Id, view.Id, point);
+                                // 4. 精確設定 Viewport BoxCenter
+                                double xCenter = xCurrent + (w / 2.0);
+                                double yCenter = yPos - yFloorOffset;
+                                vp.SetBoxCenter(new XYZ(xCenter, yCenter, 0));
 
-                                // 將左邊界移至此視圖の右邊界，達到左右緊鄰對齊效果
-                                xCurrent += viewportWidthOnSheet;
+                                // 5. 恢復視圖註解狀態
+                                view.AreAnnotationCategoriesHidden = origAnnHidden;
+
+                                xCurrent += w;
                                 placedCount++;
                             }
                         }
@@ -480,8 +503,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     {
                         tx.Start();
                         _tempCreatedViews.Clear();
+                        _viewToDataMap.Clear();
 
-                        int index = 0;
                         foreach (var wallData in _tempWallDataList)
                         {
                             string tempName = $"DT_TempElevation_{Guid.NewGuid().ToString().Substring(0, 8)}";
@@ -489,8 +512,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             if (view != null)
                             {
                                 _tempCreatedViews.Add(view);
+                                _viewToDataMap[view.Id] = wallData;
                             }
-                            index++;
                         }
 
                         tx.Commit();
@@ -633,28 +656,48 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         sheet.Name = $"磁磚展開圖_{NamePrefix}";
 
                         double xCurrent = 0.5; // feet (圖紙左邊起始邊界)
-                        double yPos = 1.0;     // feet (圖紙高度中點)
+                        double yPos = 1.0;     // feet (圖紙基準高度，樓板完成面對齊線)
 
                         int placedCount = 0;
                         for (int i = 0; i < _tempCreatedViews.Count; i++)
                         {
                             var view = _tempCreatedViews[i];
+                            WallElevationData data = null;
+                            _viewToDataMap.TryGetValue(view.Id, out data);
+
                             if (Viewport.CanAddViewToSheet(_doc, sheet.Id, view.Id))
                             {
-                                // 依據 view 裁剪區的 model 寬度與 view 比例，動態計算圖紙上的寬度 (英呎)
-                                double modelWidthFeet = view.CropBox.Max.X - view.CropBox.Min.X;
+                                // 1. 暫存原先註解隱藏狀態，並將其隱藏以取得乾淨的裁剪區 Outline
+                                bool origAnnHidden = view.AreAnnotationCategoriesHidden;
+                                view.AreAnnotationCategoriesHidden = true;
+
+                                // 2. 在臨時位置建立 Viewport，以讀取 Outline
+                                Viewport vp = Viewport.Create(_doc, sheet.Id, view.Id, new XYZ(0, 0, 0));
+                                Outline cropBoxOutline = vp.GetBoxOutline();
+
+                                double w = cropBoxOutline.MaximumPoint.X - cropBoxOutline.MinimumPoint.X;
+                                double h = cropBoxOutline.MaximumPoint.Y - cropBoxOutline.MinimumPoint.Y;
+
+                                // 3. 計算樓高對齊的 Y 偏移量
                                 double scale = (double)view.Scale;
                                 if (scale <= 0) scale = 50.0;
-                                double viewportWidthOnSheet = modelWidthFeet / scale;
 
-                                // 目前視圖的置中點 X 座標為：當前左邊界 + 視圖在圖紙寬度的一半
-                                double xCenter = xCurrent + (viewportWidthOnSheet / 2.0);
+                                double yFloorOffset = 0.0;
+                                if (data != null)
+                                {
+                                    double originZ = data.MidPoint.Z + data.WallHeight / 2.0;
+                                    yFloorOffset = (data.LevelElevation - originZ) / scale;
+                                }
 
-                                XYZ point = new XYZ(xCenter, yPos, 0);
-                                Viewport.Create(_doc, sheet.Id, view.Id, point);
+                                // 4. 精確設定 Viewport BoxCenter
+                                double xCenter = xCurrent + (w / 2.0);
+                                double yCenter = yPos - yFloorOffset;
+                                vp.SetBoxCenter(new XYZ(xCenter, yCenter, 0));
 
-                                // 將左邊界移至此視圖的右邊界，達到左右緊鄰對齊效果
-                                xCurrent += viewportWidthOnSheet;
+                                // 5. 恢復視圖註解狀態
+                                view.AreAnnotationCategoriesHidden = origAnnHidden;
+
+                                xCurrent += w;
                                 placedCount++;
                             }
                         }

@@ -34,6 +34,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public XYZ RoomSideDirection { get; set; }
         
         public double WallThickness { get; set; } // Feet
+        public double LevelElevation { get; set; } // Feet
         public Wall WallElement { get; set; }
         public Curve BoundaryCurve { get; set; }
     }

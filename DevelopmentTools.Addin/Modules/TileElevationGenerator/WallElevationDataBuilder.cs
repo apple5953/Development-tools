@@ -58,6 +58,14 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     }
                 }
 
+                double levelElevation = 0.0;
+                ElementId lvlId = wall.LevelId;
+                if (lvlId != ElementId.InvalidElementId)
+                {
+                    Level lvl = doc.GetElement(lvlId) as Level;
+                    if (lvl != null) levelElevation = lvl.Elevation;
+                }
+
                 var data = new WallElevationData
                 {
                     WallId = wall.Id,
@@ -71,6 +79,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     WallNormal = normal,
                     RoomSideDirection = normal,
                     WallThickness = wall.Width,
+                    LevelElevation = levelElevation,
                     WallElement = wall
                 };
 
@@ -97,6 +106,14 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             // 2. 計算 Floor 的幾何中心點，並決定當層樓高
             XYZ floorCenter = GetFloorCenter(floor);
             double height = DetectLevelHeight(doc, floor); // 取得自適應樓高 (Feet)
+
+            double levelElevation = 0.0;
+            ElementId lvlId = floor.LevelId;
+            if (lvlId != ElementId.InvalidElementId)
+            {
+                Level lvl = doc.GetElement(lvlId) as Level;
+                if (lvl != null) levelElevation = lvl.Elevation;
+            }
 
             int index = 1;
             foreach (var loop in boundaryLoops)
@@ -131,6 +148,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         WallNormal = normal,
                         RoomSideDirection = normal,
                         WallThickness = 0.0, // 樓板邊界沒有牆厚度
+                        LevelElevation = levelElevation,
                         WallElement = null,
                         BoundaryCurve = curve
                     };
