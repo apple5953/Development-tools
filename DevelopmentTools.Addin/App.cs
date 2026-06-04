@@ -370,6 +370,19 @@ namespace DevelopmentTools
                                                 "■ 門窗精準洞口扣減：外掛會自動偵測牆上的 Window 窗與 Door 門，分析其原有的洞口形狀，在生成的粉刷層實體中自動扣除重疊的洞口，確保明細表工程量計算精準無誤。";
                 finishPanel.AddItem(wallFinishBtn);
 
+                PushButtonData roomFinishConfigBtn = new PushButtonData(
+                    "RoomFinishConfigurator", "房間裝修配置",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_RoomFinishConfigurator");
+                roomFinishConfigBtn.ToolTip = "【房間裝修配置 - 快速指南】\n\n" +
+                                              "1. 點擊按鈕開啟配置視窗，系統會列出專案中所有的房間 (Rooms)。\n" +
+                                              "2. 您可以直接在 DataGrid 清單中編輯各個房間的地板、牆面與天花板裝修欄位。\n" +
+                                              "3. 使用左側的「批量填入」面板，可一鍵套用規格名稱至多個房間。\n" +
+                                              "4. 點擊「確定更新」寫回 Revit，作為自動粉刷/排磚等工具的生成依據。";
+                roomFinishConfigBtn.LongDescription = "【房間裝修配置 - 數據關聯說明】\n\n" +
+                                                      "■ 參數對應：直接讀寫 Revit Room 元件內建的地板裝修 (Base Finish)、牆面裝修 (Wall Finish) 與天花板裝修 (Ceiling Finish) 屬性。\n" +
+                                                      "■ 自動化工作流：透過本工具在房間中預先填入好裝修編號或材質（如: T01 地磚、P01 乳膠漆），後續其他裝修生成工具在分析房間時，即可自動識別並生成相應厚度與材質的實體牆/板/填充線，實現 BIM 智慧化裝修自動化。";
+                finishPanel.AddItem(roomFinishConfigBtn);
+
                 // Panel 4: DT｜樓板工具
                 RibbonPanel floorPanel = application.CreateRibbonPanel(tabName, "DT｜樓板工具");
 
@@ -385,6 +398,54 @@ namespace DevelopmentTools
                                                "■ 端點重建：移動後，程式會針對所有相鄰的直線在 2D XY 平面上重新求無限延伸線的交點，重設其端點。對於圓弧 (Arc)，則會保持其曲率半徑，僅微調其相鄰端點，確保草圖 100% 閉合。\n" +
                                                "■ 獨立防崩潰控制：框選多個樓板時，每塊樓板都會使用獨立的事務群組 (TransactionGroup) 處理。若有部分樓板因為草圖本身太亂或自交而對齊失敗，程式會單獨 Rollback 該樓板並提供報告，其餘成功的樓板依然會照常套用。";
                 floorPanel.AddItem(floorSnapBtn);
+
+                // Panel 5: DT｜圖紙工具
+                RibbonPanel sheetPanel = application.CreateRibbonPanel(tabName, "DT｜圖紙工具");
+
+                PushButtonData sheetRenameBtn = new PushButtonData(
+                    "BatchSheetRename", "圖紙批次更名",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_BatchSheetRenamer");
+                sheetRenameBtn.ToolTip = "【圖紙批次更名 - 快速指南】\n\n" +
+                                         "1. 點擊按鈕開啟批次更名視窗。\n" +
+                                         "2. 視窗會列出目前專案中所有的圖紙 (Sheets)。\n" +
+                                         "3. 您可以直接在清單的格子中修改圖紙編號或圖紙名稱。\n" +
+                                         "4. 按下「確定更新」即可一次套用所有變更。";
+                sheetRenameBtn.LongDescription = "【圖紙批次更名 - 衝突防護與批次功能說明】\n\n" +
+                                                 "■ 衝突防護機制：Revit 原生要求圖紙編號必須唯一。如果您想對調兩張圖紙的編號（如 A:001->002，B:002->001），本工具會自動偵測衝突並採用「兩步暫存修改法」（先暫時加上隨機或 Temp 後綴，再統一修改為目標編號），完美避開 Revit 限制。\n" +
+                                                 "■ 批次修改與預覽：支援即時編輯，提供直觀的介面，防止因手動一個個修改圖紙屬性而造成的繁瑣操作與編號衝突。";
+                sheetPanel.AddItem(sheetRenameBtn);
+
+                PushButtonData viewCreateBtn = new PushButtonData(
+                    "QuickViewCreator", "快速開圖套樣板",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_QuickViewCreator");
+                viewCreateBtn.ToolTip = "【快速開圖套樣板 - 快速指南】\n\n" +
+                                        "1. 點擊按鈕開啟開圖視窗。\n" +
+                                        "2. 在左側勾選一個或多個來源樓層平面圖。\n" +
+                                        "3. 在右側勾選一個或多個要套用的視圖樣板。\n" +
+                                        "4. 選擇複製模式（如複製詳圖），並可選勾選同步自動建立圖紙。\n" +
+                                        "5. 點擊「一鍵開圖」即可自動批次複製、命名、套用樣板與放置圖紙。";
+                viewCreateBtn.LongDescription = "【快速開圖套樣板 - 複製與圖紙自動化說明】\n\n" +
+                                                "■ 複製機制：支援「僅複製結構 (Duplicate)」、「複製詳圖 (With Detailing)」與「建立相依 (As Dependent)」三種模式，完美應對不同的出圖需求。\n" +
+                                                "■ 命名防碰撞：新視圖名稱為 [來源視圖名稱]-[樣板名稱]。若名稱已存在，系統會自動遞增後綴 (如 _1, _2) 避免 Revit 衝突崩潰。\n" +
+                                                "■ 一鍵自動出圖：若勾選「同步建立圖紙」，系統會自動採用專案圖框為新視圖建立對齊圖紙，並自動將視圖放置到圖紙正中央，實現開圖到排版的一鍵完成。";
+                sheetPanel.AddItem(viewCreateBtn);
+
+                // Panel 6: DT｜標註工具
+                RibbonPanel tagPanel = application.CreateRibbonPanel(tabName, "DT｜標註工具");
+
+                PushButtonData quickDimBtn = new PushButtonData(
+                    "QuickDimension", "快速尺寸標註",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_QuickDimension");
+                quickDimBtn.ToolTip = "【快速尺寸標註 - 快速指南】\n\n" +
+                                      "1. 點擊按鈕開啟標註工具箱。\n" +
+                                      "2. 選擇您要使用的標註模式（柱中心、牆中心、開口邊到邊）。\n" +
+                                      "3. 點擊「開始選取並標註」，依 Revit 提示在視圖中點選目標元件。\n" +
+                                      "4. 按下 Esc 完成選取，尺寸線便會自動在預設偏移位置生成。";
+                quickDimBtn.LongDescription = "【快速尺寸標註 - 標註原理與幾何提取說明】\n\n" +
+                                              "■ 柱中心對齊：自動讀取結構柱/建築柱內部的 Center 幾何面參照，依柱子排列方向（水平或垂直）建立橫向或縱向的尺寸標註。\n" +
+                                              "■ 牆中心對齊：藉由牆體定位中心線直接提取 Reference，自動在平行牆體中線建立連續的對齊標註。\n" +
+                                              "■ 開口邊到邊：讀取門、窗、洞口元件內部的 Left 與 Right 強參照面，實現開口淨寬與間距的快速一鍵尺寸標註。";
+                tagPanel.AddItem(quickDimBtn);
 
                 // 3. 註冊 DMU Updater
                 _updater = new TileUpdater(application.ActiveAddInId);

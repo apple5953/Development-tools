@@ -1,0 +1,208 @@
+<Window x:Class="DevelopmentTools.Modules.SheetTools.QuickDimension.QuickDimensionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:DevelopmentTools.Modules.SheetTools.QuickDimension"
+        Title="快速標註工具 v1.0" Height="380" Width="330"
+        Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Segoe UI"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="True" 
+        Topmost="True" ResizeMode="NoResize">
+
+    <Window.Resources>
+        <!-- 核心系統內建轉換器 -->
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- 基礎按鈕樣式 -->
+        <Style x:Key="BaseBtn" TargetType="Button">
+            <Setter Property="Background" Value="#45475A"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 主要按鈕樣式 (紫色) -->
+        <Style x:Key="PrimaryBtn" TargetType="Button" BasedOn="{StaticResource BaseBtn}">
+            <Setter Property="Background" Value="#CBA6F7"/>
+            <Setter Property="Foreground" Value="#1E1E2E"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="38"/>
+        </Style>
+
+        <!-- 輸入框樣式 -->
+        <Style x:Key="DarkTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="CaretBrush" Value="#F5E0DC"/>
+            <Setter Property="BorderBrush" Value="#45475A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="#89B4FA"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 下拉選單樣式 -->
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="BorderBrush" Value="#45475A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="6,2"/>
+        </Style>
+
+        <!-- 欄位標籤樣式 -->
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#A6ADC8"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,2,0,2"/>
+        </Style>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#6C7086"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Margin" Value="2,10,0,2"/>
+        </Style>
+
+        <!-- RadioButton 樣式 -->
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="4,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="14,12">
+        <Grid.RowDefinitions>
+            <!-- 標題 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 模式選擇 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 參數設定 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 開始按鈕 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 狀態提示與底部 -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. 標題 -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="🎯 快速標註工具" FontSize="15" FontWeight="Bold" Foreground="#CBA6F7"/>
+                <TextBlock Text="視圖快速對齊標註尺寸線" FontSize="9" Foreground="#89B4FA" Margin="1,2,0,0"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 2. 模式選擇 -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+            <TextBlock Text="▍ 選擇尺寸標註模式" Style="{StaticResource SectionLabel}"/>
+            <Border Background="#181825" BorderBrush="#313244" BorderThickness="1" CornerRadius="6" Padding="10,6">
+                <StackPanel>
+                    <RadioButton Content="柱中心 ➜ 柱中心" 
+                                 IsChecked="{Binding SelectedMode, Converter={x:Static local:CheckedInIndexedConverter.Instance}, ConverterParameter=0}"/>
+                    <RadioButton Content="牆中心 ➜ 牆中心" 
+                                 IsChecked="{Binding SelectedMode, Converter={x:Static local:CheckedInIndexedConverter.Instance}, ConverterParameter=1}"/>
+                    <RadioButton Content="開口邊 ➜ 邊 (門、窗、洞口)" 
+                                 IsChecked="{Binding SelectedMode, Converter={x:Static local:CheckedInIndexedConverter.Instance}, ConverterParameter=2}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- 3. 參數設定 -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,14">
+            <TextBlock Text="▍ 標註引線參數設定" Style="{StaticResource SectionLabel}"/>
+            
+            <!-- 尺寸類型 -->
+            <Grid Margin="0,3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="65"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="標註樣式" Style="{StaticResource FieldLabel}"/>
+                <ComboBox Grid.Column="1" Style="{StaticResource DarkComboBox}"
+                          ItemsSource="{Binding DimensionTypes}"
+                          SelectedItem="{Binding SelectedDimensionType}"
+                          DisplayMemberPath="Name"/>
+            </Grid>
+
+            <!-- 偏移距離 -->
+            <Grid Margin="0,3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="65"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="38"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="偏移引線" Style="{StaticResource FieldLabel}"/>
+                <Slider Grid.Column="1" Minimum="300" Maximum="3000" TickFrequency="100" IsSnapToTickEnabled="True"
+                        Value="{Binding OffsetDistance, UpdateSourceTrigger=PropertyChanged}"
+                        VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding OffsetDistance}" Foreground="#A6E3A1" FontSize="10" FontWeight="SemiBold"/>
+                    <TextBlock Text="m" Foreground="#6C7086" FontSize="8" VerticalAlignment="Bottom" Margin="1,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+        <!-- 4. 開始按鈕 -->
+        <Button Grid.Row="3" Content="🎯 開始選取並標註" 
+                Style="{StaticResource PrimaryBtn}"
+                Command="{Binding StartTaggingCommand}"/>
+
+        <!-- 5. 狀態列與提示 -->
+        <Border Grid.Row="4" Background="#181825" CornerRadius="6" Margin="0,12,0,0" Padding="10,8">
+            <Grid>
+                <TextBlock Text="{Binding StatusText}" 
+                           Foreground="#FAB387" 
+                           FontSize="10" 
+                           TextWrapping="Wrap" 
+                           LineHeight="14"
+                           VerticalAlignment="Top"/>
+                <TextBlock Text="MACHR" 
+                           Foreground="#45475A" 
+                           FontSize="8" 
+                           HorizontalAlignment="Right" 
+                           VerticalAlignment="Bottom"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

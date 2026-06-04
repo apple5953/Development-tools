@@ -1,0 +1,411 @@
+<Window x:Class="DevelopmentTools.Modules.SheetTools.RoomFinishConfigurator.RoomFinishConfiguratorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="房間裝修材質配置工具 v1.0" Height="620" Width="960"
+        Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Segoe UI"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+
+    <Window.Resources>
+        <!-- 核心系統內建轉換器 -->
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- 基礎按鈕樣式 -->
+        <Style x:Key="BaseBtn" TargetType="Button">
+            <Setter Property="Background" Value="#45475A"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#313244"/>
+                                <Setter Property="Foreground" Value="#585B70"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 主要按鈕樣式 (藍色) -->
+        <Style x:Key="PrimaryBtn" TargetType="Button" BasedOn="{StaticResource BaseBtn}">
+            <Setter Property="Background" Value="#89B4FA"/>
+            <Setter Property="Foreground" Value="#1E1E2E"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <!-- 綠色套用按鈕 -->
+        <Style x:Key="SuccessBtn" TargetType="Button" BasedOn="{StaticResource BaseBtn}">
+            <Setter Property="Background" Value="#A6E3A1"/>
+            <Setter Property="Foreground" Value="#1E1E2E"/>
+            <Setter Property="Height" Value="26"/>
+        </Style>
+
+        <!-- 輸入框樣式 -->
+        <Style x:Key="DarkTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="CaretBrush" Value="#F5E0DC"/>
+            <Setter Property="BorderBrush" Value="#45475A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="#89B4FA"/>
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter Property="BorderBrush" Value="#CBA6F7"/>
+                                <Setter Property="Background" Value="#45475A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 下拉選單樣式 -->
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="BorderBrush" Value="#45475A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="6,2"/>
+        </Style>
+
+        <!-- 工具箱 Border 面板 -->
+        <Style x:Key="ToolPanelBorder" TargetType="Border">
+            <Setter Property="Background" Value="#181825"/>
+            <Setter Property="BorderBrush" Value="#313244"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
+        <Style x:Key="ToolHeader" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#F5C2E7"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#A6ADC8"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,2,0,2"/>
+        </Style>
+
+        <!-- DataGrid 樣式 -->
+        <Style x:Key="DarkDataGrid" TargetType="DataGrid">
+            <Setter Property="Background" Value="#1E1E2E"/>
+            <Setter Property="RowBackground" Value="#181825"/>
+            <Setter Property="AlternatingRowBackground" Value="#1E1E2E"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="BorderBrush" Value="#313244"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#313244"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#313244"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="RowHeaderWidth" Value="0"/>
+        </Style>
+
+        <Style x:Key="DarkDataGridHeader" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#11111B"/>
+            <Setter Property="Foreground" Value="#BAC2E0"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderBrush" Value="#313244"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#45475A"/>
+                    <Setter Property="Foreground" Value="#F5E0DC"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <!-- 標題與搜尋過濾 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 主要內容 (左邊批量工具，右邊 DataGrid) -->
+            <RowDefinition Height="*"/>
+            <!-- 底部按鈕與狀態 -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. 標題與搜尋過濾 -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="🏠 房間裝修材質配置工具" FontSize="16" FontWeight="Bold" Foreground="#CBA6F7"/>
+                <TextBlock Text="集中列出專案房間，批次編輯天地牆裝修材質，為自動化排磚與粉刷提供數據基礎" FontSize="10" Foreground="#89B4FA" Margin="0,2,0,0"/>
+            </StackPanel>
+            
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="🔍 房間搜尋：" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
+                <TextBox Width="220" Style="{StaticResource DarkTextBox}" 
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="可搜尋房間編號、名稱、地/牆/天裝修材質名稱"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 2. 主要內容 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <!-- 左側批量工具欄 -->
+                <ColumnDefinition Width="260"/>
+                <!-- 間距 -->
+                <ColumnDefinition Width="10"/>
+                <!-- 右側 DataGrid -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左側工具欄 -->
+            <Border Grid.Column="0" Style="{StaticResource ToolPanelBorder}" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="⚡ 批量填入裝修值" Style="{StaticResource ToolHeader}"/>
+                    
+                    <TextBlock Text="這能幫助你快速為多個房間填入相同的裝修規格名稱（如：地磚 60x60、乳膠漆、矽酸鈣板）。完成後可在右側即時檢查並點擊確定寫入房間參數。" 
+                               Foreground="#BAC2E0" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,12" Height="Auto"/>
+
+                    <!-- 目標屬性 -->
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="目標欄位" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox Grid.Column="1" Style="{StaticResource DarkComboBox}" 
+                                  SelectedIndex="{Binding BatchTarget}">
+                            <ComboBoxItem Content="地板裝修 (Base Finish)"/>
+                            <ComboBoxItem Content="牆面裝修 (Wall Finish)"/>
+                            <ComboBoxItem Content="天花板裝修 (Ceiling Finish)"/>
+                        </ComboBox>
+                    </Grid>
+
+                    <!-- 材質設定值 -->
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="60"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="材質規格" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource DarkTextBox}" 
+                                 Text="{Binding BatchValue, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="填入要批次寫入的材質代號或名稱，例如: T-01"/>
+                    </Grid>
+
+                    <Button Content="套用至選中/當前房間" Style="{StaticResource SuccessBtn}" 
+                            Command="{Binding ApplyBatchCommand}" Margin="0,12,0,0"
+                            ToolTip="將上面填寫的材質規格套用到勾選的房間。若無勾選，則會套用到目前列表中過濾顯示的所有房間。"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 右側 DataGrid 清單 -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 表格上方工具列 -->
+                <Grid Grid.Row="0" Margin="0,0,0,4">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="☑️ 反選所有房間" Style="{StaticResource BaseBtn}" 
+                                Command="{Binding ToggleSelectAllCommand}" Height="22" FontSize="10"/>
+                    </StackPanel>
+                    <TextBlock Text="* 提示：按兩下材質欄位即可直接修改單一房間屬性" 
+                               Foreground="#A6ADC8" FontSize="10" FontStyle="Italic"
+                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- DataGrid -->
+                <DataGrid Grid.Row="1" ItemsSource="{Binding FilteredRooms}"
+                          Style="{StaticResource DarkDataGrid}">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource DarkDataGridHeader}"/>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.Columns>
+                        <!-- 勾選 -->
+                        <DataGridTemplateColumn Width="38">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- 修改標誌 -->
+                        <DataGridTemplateColumn Header="異動" Width="45">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="✏️" Foreground="#FAB387" 
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{Binding IsModified, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- 房間編號 -->
+                        <DataGridTextColumn Header="編號" Binding="{Binding Number}" Width="80" IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#89B4FA"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Margin" Value="6,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- 房間名稱 -->
+                        <DataGridTextColumn Header="房間名稱" Binding="{Binding Name}" Width="120" IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Margin" Value="6,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- 地板裝修 -->
+                        <DataGridTextColumn Header="地板裝修 (Base Finish)" Binding="{Binding FloorFinish, UpdateSourceTrigger=PropertyChanged}" Width="150">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Margin" Value="6,0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                            <Setter Property="Foreground" Value="#A6E3A1"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.EditingElementStyle>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Background" Value="#45475A"/>
+                                    <Setter Property="Foreground" Value="#CDD6F4"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Padding" Value="4,2"/>
+                                </Style>
+                            </DataGridTextColumn.EditingElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- 牆面裝修 -->
+                        <DataGridTextColumn Header="牆面裝修 (Wall Finish)" Binding="{Binding WallFinish, UpdateSourceTrigger=PropertyChanged}" Width="150">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Margin" Value="6,0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                            <Setter Property="Foreground" Value="#A6E3A1"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.EditingElementStyle>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Background" Value="#45475A"/>
+                                    <Setter Property="Foreground" Value="#CDD6F4"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Padding" Value="4,2"/>
+                                </Style>
+                            </DataGridTextColumn.EditingElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- 天花板裝修 -->
+                        <DataGridTextColumn Header="天花板裝修 (Ceiling Finish)" Binding="{Binding CeilingFinish, UpdateSourceTrigger=PropertyChanged}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Margin" Value="6,0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                            <Setter Property="Foreground" Value="#A6E3A1"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.EditingElementStyle>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Background" Value="#45475A"/>
+                                    <Setter Property="Foreground" Value="#CDD6F4"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Padding" Value="4,2"/>
+                                </Style>
+                            </DataGridTextColumn.EditingElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Grid>
+
+        <!-- 3. 底部按鈕與狀態 -->
+        <Grid Grid.Row="2" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 狀態列 -->
+            <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#FAB387" 
+                       VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
+
+            <!-- 按鈕 -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="確定更新 (Save)" Style="{StaticResource PrimaryBtn}" 
+                        Command="{Binding SaveCommand}" Width="130" Height="30" Margin="0,0,10,0"/>
+                <Button Content="取消 (Cancel)" Style="{StaticResource BaseBtn}" 
+                        Command="{Binding CancelCommand}" Width="100" Height="30"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
