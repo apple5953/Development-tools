@@ -134,6 +134,30 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
             }
         }
 
+        private ObservableCollection<PlacedViewItemViewModel> _placedViews = new ObservableCollection<PlacedViewItemViewModel>();
+        public ObservableCollection<PlacedViewItemViewModel> PlacedViews
+        {
+            get => _placedViews;
+            set { _placedViews = value; OnPropertyChanged(); }
+        }
+
+        private TreeItemViewModel _selectedSheetNode;
+        public TreeItemViewModel SelectedSheetNode
+        {
+            get => _selectedSheetNode;
+            set
+            {
+                _selectedSheetNode = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasSelectedSheet));
+                OnPropertyChanged(nameof(ShowInstructions));
+                LoadPlacedViewsForSelectedSheet();
+            }
+        }
+
+        public bool HasSelectedSheet => SelectedSheetNode != null;
+        public bool ShowInstructions => SelectedSheetNode == null;
+
         // 快取未過濾的原始樹狀圖
         private TreeItemViewModel _rawSheetsGroup;
         private TreeItemViewModel _rawUnplacedGroup;
@@ -838,6 +862,282 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
             }
 
             return maxNum + "-1";
+        }
+
+        /// <summary>
+        /// 載入目前選中圖紙上的所有已放置視圖與明細表
+        /// </summary>
+        public void LoadPlacedViewsForSelectedSheet()
+        {
+            PlacedViews.Clear();
+            if (SelectedSheetNode == null || SelectedSheetNode.Type != "Sheet") return;
+
+            var sheetId = SelectedSheetNode.Id;
+
+            // 1. 取得普通視圖 Viewports
+            var viewportsOnSheet = new FilteredElementCollector(_doc)
+                .OfClass(typeof(Viewport))
+                .Cast<Viewport>()
+                .Where(vp => vp.SheetId == sheetId)
+                .ToList();
+
+            foreach (var vp in viewportsOnSheet)
+            {
+                var view = _doc.GetElement(vp.ViewId) as View;
+                if (view == null) continue;
+
+                XYZ center = vp.GetBoxCenter();
+                PlacedViews.Add(new PlacedViewItemViewModel
+                {
+                    ViewId = view.Id,
+                    ElementId = vp.Id,
+                    Name = $"[{GetViewTypeName(view.ViewType)}] {view.Name}",
+                    Type = "Viewport",
+                    XMm = Math.Round(center.X * 304.8, 1),
+                    YMm = Math.Round(center.Y * 304.8, 1)
+                });
+            }
+
+            // 2. 取得明細表 ScheduleSheetInstances
+            var scheduleInstancesOnSheet = new FilteredElementCollector(_doc)
+                .OfClass(typeof(ScheduleSheetInstance))
+                .Cast<ScheduleSheetInstance>()
+                .Where(si => si.OwnerViewId == sheetId)
+                .ToList();
+
+            foreach (var si in scheduleInstancesOnSheet)
+            {
+                var sched = _doc.GetElement(si.ScheduleId) as ViewSchedule;
+                if (sched == null || sched.IsTitleblockRevisionSchedule) continue;
+
+                XYZ point = si.Point;
+                PlacedViews.Add(new PlacedViewItemViewModel
+                {
+                    ViewId = sched.Id,
+                    ElementId = si.Id,
+                    Name = $"[明細表] {sched.Name}",
+                    Type = "Schedule",
+                    XMm = Math.Round(point.X * 304.8, 1),
+                    YMm = Math.Round(point.Y * 304.8, 1)
+                });
+            }
+        }
+
+        /// <summary>
+        /// 調整單一已放置視圖的位置
+        /// </summary>
+        public bool UpdatePlacedViewPosition(PlacedViewItemViewModel item, double newXMm, double newYMm)
+        {
+            var elem = _doc.GetElement(item.ElementId);
+            if (elem == null) return false;
+
+            double xFeet = newXMm / 304.8;
+            double yFeet = newYMm / 304.8;
+
+            try
+            {
+                using (Transaction trans = new Transaction(_doc, "調整視圖位置"))
+                {
+                    trans.Start();
+                    if (elem is Viewport vp)
+                    {
+                        vp.SetBoxCenter(new XYZ(xFeet, yFeet, 0));
+                    }
+                    else if (elem is ScheduleSheetInstance si)
+                    {
+                        si.Point = new XYZ(xFeet, yFeet, 0);
+                    }
+                    trans.Commit();
+                }
+
+                item.XMm = Math.Round(newXMm, 1);
+                item.YMm = Math.Round(newYMm, 1);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"更新位置失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 微調/偏移多個視圖的位置
+        /// </summary>
+        public void OffsetPlacedViews(IEnumerable<PlacedViewItemViewModel> items, double dxMm, double dyMm)
+        {
+            if (items == null || !items.Any()) return;
+
+            try
+            {
+                using (Transaction trans = new Transaction(_doc, "微調視圖位置"))
+                {
+                    trans.Start();
+                    foreach (var item in items)
+                    {
+                        var elem = _doc.GetElement(item.ElementId);
+                        if (elem == null) continue;
+
+                        double newXMm = item.XMm + dxMm;
+                        double newYMm = item.YMm + dyMm;
+                        double xFeet = newXMm / 304.8;
+                        double yFeet = newYMm / 304.8;
+
+                        if (elem is Viewport vp)
+                        {
+                            vp.SetBoxCenter(new XYZ(xFeet, yFeet, 0));
+                        }
+                        else if (elem is ScheduleSheetInstance si)
+                        {
+                            si.Point = new XYZ(xFeet, yFeet, 0);
+                        }
+
+                        item.XMm = Math.Round(newXMm, 1);
+                        item.YMm = Math.Round(newYMm, 1);
+                    }
+                    trans.Commit();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"微調位置失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 對齊多個選中的視圖
+        /// </summary>
+        public void AlignPlacedViews(IEnumerable<PlacedViewItemViewModel> items, string alignType)
+        {
+            if (items == null || items.Count() < 2)
+            {
+                MessageBox.Show("請至少選擇兩個視圖進行對齊！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                double targetVal = 0;
+                switch (alignType)
+                {
+                    case "Left":
+                        targetVal = items.Min(x => x.XMm);
+                        break;
+                    case "Right":
+                        targetVal = items.Max(x => x.XMm);
+                        break;
+                    case "Top":
+                        targetVal = items.Max(x => x.YMm);
+                        break;
+                    case "Bottom":
+                        targetVal = items.Min(x => x.YMm);
+                        break;
+                    case "HCenter":
+                        targetVal = items.Average(x => x.YMm);
+                        break;
+                    case "VCenter":
+                        targetVal = items.Average(x => x.XMm);
+                        break;
+                }
+
+                using (Transaction trans = new Transaction(_doc, "對齊視圖"))
+                {
+                    trans.Start();
+                    foreach (var item in items)
+                    {
+                        var elem = _doc.GetElement(item.ElementId);
+                        if (elem == null) continue;
+
+                        double newXMm = item.XMm;
+                        double newYMm = item.YMm;
+
+                        if (alignType == "Left" || alignType == "Right" || alignType == "VCenter")
+                        {
+                            newXMm = targetVal;
+                        }
+                        else
+                        {
+                            newYMm = targetVal;
+                        }
+
+                        double xFeet = newXMm / 304.8;
+                        double yFeet = newYMm / 304.8;
+
+                        if (elem is Viewport vp)
+                        {
+                            vp.SetBoxCenter(new XYZ(xFeet, yFeet, 0));
+                        }
+                        else if (elem is ScheduleSheetInstance si)
+                        {
+                            si.Point = new XYZ(xFeet, yFeet, 0);
+                        }
+
+                        item.XMm = Math.Round(newXMm, 1);
+                        item.YMm = Math.Round(newYMm, 1);
+                    }
+                    trans.Commit();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"對齊失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 自動將選中的視圖按網格排列
+        /// </summary>
+        public void ArrangeViewsInGrid(IEnumerable<PlacedViewItemViewModel> items, int rows, int cols, double gapXMm, double gapYMm, double startXMm, double startYMm)
+        {
+            if (items == null || !items.Any()) return;
+            if (rows <= 0 || cols <= 0) return;
+
+            var itemList = items.ToList();
+
+            try
+            {
+                using (Transaction trans = new Transaction(_doc, "網格排列視圖"))
+                {
+                    trans.Start();
+
+                    for (int i = 0; i < itemList.Count; i++)
+                    {
+                        var item = itemList[i];
+                        var elem = _doc.GetElement(item.ElementId);
+                        if (elem == null) continue;
+
+                        int r = i / cols;
+                        int c = i % cols;
+
+                        if (r >= rows) break;
+
+                        // Revit 的 Y 軸向上，向下折行 Y 遞減
+                        double newXMm = startXMm + c * gapXMm;
+                        double newYMm = startYMm - r * gapYMm;
+
+                        double xFeet = newXMm / 304.8;
+                        double yFeet = newYMm / 304.8;
+
+                        if (elem is Viewport vp)
+                        {
+                            vp.SetBoxCenter(new XYZ(xFeet, yFeet, 0));
+                        }
+                        else if (elem is ScheduleSheetInstance si)
+                        {
+                            si.Point = new XYZ(xFeet, yFeet, 0);
+                        }
+
+                        item.XMm = Math.Round(newXMm, 1);
+                        item.YMm = Math.Round(newYMm, 1);
+                    }
+
+                    trans.Commit();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"網格排列失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         #endregion

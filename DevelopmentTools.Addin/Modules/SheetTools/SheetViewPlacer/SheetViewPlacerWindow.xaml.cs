@@ -370,6 +370,243 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
         }
 
         #endregion
+
+        #region 圖紙內視圖位置調整與微調對齊排列事件
+
+        private void SheetTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (e.NewValue is TreeItemViewModel item)
+            {
+                if (item.Type == "Sheet")
+                {
+                    _viewModel.SelectedSheetNode = item;
+                }
+                else if ((item.Type == "View" || item.Type == "Schedule") && item.Parent != null && item.Parent.Type == "Sheet")
+                {
+                    _viewModel.SelectedSheetNode = item.Parent;
+
+                    // 在右側 ListBox 中選取對應視圖
+                    var placedView = _viewModel.PlacedViews.FirstOrDefault(pv => pv.ViewId == item.Id);
+                    if (placedView != null)
+                    {
+                        PlacedViewsListBox.SelectedItem = placedView;
+                        PlacedViewsListBox.ScrollIntoView(placedView);
+                    }
+                }
+                else
+                {
+                    _viewModel.SelectedSheetNode = null;
+                }
+            }
+            else
+            {
+                _viewModel.SelectedSheetNode = null;
+            }
+        }
+
+        private void PlacedViewsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var selectedCount = PlacedViewsListBox.SelectedItems.Count;
+
+            if (selectedCount == 1)
+            {
+                var singleItem = PlacedViewsListBox.SelectedItem as PlacedViewItemViewModel;
+                if (singleItem != null)
+                {
+                    PosXTextBox.Text = singleItem.XMm.ToString("F0");
+                    PosYTextBox.Text = singleItem.YMm.ToString("F0");
+                    PosXTextBox.IsEnabled = true;
+                    PosYTextBox.IsEnabled = true;
+                }
+            }
+            else
+            {
+                PosXTextBox.Text = "";
+                PosYTextBox.Text = "";
+                PosXTextBox.IsEnabled = false;
+                PosYTextBox.IsEnabled = false;
+            }
+        }
+
+        private void PosXTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            CommitCoordinateChange();
+        }
+
+        private void PosXTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                CommitCoordinateChange();
+            }
+        }
+
+        private void PosYTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            CommitCoordinateChange();
+        }
+
+        private void PosYTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                CommitCoordinateChange();
+            }
+        }
+
+        private void CommitCoordinateChange()
+        {
+            if (PlacedViewsListBox.SelectedItems.Count != 1) return;
+
+            var item = PlacedViewsListBox.SelectedItem as PlacedViewItemViewModel;
+            if (item == null) return;
+
+            if (double.TryParse(PosXTextBox.Text.Trim(), out double newX) &&
+                double.TryParse(PosYTextBox.Text.Trim(), out double newY))
+            {
+                if (Math.Abs(newX - item.XMm) > 0.1 || Math.Abs(newY - item.YMm) > 0.1)
+                {
+                    StatusText.Text = "狀態：正在調整視圖位置...";
+                    bool success = _viewModel.UpdatePlacedViewPosition(item, newX, newY);
+                    if (success)
+                    {
+                        StatusText.Text = $"狀態：✓ 成功移動視圖至 ({newX:F0}, {newY:F0}) mm";
+                    }
+                    else
+                    {
+                        StatusText.Text = "狀態：位置調整失敗。";
+                        PosXTextBox.Text = item.XMm.ToString("F0");
+                        PosYTextBox.Text = item.YMm.ToString("F0");
+                    }
+                }
+            }
+            else
+            {
+                PosXTextBox.Text = item.XMm.ToString("F0");
+                PosYTextBox.Text = item.YMm.ToString("F0");
+            }
+        }
+
+        private double GetStepSize()
+        {
+            if (double.TryParse(StepSizeTextBox.Text.Trim(), out double step))
+            {
+                return step;
+            }
+            return 10.0;
+        }
+
+        private void TweakUpBtn_Click(object sender, RoutedEventArgs e)
+        {
+            TweakSelectedViews(0, GetStepSize());
+        }
+
+        private void TweakDownBtn_Click(object sender, RoutedEventArgs e)
+        {
+            TweakSelectedViews(0, -GetStepSize());
+        }
+
+        private void TweakLeftBtn_Click(object sender, RoutedEventArgs e)
+        {
+            TweakSelectedViews(-GetStepSize(), 0);
+        }
+
+        private void TweakRightBtn_Click(object sender, RoutedEventArgs e)
+        {
+            TweakSelectedViews(GetStepSize(), 0);
+        }
+
+        private void TweakSelectedViews(double dx, double dy)
+        {
+            var selectedItems = PlacedViewsListBox.SelectedItems.Cast<PlacedViewItemViewModel>().ToList();
+            if (!selectedItems.Any())
+            {
+                MessageBox.Show("請先選擇要微調的視圖！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            StatusText.Text = "狀態：正在微調視圖位置...";
+            _viewModel.OffsetPlacedViews(selectedItems, dx, dy);
+            StatusText.Text = "狀態：✓ 微調位置完成";
+
+            if (selectedItems.Count == 1)
+            {
+                PosXTextBox.Text = selectedItems[0].XMm.ToString("F0");
+                PosYTextBox.Text = selectedItems[0].YMm.ToString("F0");
+            }
+        }
+
+        private void AlignLeftBtn_Click(object sender, RoutedEventArgs e) { ExecuteAlign("Left"); }
+        private void AlignRightBtn_Click(object sender, RoutedEventArgs e) { ExecuteAlign("Right"); }
+        private void AlignTopBtn_Click(object sender, RoutedEventArgs e) { ExecuteAlign("Top"); }
+        private void AlignBottomBtn_Click(object sender, RoutedEventArgs e) { ExecuteAlign("Bottom"); }
+        private void AlignHCenterBtn_Click(object sender, RoutedEventArgs e) { ExecuteAlign("HCenter"); }
+        private void AlignVCenterBtn_Click(object sender, RoutedEventArgs e) { ExecuteAlign("VCenter"); }
+
+        private void ExecuteAlign(string alignType)
+        {
+            var selectedItems = PlacedViewsListBox.SelectedItems.Cast<PlacedViewItemViewModel>().ToList();
+            if (selectedItems.Count < 2)
+            {
+                MessageBox.Show("請至少選擇兩個視圖進行對齊！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            StatusText.Text = "狀態：正在對齊視圖...";
+            _viewModel.AlignPlacedViews(selectedItems, alignType);
+            StatusText.Text = "狀態：✓ 對齊視圖完成";
+
+            if (selectedItems.Count == 1)
+            {
+                PosXTextBox.Text = selectedItems[0].XMm.ToString("F0");
+                PosYTextBox.Text = selectedItems[0].YMm.ToString("F0");
+            }
+        }
+
+        private void GridLayoutBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedItems = PlacedViewsListBox.SelectedItems.Cast<PlacedViewItemViewModel>().ToList();
+            if (!selectedItems.Any())
+            {
+                MessageBox.Show("請選擇要排列的視圖！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (!int.TryParse(GridRowsTextBox.Text.Trim(), out int rows) || rows <= 0 ||
+                !int.TryParse(GridColsTextBox.Text.Trim(), out int cols) || cols <= 0)
+            {
+                MessageBox.Show("請輸入有效的行列數！", "錯誤", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!double.TryParse(GridGapXTextBox.Text.Trim(), out double gapX) ||
+                !double.TryParse(GridGapYTextBox.Text.Trim(), out double gapY))
+            {
+                MessageBox.Show("請輸入有效的間距數值！", "錯誤", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!double.TryParse(GridStartXTextBox.Text.Trim(), out double startX) ||
+                !double.TryParse(GridStartYTextBox.Text.Trim(), out double startY))
+            {
+                MessageBox.Show("請輸入有效的起點座標數值！", "錯誤", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            StatusText.Text = "狀態：正在進行網格排列...";
+            _viewModel.ArrangeViewsInGrid(selectedItems, rows, cols, gapX, gapY, startX, startY);
+            StatusText.Text = "狀態：✓ 網格排列完成";
+
+            if (selectedItems.Count == 1)
+            {
+                PosXTextBox.Text = selectedItems[0].XMm.ToString("F0");
+                PosYTextBox.Text = selectedItems[0].YMm.ToString("F0");
+            }
+        }
+
+        #endregion
     }
 
     /// <summary>
