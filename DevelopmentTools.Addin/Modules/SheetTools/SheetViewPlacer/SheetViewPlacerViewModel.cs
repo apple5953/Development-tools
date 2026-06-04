@@ -1,0 +1,703 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Windows;
+using System.Windows.Input;
+using Autodesk.Revit.DB;
+
+namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
+{
+    /// <summary>
+    /// 樹狀圖節點 ViewModel
+    /// </summary>
+    public class TreeItemViewModel : INotifyPropertyChanged
+    {
+        public ElementId Id { get; set; }
+        public string Name { get; set; }
+        
+        /// <summary>
+        /// 節點類型: "SheetGroup", "Sheet", "UnplacedGroup", "ViewTypeGroup", "View", "Schedule"
+        /// </summary>
+        public string Type { get; set; }
+        public string ViewTypeStr { get; set; }
+        public string SheetNumber { get; set; }
+
+        public bool IsGroup => Type == "SheetGroup" || Type == "UnplacedGroup" || Type == "ViewTypeGroup" || Type == "Sheet";
+        public bool IsView => Type == "View" || Type == "Schedule";
+
+        private bool _isExpanded;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set { _isExpanded = value; OnPropertyChanged(); }
+        }
+
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { _isSelected = value; OnPropertyChanged(); }
+        }
+
+        public TreeItemViewModel Parent { get; set; }
+        public ObservableCollection<TreeItemViewModel> Children { get; } = new ObservableCollection<TreeItemViewModel>();
+
+        public TreeItemViewModel()
+        {
+            _isExpanded = true;
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    /// <summary>
+    /// 下拉選單項目 ViewModel
+    /// </summary>
+    public class ComboboxItemViewModel : INotifyPropertyChanged
+    {
+        public ElementId Id { get; }
+        public string Name { get; }
+
+        public ComboboxItemViewModel(ElementId id, string name)
+        {
+            Id = id;
+            Name = name;
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    /// <summary>
+    /// 圖紙視圖排版主 ViewModel
+    /// </summary>
+    public class SheetViewPlacerViewModel : INotifyPropertyChanged
+    {
+        private readonly Document _doc;
+        private Window _window;
+
+        public ObservableCollection<TreeItemViewModel> TreeItems { get; } = new ObservableCollection<TreeItemViewModel>();
+        public ObservableCollection<ComboboxItemViewModel> TitleBlocks { get; } = new ObservableCollection<ComboboxItemViewModel>();
+        public ObservableCollection<ComboboxItemViewModel> ViewportTypes { get; } = new ObservableCollection<ComboboxItemViewModel>();
+
+        private ComboboxItemViewModel _selectedTitleBlock;
+        public ComboboxItemViewModel SelectedTitleBlock
+        {
+            get => _selectedTitleBlock;
+            set { _selectedTitleBlock = value; OnPropertyChanged(); }
+        }
+
+        private ComboboxItemViewModel _selectedViewportType;
+        public ComboboxItemViewModel SelectedViewportType
+        {
+            get => _selectedViewportType;
+            set { _selectedViewportType = value; OnPropertyChanged(); }
+        }
+
+        private string _searchText;
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                _searchText = value;
+                OnPropertyChanged();
+                ApplyFilter();
+            }
+        }
+
+        // 快取未過濾的原始樹狀圖
+        private TreeItemViewModel _rawSheetsGroup;
+        private TreeItemViewModel _rawUnplacedGroup;
+
+        public SheetViewPlacerViewModel(Document doc, Window window)
+        {
+            _doc = doc;
+            _window = window;
+
+            LoadComboboxes();
+            LoadData();
+        }
+
+        /// <summary>
+        /// 載入下拉選單數據 (圖框與視埠類型)
+        /// </summary>
+        private void LoadComboboxes()
+        {
+            TitleBlocks.Clear();
+            ViewportTypes.Clear();
+
+            // 1. 載入圖框類型
+            var tbs = new FilteredElementCollector(_doc)
+                .OfCategory(BuiltInCategory.OST_TitleBlocks)
+                .WhereElementIsElementType()
+                .Cast<FamilySymbol>()
+                .OrderBy(x => x.Name)
+                .ToList();
+
+            TitleBlocks.Add(new ComboboxItemViewModel(ElementId.InvalidElementId, "<無圖框 - 建立空白圖紙>"));
+            foreach (var tb in tbs)
+            {
+                TitleBlocks.Add(new ComboboxItemViewModel(tb.Id, $"{tb.FamilyName}: {tb.Name}"));
+            }
+            SelectedTitleBlock = TitleBlocks.FirstOrDefault();
+
+            // 2. 載入視埠類型 (Viewport Types)
+            var vps = new FilteredElementCollector(_doc)
+                .OfClass(typeof(ElementType))
+                .Cast<ElementType>()
+                .Where(x => (x.FamilyName != null && (x.FamilyName.Equals("Viewport", StringComparison.OrdinalIgnoreCase) 
+                                                  || x.FamilyName.Equals("視埠", StringComparison.OrdinalIgnoreCase)
+                                                  || x.FamilyName.Equals("視口", StringComparison.OrdinalIgnoreCase)))
+                         || (x.Category != null && x.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Viewports))
+                .OrderBy(x => x.Name)
+                .ToList();
+
+            foreach (var vp in vps)
+            {
+                ViewportTypes.Add(new ComboboxItemViewModel(vp.Id, vp.Name));
+            }
+
+            // 嘗試選取預設的視埠類型
+            SelectedViewportType = ViewportTypes.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// 載入樹狀圖拓撲結構
+        /// </summary>
+        public void LoadData()
+        {
+            TreeItems.Clear();
+
+            // 1. 取得所有圖紙
+            var sheets = new FilteredElementCollector(_doc)
+                .OfClass(typeof(ViewSheet))
+                .Cast<ViewSheet>()
+                .OrderBy(s => s.SheetNumber)
+                .ToList();
+
+            // 2. 統計已被放置的視圖 Id (包含明細表)
+            var placedViewIds = new HashSet<ElementId>();
+            var viewports = new FilteredElementCollector(_doc)
+                .OfClass(typeof(Viewport))
+                .Cast<Viewport>()
+                .ToList();
+
+            foreach (var vp in viewports)
+            {
+                placedViewIds.Add(vp.ViewId);
+            }
+
+            var scheduleInstances = new FilteredElementCollector(_doc)
+                .OfClass(typeof(ScheduleSheetInstance))
+                .Cast<ScheduleSheetInstance>()
+                .ToList();
+
+            foreach (var si in scheduleInstances)
+            {
+                placedViewIds.Add(si.ScheduleId);
+            }
+
+            // 3. 建立「圖紙清單」根節點
+            _rawSheetsGroup = new TreeItemViewModel
+            {
+                Name = "圖紙清單 (Sheets)",
+                Type = "SheetGroup"
+            };
+
+            foreach (var sheet in sheets)
+            {
+                var sheetNode = new TreeItemViewModel
+                {
+                    Id = sheet.Id,
+                    Name = $"[{sheet.SheetNumber}] {sheet.Name}",
+                    SheetNumber = sheet.SheetNumber,
+                    Type = "Sheet",
+                    Parent = _rawSheetsGroup
+                };
+
+                // 3.1 載入此圖紙上的普通視埠視圖
+                var vpsOnSheet = viewports.Where(vp => vp.SheetId == sheet.Id).ToList();
+                foreach (var vp in vpsOnSheet)
+                {
+                    var view = _doc.GetElement(vp.ViewId) as View;
+                    if (view == null) continue;
+
+                    sheetNode.Children.Add(new TreeItemViewModel
+                    {
+                        Id = view.Id,
+                        Name = $"[{GetViewTypeName(view.ViewType)}] {view.Name}",
+                        Type = "View",
+                        ViewTypeStr = GetViewTypeName(view.ViewType),
+                        Parent = sheetNode
+                    });
+                }
+
+                // 3.2 載入此圖紙上的明細表視圖
+                var sisOnSheet = scheduleInstances.Where(si => si.OwnerViewId == sheet.Id).ToList();
+                foreach (var si in sisOnSheet)
+                {
+                    var sched = _doc.GetElement(si.ScheduleId) as ViewSchedule;
+                    if (sched == null || sched.IsTitleblockRevisionSchedule) continue;
+
+                    sheetNode.Children.Add(new TreeItemViewModel
+                    {
+                        Id = sched.Id,
+                        Name = $"[明細表] {sched.Name}",
+                        Type = "Schedule",
+                        ViewTypeStr = "明細表",
+                        Parent = sheetNode
+                    });
+                }
+
+                _rawSheetsGroup.Children.Add(sheetNode);
+            }
+
+            // 4. 建立「未放置視圖」根節點
+            _rawUnplacedGroup = new TreeItemViewModel
+            {
+                Name = "未放置視圖 (Unplaced Views)",
+                Type = "UnplacedGroup"
+            };
+
+            var allViews = new FilteredElementCollector(_doc)
+                .OfClass(typeof(View))
+                .Cast<View>()
+                .Where(v => !v.IsTemplate)
+                .ToList();
+
+            var unplacedViews = allViews.Where(v => !placedViewIds.Contains(v.Id) && IsPlaceableView(v)).ToList();
+
+            // 依視圖類型分組
+            var groupedViews = unplacedViews.GroupBy(v => v.ViewType).OrderBy(g => g.Key.ToString());
+            foreach (var group in groupedViews)
+            {
+                var viewTypeGroupNode = new TreeItemViewModel
+                {
+                    Name = $"{GetViewTypeName(group.Key)} ({group.Count()})",
+                    Type = "ViewTypeGroup",
+                    Parent = _rawUnplacedGroup
+                };
+
+                foreach (var view in group.OrderBy(v => v.Name))
+                {
+                    viewTypeGroupNode.Children.Add(new TreeItemViewModel
+                    {
+                        Id = view.Id,
+                        Name = view.Name,
+                        Type = view is ViewSchedule ? "Schedule" : "View",
+                        ViewTypeStr = GetViewTypeName(view.ViewType),
+                        Parent = viewTypeGroupNode
+                    });
+                }
+
+                _rawUnplacedGroup.Children.Add(viewTypeGroupNode);
+            }
+
+            // 加入顯示樹
+            TreeItems.Add(_rawSheetsGroup);
+            TreeItems.Add(_rawUnplacedGroup);
+
+            ApplyFilter();
+        }
+
+        /// <summary>
+        /// 套用即時關鍵字搜尋過濾
+        /// </summary>
+        private void ApplyFilter()
+        {
+            if (string.IsNullOrWhiteSpace(SearchText))
+            {
+                // 無搜尋字串，還原顯示
+                ResetVisibility(TreeItems);
+                return;
+            }
+
+            string keyword = SearchText.Trim().ToLower();
+
+            // 對「圖紙清單」與「未放置視圖」下的節點進行過濾
+            FilterNode(_rawSheetsGroup, keyword);
+            FilterNode(_rawUnplacedGroup, keyword);
+        }
+
+        private bool FilterNode(TreeItemViewModel node, string keyword)
+        {
+            bool anyChildVisible = false;
+
+            foreach (var child in node.Children)
+            {
+                if (child.Type == "Sheet" || child.Type == "ViewTypeGroup")
+                {
+                    // 檢查子節點 (視圖)
+                    bool matchAnySubChild = false;
+                    foreach (var subChild in child.Children)
+                    {
+                        bool isMatch = (subChild.Name ?? "").ToLower().Contains(keyword);
+                        subChild.IsSelected = false; // 取消選取高亮
+                        
+                        // 若子節點名稱符合關鍵字，則該子節點可見
+                        // WPF 樹狀圖我們直接使用 Collection 控制可見性，這裡簡化做法：
+                        // 如果沒有子節點滿足，我們就將其隱藏。為簡化，我們可以直接重構展示用的 filtered tree，
+                        // 或者僅在 TreeView 中利用 IsExpanded 與 Visibility 控制。
+                        // 這裡採用「若子節點匹配，或父節點匹配，則保留此節點」的邏輯。
+                        if (isMatch) matchAnySubChild = true;
+                    }
+
+                    bool parentMatch = (child.Name ?? "").ToLower().Contains(keyword);
+                    if (parentMatch || matchAnySubChild)
+                    {
+                        child.IsExpanded = true;
+                        anyChildVisible = true;
+                    }
+                }
+            }
+
+            return anyChildVisible;
+        }
+
+        private void ResetVisibility(ObservableCollection<TreeItemViewModel> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                node.IsExpanded = true;
+                ResetVisibility(node.Children);
+            }
+        }
+
+        /// <summary>
+        /// 判斷視圖是否可放置至圖紙
+        /// </summary>
+        private bool IsPlaceableView(View view)
+        {
+            if (view == null || view.IsTemplate) return false;
+            
+            // 排除圖紙本身
+            if (view is ViewSheet) return false;
+
+            // 支持的視圖類型
+            var t = view.ViewType;
+            return t == ViewType.FloorPlan ||
+                   t == ViewType.CeilingPlan ||
+                   t == ViewType.Elevation ||
+                   t == ViewType.Section ||
+                   t == ViewType.ThreeD ||
+                   t == ViewType.DraftingView ||
+                   t == ViewType.Legend ||
+                   t == ViewType.Schedule;
+        }
+
+        /// <summary>
+        /// 取得視圖類型的中文名稱
+        /// </summary>
+        private string GetViewTypeName(ViewType type)
+        {
+            switch (type)
+            {
+                case ViewType.FloorPlan: return "平面圖";
+                case ViewType.CeilingPlan: return "天花板平面圖";
+                case ViewType.Elevation: return "立面圖";
+                case ViewType.Section: return "剖面圖";
+                case ViewType.ThreeD: return "3D 視圖";
+                case ViewType.DraftingView: return "繪圖視圖";
+                case ViewType.Legend: return "圖例";
+                case ViewType.Schedule: return "明細表";
+                default: return type.ToString();
+            }
+        }
+
+        #region Revit API 寫入操作 (Transaction)
+
+        /// <summary>
+        /// 將未放置的視圖放入圖紙中
+        /// </summary>
+        public bool PlaceViewOnSheet(ElementId viewId, ElementId targetSheetId)
+        {
+            var view = _doc.GetElement(viewId) as View;
+            var sheet = _doc.GetElement(targetSheetId) as ViewSheet;
+            if (view == null || sheet == null) return false;
+
+            try
+            {
+                using (Transaction trans = new Transaction(_doc, "放置視圖至圖紙"))
+                {
+                    trans.Start();
+
+                    XYZ location = CalculateViewportLocation(sheet);
+
+                    if (view is ViewSchedule schedule)
+                    {
+                        ScheduleSheetInstance.Create(_doc, sheet.Id, schedule.Id, location);
+                    }
+                    else
+                    {
+                        if (!Viewport.CanAddViewToSheet(_doc, sheet.Id, view.Id))
+                        {
+                            MessageBox.Show("此視圖無法放置在此圖紙上！\n請確定它是否已放置於其他圖紙，或其類型是否支援多張圖紙放置。", 
+                                "放置失敗", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            trans.RollBack();
+                            return false;
+                        }
+
+                        Viewport vp = Viewport.Create(_doc, sheet.Id, view.Id, location);
+                        if (SelectedViewportType != null && SelectedViewportType.Id != ElementId.InvalidElementId)
+                        {
+                            vp.ChangeTypeId(SelectedViewportType.Id);
+                        }
+                    }
+
+                    trans.Commit();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"放置視圖失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 在兩張圖紙之間移動視圖 (跨圖紙調整)
+        /// </summary>
+        public bool MoveViewBetweenSheets(ElementId viewId, ElementId sourceSheetId, ElementId targetSheetId)
+        {
+            if (sourceSheetId == targetSheetId) return false;
+
+            var view = _doc.GetElement(viewId) as View;
+            var targetSheet = _doc.GetElement(targetSheetId) as ViewSheet;
+            if (view == null || targetSheet == null) return false;
+
+            try
+            {
+                using (Transaction trans = new Transaction(_doc, "跨圖紙移轉視圖"))
+                {
+                    trans.Start();
+
+                    // 1. 尋找並刪除在原圖紙上的視埠/明細表實例
+                    if (view is ViewSchedule)
+                    {
+                        var existingSched = new FilteredElementCollector(_doc)
+                            .OfClass(typeof(ScheduleSheetInstance))
+                            .Cast<ScheduleSheetInstance>()
+                            .FirstOrDefault(si => si.ScheduleId == view.Id && si.OwnerViewId == sourceSheetId);
+                        
+                        if (existingSched != null)
+                        {
+                            _doc.Delete(existingSched.Id);
+                        }
+                    }
+                    else
+                    {
+                        var existingVp = new FilteredElementCollector(_doc)
+                            .OfClass(typeof(Viewport))
+                            .Cast<Viewport>()
+                            .FirstOrDefault(vp => vp.ViewId == view.Id && vp.SheetId == sourceSheetId);
+
+                        if (existingVp != null)
+                        {
+                            _doc.Delete(existingVp.Id);
+                        }
+                    }
+
+                    // 2. 重新在新圖紙上建立視埠/明細表
+                    XYZ location = CalculateViewportLocation(targetSheet);
+
+                    if (view is ViewSchedule schedule)
+                    {
+                        ScheduleSheetInstance.Create(_doc, targetSheet.Id, schedule.Id, location);
+                    }
+                    else
+                    {
+                        if (!Viewport.CanAddViewToSheet(_doc, targetSheet.Id, view.Id))
+                        {
+                            MessageBox.Show("此視圖無法放置在此圖紙上！", "放置失敗", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            trans.RollBack();
+                            return false;
+                        }
+
+                        Viewport vp = Viewport.Create(_doc, targetSheet.Id, view.Id, location);
+                        if (SelectedViewportType != null && SelectedViewportType.Id != ElementId.InvalidElementId)
+                        {
+                            vp.ChangeTypeId(SelectedViewportType.Id);
+                        }
+                    }
+
+                    trans.Commit();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"移轉視圖失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 從圖紙中移除視圖 (刪除視埠)
+        /// </summary>
+        public bool RemoveViewFromSheet(ElementId viewId, ElementId sheetId)
+        {
+            var view = _doc.GetElement(viewId) as View;
+            if (view == null) return false;
+
+            try
+            {
+                using (Transaction trans = new Transaction(_doc, "移除圖紙視圖"))
+                {
+                    trans.Start();
+
+                    if (view is ViewSchedule)
+                    {
+                        var existingSched = new FilteredElementCollector(_doc)
+                            .OfClass(typeof(ScheduleSheetInstance))
+                            .Cast<ScheduleSheetInstance>()
+                            .FirstOrDefault(si => si.ScheduleId == view.Id && si.OwnerViewId == sheetId);
+                        
+                        if (existingSched != null)
+                        {
+                            _doc.Delete(existingSched.Id);
+                        }
+                    }
+                    else
+                    {
+                        var existingVp = new FilteredElementCollector(_doc)
+                            .OfClass(typeof(Viewport))
+                            .Cast<Viewport>()
+                            .FirstOrDefault(vp => vp.ViewId == view.Id && vp.SheetId == sheetId);
+
+                        if (existingVp != null)
+                        {
+                            _doc.Delete(existingVp.Id);
+                        }
+                    }
+
+                    trans.Commit();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"移除視圖失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 一鍵新建一張圖紙
+        /// </summary>
+        public bool CreateNewSheet(string number, string name)
+        {
+            if (string.IsNullOrWhiteSpace(number) || string.IsNullOrWhiteSpace(name))
+            {
+                MessageBox.Show("圖紙編號與名稱不可為空！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            // 檢查編號唯一性
+            bool numberExists = new FilteredElementCollector(_doc)
+                .OfClass(typeof(ViewSheet))
+                .Cast<ViewSheet>()
+                .Any(s => s.SheetNumber.Equals(number, StringComparison.OrdinalIgnoreCase));
+
+            if (numberExists)
+            {
+                MessageBox.Show($"圖紙編號 [{number}] 已在專案中存在！請換一個編號。", "編號重複", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            try
+            {
+                using (Transaction trans = new Transaction(_doc, "新建圖紙"))
+                {
+                    trans.Start();
+
+                    ElementId tbId = SelectedTitleBlock != null ? SelectedTitleBlock.Id : ElementId.InvalidElementId;
+                    ViewSheet sheet = ViewSheet.Create(_doc, tbId);
+                    if (sheet != null)
+                    {
+                        sheet.SheetNumber = number;
+                        sheet.Name = name;
+                    }
+
+                    trans.Commit();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"建立圖紙失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 計算新視埠在圖紙上的置入位置，避免與現有視埠完美重疊
+        /// </summary>
+        private XYZ CalculateViewportLocation(ViewSheet sheet)
+        {
+            var viewports = new FilteredElementCollector(_doc)
+                .OfClass(typeof(Viewport))
+                .Cast<Viewport>()
+                .Where(vp => vp.SheetId == sheet.Id)
+                .ToList();
+
+            int count = viewports.Count;
+            if (count == 0)
+            {
+                return new XYZ(0, 0, 0); // 置中
+            }
+
+            // 每多一個視埠，就往右上方稍微偏移 0.15 呎，方便使用者手動拉開
+            double offset = count * 0.15;
+            return new XYZ(offset, offset, 0);
+        }
+
+        /// <summary>
+        /// 自動推算下一個推薦的圖紙編號 (依據專案最大編號後綴遞增)
+        /// </summary>
+        public string SuggestNextSheetNumber()
+        {
+            var sheets = new FilteredElementCollector(_doc)
+                .OfClass(typeof(ViewSheet))
+                .Cast<ViewSheet>()
+                .ToList();
+
+            if (sheets.Count == 0) return "A-101";
+
+            // 尋找最大編號
+            var sortedNumbers = sheets
+                .Select(s => s.SheetNumber)
+                .OrderBy(n => n)
+                .ToList();
+
+            string maxNum = sortedNumbers.LastOrDefault();
+            if (string.IsNullOrEmpty(maxNum)) return "A-101";
+
+            // 尋找最後部分的數字進行加一
+            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(maxNum, @"\d+$");
+            if (match.Success)
+            {
+                string numStr = match.Value;
+                int val = int.Parse(numStr) + 1;
+                string format = new string('0', numStr.Length);
+                string prefix = maxNum.Substring(0, maxNum.Length - numStr.Length);
+                return prefix + val.ToString(format);
+            }
+
+            return maxNum + "-1";
+        }
+
+        #endregion
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+}

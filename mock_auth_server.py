@@ -11,7 +11,7 @@ USERS_DB = {
     },
     "admin@example.com": {
         "status": "Allowed",
-        "allowed_tools": ["Tiling", "WallFinish"]
+        "allowed_tools": ["*"]
     },
     "blocked_user@example.com": {
         "status": "Blocked",
@@ -109,6 +109,8 @@ class MockAuthHandler(http.server.BaseHTTPRequestHandler):
                                     # 判定特定工具授權
                                     is_allowed = False
                                     if tool == "Platform":
+                                        is_allowed = True
+                                    elif "*" in user_info["allowed_tools"] or "all" in [t.lower() for t in user_info["allowed_tools"]]:
                                         is_allowed = True
                                     elif tool.lower() in [t.lower() for t in user_info["allowed_tools"]]:
                                         is_allowed = True

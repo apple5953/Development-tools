@@ -430,6 +430,20 @@ namespace DevelopmentTools
                                                 "■ 一鍵自動出圖：若勾選「同步建立圖紙」，系統會自動採用專案圖框為新視圖建立對齊圖紙，並自動將視圖放置到圖紙正中央，實現開圖到排版的一鍵完成。";
                 sheetPanel.AddItem(viewCreateBtn);
 
+                PushButtonData viewPlaceBtn = new PushButtonData(
+                    "SheetViewPlacer", "圖紙視圖排版",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_SheetViewPlacer");
+                viewPlaceBtn.ToolTip = "【圖紙視圖排版 - 快速指南】\n\n" +
+                                       "1. 點擊按鈕開啟拖曳排版主視窗。\n" +
+                                       "2. 在左側樹狀清單中展開「未放置視圖」。\n" +
+                                       "3. 將目標視圖拖曳 (Drag & Drop) 放至上方的特定圖紙上即可置入。\n" +
+                                       "4. 可跨圖紙相互拖曳搬移，或點選「新建圖紙」一鍵加開圖紙。";
+                viewPlaceBtn.LongDescription = "【圖紙視圖排版 - 拖放移轉與防重疊說明】\n\n" +
+                                               "■ 智能跨圖紙搬移：由於 Revit 限制普通視圖只能放置在單一圖紙上，當您跨圖紙拖曳時，系統會自動在後台刪除舊圖紙的 Viewport 並於新圖紙重建，避免 Revit 異常。\n" +
+                                               "■ 位置自動偏移：置入新視圖時，若圖紙已有視窗，系統會自動套用微幅偏移以防完全重疊遮擋，並會自動套用下拉選定的視埠樣式。\n" +
+                                               "■ 支援明細表與圖例：除了一般平面/剖立面/3D 視圖外，亦支援將明細表 (Schedule) 等可多重置入的視圖進行拖放排版。";
+                sheetPanel.AddItem(viewPlaceBtn);
+
                 // Panel 6: DT｜標註工具
                 RibbonPanel tagPanel = application.CreateRibbonPanel(tabName, "DT｜標註工具");
 
