@@ -28,6 +28,27 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
         public bool IsGroup => Type == "SheetGroup" || Type == "UnplacedGroup" || Type == "ViewTypeGroup" || Type == "Sheet";
         public bool IsView => Type == "View" || Type == "Schedule";
 
+        private string _rawName;
+        public string RawName
+        {
+            get => _rawName;
+            set { _rawName = value; OnPropertyChanged(); }
+        }
+
+        private string _editText;
+        public string EditText
+        {
+            get => _editText;
+            set { _editText = value; OnPropertyChanged(); }
+        }
+
+        private bool _isEditing;
+        public bool IsEditing
+        {
+            get => _isEditing;
+            set { _isEditing = value; OnPropertyChanged(); }
+        }
+
         private bool _isExpanded;
         public bool IsExpanded
         {
@@ -168,6 +189,24 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
             SelectedViewportType = ViewportTypes.FirstOrDefault();
         }
 
+        private static readonly Dictionary<ViewType, int> ViewTypeOrder = new Dictionary<ViewType, int>
+        {
+            { ViewType.FloorPlan, 1 },
+            { ViewType.CeilingPlan, 2 },
+            { ViewType.ThreeD, 3 },
+            { ViewType.Elevation, 4 },
+            { ViewType.Section, 5 },
+            { ViewType.Rendering, 6 },
+            { ViewType.DraftingView, 7 },
+            { ViewType.Legend, 8 },
+            { ViewType.Schedule, 9 }
+        };
+
+        private int GetViewTypeOrder(ViewType type)
+        {
+            return ViewTypeOrder.TryGetValue(type, out var val) ? val : 99;
+        }
+
         /// <summary>
         /// 載入樹狀圖拓撲結構
         /// </summary>
@@ -182,8 +221,8 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                 .OrderBy(s => s.SheetNumber)
                 .ToList();
 
-            // 2. 統計已被放置的視圖 Id (包含明細表)
-            var placedViewIds = new HashSet<ElementId>();
+            // 2. 統計已被放置的視圖 Id (包含明細表) 並對應到圖紙編號
+            var viewToSheetNumbers = new Dictionary<ElementId, List<string>>();
             var viewports = new FilteredElementCollector(_doc)
                 .OfClass(typeof(Viewport))
                 .Cast<Viewport>()
@@ -191,7 +230,17 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
 
             foreach (var vp in viewports)
             {
-                placedViewIds.Add(vp.ViewId);
+                var sheet = _doc.GetElement(vp.SheetId) as ViewSheet;
+                if (sheet != null)
+                {
+                    if (!viewToSheetNumbers.TryGetValue(vp.ViewId, out var sheetNums))
+                    {
+                        sheetNums = new List<string>();
+                        viewToSheetNumbers[vp.ViewId] = sheetNums;
+                    }
+                    if (!sheetNums.Contains(sheet.SheetNumber))
+                        sheetNums.Add(sheet.SheetNumber);
+                }
             }
 
             var scheduleInstances = new FilteredElementCollector(_doc)
@@ -201,7 +250,17 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
 
             foreach (var si in scheduleInstances)
             {
-                placedViewIds.Add(si.ScheduleId);
+                var sheet = _doc.GetElement(si.OwnerViewId) as ViewSheet;
+                if (sheet != null)
+                {
+                    if (!viewToSheetNumbers.TryGetValue(si.ScheduleId, out var sheetNums))
+                    {
+                        sheetNums = new List<string>();
+                        viewToSheetNumbers[si.ScheduleId] = sheetNums;
+                    }
+                    if (!sheetNums.Contains(sheet.SheetNumber))
+                        sheetNums.Add(sheet.SheetNumber);
+                }
             }
 
             // 3. 建立「圖紙清單」根節點
@@ -217,10 +276,14 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                 {
                     Id = sheet.Id,
                     Name = $"[{sheet.SheetNumber}] {sheet.Name}",
+                    RawName = sheet.Name,
+                    EditText = sheet.Name,
                     SheetNumber = sheet.SheetNumber,
                     Type = "Sheet",
                     Parent = _rawSheetsGroup
                 };
+
+                var sheetChildrenList = new List<TreeItemViewModel>();
 
                 // 3.1 載入此圖紙上的普通視埠視圖
                 var vpsOnSheet = viewports.Where(vp => vp.SheetId == sheet.Id).ToList();
@@ -229,10 +292,12 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                     var view = _doc.GetElement(vp.ViewId) as View;
                     if (view == null) continue;
 
-                    sheetNode.Children.Add(new TreeItemViewModel
+                    sheetChildrenList.Add(new TreeItemViewModel
                     {
                         Id = view.Id,
                         Name = $"[{GetViewTypeName(view.ViewType)}] {view.Name}",
+                        RawName = view.Name,
+                        EditText = view.Name,
                         Type = "View",
                         ViewTypeStr = GetViewTypeName(view.ViewType),
                         Parent = sheetNode
@@ -246,23 +311,38 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                     var sched = _doc.GetElement(si.ScheduleId) as ViewSchedule;
                     if (sched == null || sched.IsTitleblockRevisionSchedule) continue;
 
-                    sheetNode.Children.Add(new TreeItemViewModel
+                    sheetChildrenList.Add(new TreeItemViewModel
                     {
                         Id = sched.Id,
                         Name = $"[明細表] {sched.Name}",
+                        RawName = sched.Name,
+                        EditText = sched.Name,
                         Type = "Schedule",
                         ViewTypeStr = "明細表",
                         Parent = sheetNode
                     });
                 }
 
+                // 依專案瀏覽器邏輯排序圖紙內的視圖
+                var sortedSheetChildren = sheetChildrenList
+                    .OrderBy(item => {
+                        var view = _doc.GetElement(item.Id) as View;
+                        return view != null ? GetViewTypeOrder(view.ViewType) : 99;
+                    })
+                    .ThenBy(item => item.RawName);
+
+                foreach (var childNode in sortedSheetChildren)
+                {
+                    sheetNode.Children.Add(childNode);
+                }
+
                 _rawSheetsGroup.Children.Add(sheetNode);
             }
 
-            // 4. 建立「未放置視圖」根節點
+            // 4. 建立「所有視圖」根節點
             _rawUnplacedGroup = new TreeItemViewModel
             {
-                Name = "未放置視圖 (Unplaced Views)",
+                Name = "所有視圖 (All Views)",
                 Type = "UnplacedGroup"
             };
 
@@ -272,10 +352,10 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                 .Where(v => !v.IsTemplate)
                 .ToList();
 
-            var unplacedViews = allViews.Where(v => !placedViewIds.Contains(v.Id) && IsPlaceableView(v)).ToList();
+            var placeableViews = allViews.Where(v => IsPlaceableView(v)).ToList();
 
             // 依視圖類型分組
-            var groupedViews = unplacedViews.GroupBy(v => v.ViewType).OrderBy(g => g.Key.ToString());
+            var groupedViews = placeableViews.GroupBy(v => v.ViewType).OrderBy(g => GetViewTypeOrder(g.Key));
             foreach (var group in groupedViews)
             {
                 var viewTypeGroupNode = new TreeItemViewModel
@@ -287,10 +367,18 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
 
                 foreach (var view in group.OrderBy(v => v.Name))
                 {
+                    string displayName = view.Name;
+                    if (viewToSheetNumbers.TryGetValue(view.Id, out var sheetNums) && sheetNums.Count > 0)
+                    {
+                        displayName = $"{view.Name} [已放置於 {string.Join(", ", sheetNums)}]";
+                    }
+
                     viewTypeGroupNode.Children.Add(new TreeItemViewModel
                     {
                         Id = view.Id,
-                        Name = view.Name,
+                        Name = displayName,
+                        RawName = view.Name,
+                        EditText = view.Name,
                         Type = view is ViewSchedule ? "Schedule" : "View",
                         ViewTypeStr = GetViewTypeName(view.ViewType),
                         Parent = viewTypeGroupNode
@@ -321,7 +409,7 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
 
             string keyword = SearchText.Trim().ToLower();
 
-            // 對「圖紙清單」與「未放置視圖」下的節點進行過濾
+            // 對「圖紙清單」與「所有視圖」下的節點進行過濾
             FilterNode(_rawSheetsGroup, keyword);
             FilterNode(_rawUnplacedGroup, keyword);
         }
@@ -340,12 +428,6 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                     {
                         bool isMatch = (subChild.Name ?? "").ToLower().Contains(keyword);
                         subChild.IsSelected = false; // 取消選取高亮
-                        
-                        // 若子節點名稱符合關鍵字，則該子節點可見
-                        // WPF 樹狀圖我們直接使用 Collection 控制可見性，這裡簡化做法：
-                        // 如果沒有子節點滿足，我們就將其隱藏。為簡化，我們可以直接重構展示用的 filtered tree，
-                        // 或者僅在 TreeView 中利用 IsExpanded 與 Visibility 控制。
-                        // 這裡採用「若子節點匹配，或父節點匹配，則保留此節點」的邏輯。
                         if (isMatch) matchAnySubChild = true;
                     }
 
@@ -380,6 +462,8 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
             // 排除圖紙本身
             if (view is ViewSheet) return false;
 
+            if (view is ViewSchedule sched && sched.IsTitleblockRevisionSchedule) return false;
+
             // 支持的視圖類型
             var t = view.ViewType;
             return t == ViewType.FloorPlan ||
@@ -389,7 +473,8 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                    t == ViewType.ThreeD ||
                    t == ViewType.DraftingView ||
                    t == ViewType.Legend ||
-                   t == ViewType.Schedule;
+                   t == ViewType.Schedule ||
+                   t == ViewType.Rendering;
         }
 
         /// <summary>
@@ -407,6 +492,7 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                 case ViewType.DraftingView: return "繪圖視圖";
                 case ViewType.Legend: return "圖例";
                 case ViewType.Schedule: return "明細表";
+                case ViewType.Rendering: return "彩現";
                 default: return type.ToString();
             }
         }
@@ -414,13 +500,31 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
         #region Revit API 寫入操作 (Transaction)
 
         /// <summary>
-        /// 將未放置的視圖放入圖紙中
+        /// 將未放置的視圖放入圖紙中 (若已放置在其他圖紙，則會自動移轉位置)
         /// </summary>
         public bool PlaceViewOnSheet(ElementId viewId, ElementId targetSheetId)
         {
             var view = _doc.GetElement(viewId) as View;
             var sheet = _doc.GetElement(targetSheetId) as ViewSheet;
             if (view == null || sheet == null) return false;
+
+            // 檢查是否為普通視圖，且已經放置在其他圖紙上，若是則自動執行移轉
+            if (!(view is ViewSchedule))
+            {
+                var existingVp = new FilteredElementCollector(_doc)
+                    .OfClass(typeof(Viewport))
+                    .Cast<Viewport>()
+                    .FirstOrDefault(vp => vp.ViewId == view.Id);
+
+                if (existingVp != null)
+                {
+                    if (existingVp.SheetId == targetSheetId)
+                    {
+                        return true;
+                    }
+                    return MoveViewBetweenSheets(view.Id, existingVp.SheetId, targetSheetId);
+                }
+            }
 
             try
             {
@@ -458,6 +562,47 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
             catch (Exception ex)
             {
                 MessageBox.Show($"放置視圖失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 重新命名 Revit 元素 (圖紙或視圖)
+        /// </summary>
+        public bool RenameElement(ElementId id, string newName)
+        {
+            if (id == null || id == ElementId.InvalidElementId) return false;
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                MessageBox.Show("名稱不可為空！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            var elem = _doc.GetElement(id);
+            if (elem == null) return false;
+
+            try
+            {
+                using (Transaction trans = new Transaction(_doc, "重新命名元素"))
+                {
+                    trans.Start();
+                    
+                    if (elem is ViewSheet sheet)
+                    {
+                        sheet.Name = newName;
+                    }
+                    else if (elem is View view)
+                    {
+                        view.Name = newName;
+                    }
+                    
+                    trans.Commit();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"重新命名失敗：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }

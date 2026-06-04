@@ -118,6 +118,7 @@
             <EventSetter Event="MouseMove" Handler="TreeViewItem_MouseMove"/>
             <EventSetter Event="DragOver" Handler="TreeViewItem_DragOver"/>
             <EventSetter Event="Drop" Handler="TreeViewItem_Drop"/>
+            <EventSetter Event="MouseDoubleClick" Handler="TreeViewItem_MouseDoubleClick"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TreeViewItem">
@@ -228,7 +229,8 @@
                 <TreeView x:Name="SheetTreeView" ItemsSource="{Binding TreeItems}" AllowDrop="True"
                           Background="Transparent" BorderThickness="0" 
                           ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                          DragOver="SheetTreeView_DragOver" Drop="SheetTreeView_Drop">
+                          DragOver="SheetTreeView_DragOver" Drop="SheetTreeView_Drop"
+                          KeyDown="SheetTreeView_KeyDown">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <StackPanel Orientation="Horizontal" Margin="2,1">
@@ -237,8 +239,23 @@
                                            Visibility="{Binding IsGroup, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                 <TextBlock Text="📄 " Foreground="#A6E3A1" FontSize="12" 
                                            Visibility="{Binding IsView, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                <TextBlock Text="{Binding Name}" FontSize="12" VerticalAlignment="Center"/>
+                                <Grid VerticalAlignment="Center">
+                                    <!-- 唯讀文字顯示模式 -->
+                                    <TextBlock x:Name="NameText" Text="{Binding Name}" FontSize="12" VerticalAlignment="Center"/>
+                                    <!-- 編輯文字輸入框模式 -->
+                                    <TextBox x:Name="EditBox" Text="{Binding EditText, UpdateSourceTrigger=PropertyChanged}" 
+                                             FontSize="12" VerticalAlignment="Center" MinWidth="150" Height="22"
+                                             Background="#313244" Foreground="#CDD6F4" CaretBrush="#F5E0DC"
+                                             BorderBrush="#89B4FA" BorderThickness="1" Padding="2,0" Margin="-2,-1,0,-1"
+                                             Visibility="Collapsed" LostFocus="RenameTextBox_LostFocus" KeyDown="RenameTextBox_KeyDown" IsVisibleChanged="RenameTextBox_IsVisibleChanged"/>
+                                </Grid>
                             </StackPanel>
+                            <HierarchicalDataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                    <Setter TargetName="NameText" Property="Visibility" Value="Collapsed"/>
+                                    <Setter TargetName="EditBox" Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </HierarchicalDataTemplate.Triggers>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
                 </TreeView>

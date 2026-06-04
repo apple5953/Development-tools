@@ -161,6 +161,104 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
 
         #endregion
 
+        #region TreeView 雙擊 / 鍵盤更名事件處理
+
+        private void TreeViewItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            // 避免雙擊事件冒泡向上傳遞到父節點，只有最底層被點擊的節點才響應
+            e.Handled = true;
+
+            if (sender is TreeViewItem tvi && tvi.Header is TreeItemViewModel item)
+            {
+                if (item.Type == "Sheet" || item.Type == "View" || item.Type == "Schedule")
+                {
+                    item.EditText = item.RawName;
+                    item.IsEditing = true;
+                }
+            }
+        }
+
+        private void SheetTreeView_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.F2)
+            {
+                if (SheetTreeView.SelectedItem is TreeItemViewModel item)
+                {
+                    if (item.Type == "Sheet" || item.Type == "View" || item.Type == "Schedule")
+                    {
+                        e.Handled = true;
+                        item.EditText = item.RawName;
+                        item.IsEditing = true;
+                    }
+                }
+            }
+        }
+
+        private void RenameTextBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is TextBox textBox && textBox.IsVisible)
+            {
+                textBox.Focus();
+                textBox.SelectAll();
+            }
+        }
+
+        private void RenameTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox textBox && textBox.DataContext is TreeItemViewModel item)
+            {
+                CommitRename(item);
+            }
+        }
+
+        private void RenameTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (sender is TextBox textBox && textBox.DataContext is TreeItemViewModel item)
+            {
+                if (e.Key == Key.Enter)
+                {
+                    e.Handled = true;
+                    CommitRename(item);
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    e.Handled = true;
+                    item.IsEditing = false;
+                }
+            }
+        }
+
+        private void CommitRename(TreeItemViewModel item)
+        {
+            if (!item.IsEditing) return;
+
+            // 關閉編輯狀態
+            item.IsEditing = false;
+
+            string newName = item.EditText?.Trim();
+            if (string.IsNullOrEmpty(newName))
+            {
+                return;
+            }
+
+            if (newName != item.RawName)
+            {
+                StatusText.Text = $"狀態：正在重新命名「{item.RawName}」為「{newName}」...";
+                bool success = _viewModel.RenameElement(item.Id, newName);
+                if (success)
+                {
+                    _viewModel.LoadData();
+                    StatusText.Text = $"狀態：✓ 成功重新命名為「{newName}」";
+                }
+                else
+                {
+                    StatusText.Text = "狀態：重新命名失敗。";
+                }
+            }
+        }
+
+        #endregion
+
         #region 按鈕點擊事件
 
         private void RefreshBtn_Click(object sender, RoutedEventArgs e)
