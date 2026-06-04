@@ -18,6 +18,13 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
         private System.Windows.Point _startPoint;
         private TreeItemViewModel _draggedItem;
 
+        // 畫布拖曳狀態變數
+        private bool _isDraggingInCanvas = false;
+        private System.Windows.Point _dragStartMousePos;
+        private double _dragStartCanvasX;
+        private double _dragStartCanvasY;
+        private PlacedViewItemViewModel _draggedCanvasItem;
+
         public SheetViewPlacerWindow(Autodesk.Revit.DB.Document doc)
         {
             InitializeComponent();
@@ -604,6 +611,79 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                 PosXTextBox.Text = selectedItems[0].XMm.ToString("F0");
                 PosYTextBox.Text = selectedItems[0].YMm.ToString("F0");
             }
+        }
+
+        private void CanvasItem_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var border = sender as FrameworkElement;
+            if (border == null) return;
+
+            var item = border.DataContext as PlacedViewItemViewModel;
+            if (item == null) return;
+
+            _isDraggingInCanvas = true;
+            _draggedCanvasItem = item;
+            _dragStartMousePos = e.GetPosition(PlacedViewsItemsControl);
+            _dragStartCanvasX = item.CanvasX;
+            _dragStartCanvasY = item.CanvasY;
+
+            border.CaptureMouse();
+            
+            // 同時將其設為 PlacedViewsListBox 的選取項
+            PlacedViewsListBox.SelectedItem = item;
+            
+            e.Handled = true;
+        }
+
+        private void CanvasItem_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDraggingInCanvas || _draggedCanvasItem == null) return;
+
+            var border = sender as FrameworkElement;
+            if (border == null) return;
+
+            System.Windows.Point currentMousePos = e.GetPosition(PlacedViewsItemsControl);
+            double deltaX = currentMousePos.X - _dragStartMousePos.X;
+            double deltaY = currentMousePos.Y - _dragStartMousePos.Y;
+
+            // 即時移動 UI
+            _draggedCanvasItem.CanvasX = _dragStartCanvasX + deltaX;
+            _draggedCanvasItem.CanvasY = _dragStartCanvasY + deltaY;
+        }
+
+        private void CanvasItem_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isDraggingInCanvas || _draggedCanvasItem == null) return;
+
+            var border = sender as FrameworkElement;
+            if (border != null)
+            {
+                border.ReleaseMouseCapture();
+            }
+
+            _isDraggingInCanvas = false;
+
+            // 計算新中心點並寫入 Revit
+            double newCenterX_mm = _draggedCanvasItem.CanvasX + _draggedCanvasItem.WidthMm / 2;
+            double newCenterY_mm = _draggedCanvasItem.SheetHeight - _draggedCanvasItem.CanvasY - _draggedCanvasItem.HeightMm / 2;
+
+            StatusText.Text = "狀態：正在調整視圖位置...";
+            bool success = _viewModel.UpdatePlacedViewPosition(_draggedCanvasItem, newCenterX_mm, newCenterY_mm);
+            if (success)
+            {
+                StatusText.Text = $"狀態：✓ 成功移動視圖至 ({newCenterX_mm:F0}, {newCenterY_mm:F0}) mm";
+                PosXTextBox.Text = newCenterX_mm.ToString("F0");
+                PosYTextBox.Text = newCenterY_mm.ToString("F0");
+            }
+            else
+            {
+                StatusText.Text = "狀態：位置調整失敗，還原座標。";
+                _draggedCanvasItem.CanvasX = _dragStartCanvasX;
+                _draggedCanvasItem.CanvasY = _dragStartCanvasY;
+            }
+
+            _draggedCanvasItem = null;
+            e.Handled = true;
         }
 
         #endregion

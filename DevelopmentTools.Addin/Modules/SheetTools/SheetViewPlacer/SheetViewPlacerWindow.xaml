@@ -178,6 +178,34 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Segmented Tab Button Style -->
+        <Style x:Key="SegmentedTabBtn" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Background="#313244" BorderBrush="#45475A" BorderThickness="1" CornerRadius="4" Padding="6,4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#89B4FA"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#89B4FA"/>
+                                <Setter Property="Foreground" Value="#1E1E2E"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="16">
@@ -335,9 +363,9 @@
                         Visibility="{Binding HasSelectedSheet, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <!-- 標題與圖紙名稱 -->
+                            <!-- 標題與分頁按鈕 -->
                             <RowDefinition Height="Auto"/>
-                            <!-- 視圖列表 ListBox -->
+                            <!-- 視圖列表或畫布 -->
                             <RowDefinition Height="*"/>
                             <!-- 控制選項 -->
                             <RowDefinition Height="Auto"/>
@@ -346,14 +374,25 @@
                         <!-- 標題 -->
                         <StackPanel Grid.Row="0" Margin="0,0,0,8">
                             <TextBlock Text="▍ 圖紙內視圖排版微調" FontWeight="Bold" Foreground="#89B4FA" FontSize="12"/>
-                            <TextBlock Text="{Binding SelectedSheetNode.Name}" Foreground="#BAC2E0" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                            <TextBlock Text="{Binding SelectedSheetNode.Name}" Foreground="#BAC2E0" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,8"/>
+                            
+                            <!-- Segmented Tab 切換控制項 -->
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <RadioButton x:Name="TabVisualRadio" Content="🎨 可視化畫布" IsChecked="True" Style="{StaticResource SegmentedTabBtn}" Margin="0,0,3,0"/>
+                                <RadioButton x:Name="TabNumericRadio" Grid.Column="1" Content="⚙️ 對齊與微調" Style="{StaticResource SegmentedTabBtn}" Margin="3,0,0,0"/>
+                            </Grid>
                         </StackPanel>
 
-                        <!-- 視圖列表 -->
+                        <!-- 視圖列表 (對齊與微調模式) -->
                         <ListBox x:Name="PlacedViewsListBox" Grid.Row="1" ItemsSource="{Binding PlacedViews}" SelectionMode="Extended"
                                  Background="#1E1E2E" BorderBrush="#313244" BorderThickness="1" Margin="0,0,0,8"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 SelectionChanged="PlacedViewsListBox_SelectionChanged">
+                                 SelectionChanged="PlacedViewsListBox_SelectionChanged"
+                                 Visibility="{Binding IsChecked, ElementName=TabNumericRadio, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid HorizontalAlignment="Stretch">
@@ -399,8 +438,45 @@
                             </ListBox.ItemContainerStyle>
                         </ListBox>
 
-                        <!-- 下方控制項 -->
-                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Height="220">
+                        <!-- 可視化畫布預覽區 (可視化畫布模式) -->
+                        <Viewbox Grid.Row="1" Grid.RowSpan="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                 Visibility="{Binding IsChecked, ElementName=TabVisualRadio, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Border Width="{Binding SheetWidthMm}" Height="{Binding SheetHeightMm}" 
+                                    Background="#11111B" BorderBrush="#45475A" BorderThickness="2" CornerRadius="4">
+                                <ItemsControl x:Name="PlacedViewsItemsControl" ItemsSource="{Binding PlacedViews}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas Background="Transparent" IsItemsHost="True"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="{Binding CanvasX}"/>
+                                            <Setter Property="Canvas.Top" Value="{Binding CanvasY}"/>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Width="{Binding WidthMm}" Height="{Binding HeightMm}"
+                                                    Background="#2689B4FA" BorderBrush="#89B4FA" BorderThickness="1.5" CornerRadius="3"
+                                                    Cursor="SizeAll"
+                                                    MouseLeftButtonDown="CanvasItem_MouseLeftButtonDown"
+                                                    MouseMove="CanvasItem_MouseMove"
+                                                    MouseLeftButtonUp="CanvasItem_MouseLeftButtonUp">
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Name}" Foreground="#CDD6F4" FontSize="9"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="4"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+                        </Viewbox>
+
+                        <!-- 下方控制項 (對齊與微調模式) -->
+                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Height="220"
+                                      Visibility="{Binding IsChecked, ElementName=TabNumericRadio, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <StackPanel>
                                 <!-- 1. 座標手動編輯與微調 -->
                                 <Grid Margin="0,4,0,8">

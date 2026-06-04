@@ -141,6 +141,20 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
             set { _placedViews = value; OnPropertyChanged(); }
         }
 
+        private double _sheetWidthMm = 841;
+        public double SheetWidthMm
+        {
+            get => _sheetWidthMm;
+            set { _sheetWidthMm = value; OnPropertyChanged(); }
+        }
+
+        private double _sheetHeightMm = 594;
+        public double SheetHeightMm
+        {
+            get => _sheetHeightMm;
+            set { _sheetHeightMm = value; OnPropertyChanged(); }
+        }
+
         private TreeItemViewModel _selectedSheetNode;
         public TreeItemViewModel SelectedSheetNode
         {
@@ -873,8 +887,32 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
             if (SelectedSheetNode == null || SelectedSheetNode.Type != "Sheet") return;
 
             var sheetId = SelectedSheetNode.Id;
+            var sheet = _doc.GetElement(sheetId) as ViewSheet;
+            if (sheet == null) return;
 
-            // 1. 取得普通視圖 Viewports
+            // 1. 取得此圖紙上的圖框 TitleBlock
+            var titleBlock = new FilteredElementCollector(_doc, sheetId)
+                .OfCategory(BuiltInCategory.OST_TitleBlocks)
+                .OfClass(typeof(FamilyInstance))
+                .FirstOrDefault() as FamilyInstance;
+
+            double sheetWidth = 841; // 預設 A1
+            double sheetHeight = 594;
+
+            if (titleBlock != null)
+            {
+                BoundingBoxXYZ bbox = titleBlock.get_BoundingBox(sheet);
+                if (bbox != null)
+                {
+                    sheetWidth = (bbox.Max.X - bbox.Min.X) * 304.8;
+                    sheetHeight = (bbox.Max.Y - bbox.Min.Y) * 304.8;
+                }
+            }
+
+            SheetWidthMm = Math.Round(sheetWidth, 1);
+            SheetHeightMm = Math.Round(sheetHeight, 1);
+
+            // 2. 取得普通視圖 Viewports
             var viewportsOnSheet = new FilteredElementCollector(_doc)
                 .OfClass(typeof(Viewport))
                 .Cast<Viewport>()
@@ -887,18 +925,27 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                 if (view == null) continue;
 
                 XYZ center = vp.GetBoxCenter();
-                PlacedViews.Add(new PlacedViewItemViewModel
+                Outline outline = vp.GetBoxOutline();
+                double viewWidth = (outline.MaximumPoint.X - outline.MinimumPoint.X) * 304.8;
+                double viewHeight = (outline.MaximumPoint.Y - outline.MinimumPoint.Y) * 304.8;
+
+                var pvi = new PlacedViewItemViewModel
                 {
                     ViewId = view.Id,
                     ElementId = vp.Id,
                     Name = $"[{GetViewTypeName(view.ViewType)}] {view.Name}",
                     Type = "Viewport",
+                    WidthMm = Math.Round(viewWidth, 1),
+                    HeightMm = Math.Round(viewHeight, 1),
+                    SheetWidth = SheetWidthMm,
+                    SheetHeight = SheetHeightMm,
                     XMm = Math.Round(center.X * 304.8, 1),
                     YMm = Math.Round(center.Y * 304.8, 1)
-                });
+                };
+                PlacedViews.Add(pvi);
             }
 
-            // 2. 取得明細表 ScheduleSheetInstances
+            // 3. 取得明細表 ScheduleSheetInstances
             var scheduleInstancesOnSheet = new FilteredElementCollector(_doc)
                 .OfClass(typeof(ScheduleSheetInstance))
                 .Cast<ScheduleSheetInstance>()
@@ -911,15 +958,30 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
                 if (sched == null || sched.IsTitleblockRevisionSchedule) continue;
 
                 XYZ point = si.Point;
-                PlacedViews.Add(new PlacedViewItemViewModel
+                double viewWidth = 180;
+                double viewHeight = 80;
+
+                BoundingBoxXYZ bbox = si.get_BoundingBox(sheet);
+                if (bbox != null)
+                {
+                    viewWidth = (bbox.Max.X - bbox.Min.X) * 304.8;
+                    viewHeight = (bbox.Max.Y - bbox.Min.Y) * 304.8;
+                }
+
+                var pvi = new PlacedViewItemViewModel
                 {
                     ViewId = sched.Id,
                     ElementId = si.Id,
                     Name = $"[明細表] {sched.Name}",
                     Type = "Schedule",
+                    WidthMm = Math.Round(viewWidth, 1),
+                    HeightMm = Math.Round(viewHeight, 1),
+                    SheetWidth = SheetWidthMm,
+                    SheetHeight = SheetHeightMm,
                     XMm = Math.Round(point.X * 304.8, 1),
                     YMm = Math.Round(point.Y * 304.8, 1)
-                });
+                };
+                PlacedViews.Add(pvi);
             }
         }
 
