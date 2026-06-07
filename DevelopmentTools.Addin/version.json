@@ -1,7 +1,7 @@
-{
+﻿{
   "app_id": "development_tools",
   "product_name": "Room Tile System v3",
-  "current_version": "9.9.9",
+  "current_version": "2.0.0",
   "channel": "stable",
   "main_dll": "DevelopmentTools.Addin.dll",
   "install_folder": "%LOCALAPPDATA%\\DevelopmentTools\\App",
@@ -9,3 +9,4 @@
   "manifest_url": "https://raw.githubusercontent.com/apple5953/Development-tools/main/update_manifest.json",
   "updated_at": "2026-06-04T23:51:00"
 }
+
