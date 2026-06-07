@@ -10,14 +10,14 @@ namespace DevelopmentTools.Modules.SheetTools.QuickViewCreator
     /// </summary>
     public partial class QuickViewCreatorWindow : Window
     {
-        private readonly QuickViewCreatorViewModel _viewModel;
+        public QuickViewCreatorViewModel ViewModel { get; }
 
         public QuickViewCreatorWindow(Document doc)
         {
             InitializeComponent();
             
-            _viewModel = new QuickViewCreatorViewModel(doc, this);
-            this.DataContext = _viewModel;
+            ViewModel = new QuickViewCreatorViewModel(doc, this);
+            this.DataContext = ViewModel;
         }
 
         private void TreeViewItem_ToolTipOpening(object sender, ToolTipEventArgs e)
@@ -34,7 +34,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickViewCreator
 
                     if (previewImg != null && loadingText != null)
                     {
-                        var bitmap = DevelopmentTools.Core.ViewPreviewCacheManager.GetPreviewImage(_viewModel.Doc, item.Id);
+                        var bitmap = DevelopmentTools.Core.ViewPreviewCacheManager.GetPreviewImage(ViewModel.Doc, item.Id);
                         if (bitmap != null)
                         {
                             previewImg.Source = bitmap;

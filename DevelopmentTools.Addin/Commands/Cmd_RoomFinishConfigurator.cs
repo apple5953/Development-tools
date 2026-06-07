@@ -25,10 +25,7 @@ namespace DevelopmentTools.Commands
                 bool isAuthorized = true;
                 if (GoogleAuthManager.IsAuthEnabled())
                 {
-                    isAuthorized = System.Threading.Tasks.Task.Run(async () =>
-                    {
-                        return await GoogleAuthManager.VerifyAccessAsync("DT_RoomFinishConfigurator", "房間裝修配置");
-                    }).GetAwaiter().GetResult();
+                    isAuthorized = GoogleAuthManager.VerifyAccess("DT_RoomFinishConfigurator", "房間裝修配置");
                 }
 
                 if (!isAuthorized)
@@ -45,21 +42,16 @@ namespace DevelopmentTools.Commands
                     return Result.Failed;
                 }
 
-                // 2. 開啟配置視窗 (Modal)
-                RoomFinishConfiguratorWindow window = new RoomFinishConfiguratorWindow(doc);
+                // 2. 開啟配置視窗 (Modeless)
+                RoomFinishConfiguratorWindow window = new RoomFinishConfiguratorWindow(uidoc);
 
                 // 設定 Owner 為 Revit 主視窗以防視窗掉到 Revit 後面
                 var helper = new System.Windows.Interop.WindowInteropHelper(window);
                 helper.Owner = commandData.Application.MainWindowHandle;
 
-                bool? dialogResult = window.ShowDialog();
+                window.Show();
 
-                if (dialogResult == true)
-                {
-                    return Result.Succeeded;
-                }
-
-                return Result.Cancelled;
+                return Result.Succeeded;
             }
             catch (Exception ex)
             {

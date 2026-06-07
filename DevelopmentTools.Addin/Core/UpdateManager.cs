@@ -64,7 +64,7 @@ namespace DevelopmentTools.Core
                     }
                 }
 
-                string remoteJson = await DownloadManager.DownloadJsonAsync(manifestUrl);
+                string remoteJson = await DownloadManager.DownloadJsonAsync(manifestUrl).ConfigureAwait(false);
                 if (string.IsNullOrEmpty(remoteJson))
                 {
                     return result;
@@ -109,10 +109,13 @@ namespace DevelopmentTools.Core
                 string destinationZip = Path.Combine(StagingDir, zipName);
 
                 UpdateLogger.Log($"開始下載新版壓縮包: {manifest.release_url}");
-                bool downloadSuccess = await DownloadManager.DownloadFileAsync(manifest.release_url, destinationZip);
+                bool downloadSuccess = await DownloadManager.DownloadFileAsync(manifest.release_url, destinationZip).ConfigureAwait(false);
                 if (!downloadSuccess)
                 {
-                    TaskDialog.Show("更新提示", "下載新版更新檔案失敗。詳細資料請見 Logs。");
+                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        TaskDialog.Show("更新提示", "下載新版更新檔案失敗。詳細資料請見 Logs。");
+                    }));
                     return false;
                 }
 
@@ -120,7 +123,10 @@ namespace DevelopmentTools.Core
                 if (!DownloadManager.VerifySha256(destinationZip, manifest.sha256))
                 {
                     UpdateLogger.Log($"SHA256 驗證失敗。檔案: {destinationZip}");
-                    TaskDialog.Show("更新提示", "下載的檔案損壞（SHA256 校驗失敗），已取消更新。");
+                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        TaskDialog.Show("更新提示", "下載的檔案損壞（SHA256 校驗失敗），已取消更新。");
+                    }));
                     return false;
                 }
 
@@ -144,7 +150,10 @@ namespace DevelopmentTools.Core
 
                 if (!File.Exists(updaterExe))
                 {
-                    TaskDialog.Show("更新提示", $"找不到更新主程式：{updaterExe}");
+                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        TaskDialog.Show("更新提示", $"找不到更新主程式：{updaterExe}");
+                    }));
                     return false;
                 }
 
@@ -157,13 +166,19 @@ namespace DevelopmentTools.Core
                 };
 
                 Process.Start(startInfo);
-                TaskDialog.Show("更新提示", "更新程式已啟動。請關閉 Revit 以完成更新安裝。");
+                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    TaskDialog.Show("更新提示", "更新程式已啟動。請關閉 Revit 以完成更新安裝。");
+                }));
                 return true;
             }
             catch (Exception ex)
             {
                 UpdateLogger.Log("啟動更新程序失敗", ex);
-                TaskDialog.Show("更新錯誤", "啟動更新流程時發生錯誤: " + ex.Message);
+                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    TaskDialog.Show("更新錯誤", "啟動更新流程時發生錯誤: " + ex.Message);
+                }));
                 return false;
             }
         }

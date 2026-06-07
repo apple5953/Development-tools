@@ -3,6 +3,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using DevelopmentTools.Core;
+using DevelopmentTools.Modules.SheetTools.RoomFinishConfigurator;
 
 namespace DevelopmentTools.Commands
 {
@@ -15,36 +16,45 @@ namespace DevelopmentTools.Commands
             ref string message,
             ElementSet elements)
         {
-            var uiDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
-
-            // 啟動非同步驗證，防止卡死 Revit 主執行緒
-            System.Threading.Tasks.Task.Run(async () =>
+            try
             {
-                try
+                // 1. 檢查既有授權系統
+                bool isAuthorized = true;
+                if (GoogleAuthManager.IsAuthEnabled())
                 {
-                    bool isAuthorized = await GoogleAuthManager.VerifyAccessAsync("WallFinish", "自動粉刷系統");
-                    if (!isAuthorized) return;
-
-                    uiDispatcher.Invoke(() =>
-                    {
-                        TaskDialog.Show(
-                            "自動粉刷系統 (Mock)", 
-                            "驗證成功！您已獲得「自動粉刷系統」的完整使用權限。\n\n" +
-                            "【功能展示】\n" +
-                            "本功能正與 Revit 牆面粉刷幾何引擎（Wall Decoration Geometry Engine）進行最終對接，預計於下個小版本更新後正式啟用，敬請期待！"
-                        );
-                    });
+                    isAuthorized = GoogleAuthManager.VerifyAccess("WallFinish", "自動粉刷系統");
                 }
-                catch (Exception ex)
+
+                if (!isAuthorized)
                 {
-                    uiDispatcher.Invoke(() =>
-                    {
-                        TaskDialog.Show("驗證錯誤", $"驗證過程發生異常：{ex.Message}");
-                    });
+                    return Result.Failed;
                 }
-            });
 
-            return Result.Succeeded;
+                UIDocument uidoc = commandData.Application.ActiveUIDocument;
+                Document doc = uidoc?.Document;
+
+                if (doc == null)
+                {
+                    message = "無效的活動文件。";
+                    return Result.Failed;
+                }
+
+                // 2. 開啟已整合的配置與粉刷生成視窗 (Modeless)
+                RoomFinishConfiguratorWindow window = new RoomFinishConfiguratorWindow(uidoc);
+
+                // 設定 Owner 為 Revit 主視窗
+                var helper = new System.Windows.Interop.WindowInteropHelper(window);
+                helper.Owner = commandData.Application.MainWindowHandle;
+
+                window.Show();
+
+                return Result.Succeeded;
+            }
+            catch (Exception ex)
+            {
+                message = $"開啟自動粉刷與配置工具失敗：{ex.Message}";
+                return Result.Failed;
+            }
         }
     }
 }

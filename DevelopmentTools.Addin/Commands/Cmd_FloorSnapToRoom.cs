@@ -44,11 +44,7 @@ namespace DevelopmentTools.Commands
                 bool isAuthorized = true;
                 if (GoogleAuthManager.IsAuthEnabled())
                 {
-                    // 同步等待非同步驗證，保留 Revit API Context 鎖
-                    isAuthorized = System.Threading.Tasks.Task.Run(async () =>
-                    {
-                        return await GoogleAuthManager.VerifyAccessAsync("DT_FloorSnapToRoom", "樓板貼房間");
-                    }).GetAwaiter().GetResult();
+                    isAuthorized = GoogleAuthManager.VerifyAccess("DT_FloorSnapToRoom", "樓板貼房間");
                 }
 
                 if (!isAuthorized)

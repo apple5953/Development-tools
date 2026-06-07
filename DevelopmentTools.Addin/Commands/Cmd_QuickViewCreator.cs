@@ -25,10 +25,7 @@ namespace DevelopmentTools.Commands
                 bool isAuthorized = true;
                 if (GoogleAuthManager.IsAuthEnabled())
                 {
-                    isAuthorized = System.Threading.Tasks.Task.Run(async () =>
-                    {
-                        return await GoogleAuthManager.VerifyAccessAsync("DT_QuickViewCreator", "快速開圖與套樣板");
-                    }).GetAwaiter().GetResult();
+                    isAuthorized = GoogleAuthManager.VerifyAccess("DT_QuickViewCreator", "快速開圖與套樣板");
                 }
 
                 if (!isAuthorized)
@@ -56,6 +53,14 @@ namespace DevelopmentTools.Commands
 
                 if (dialogResult == true)
                 {
+                    if (window.ViewModel.LastCreatedSheetId != ElementId.InvalidElementId)
+                    {
+                        View view = doc.GetElement(window.ViewModel.LastCreatedSheetId) as View;
+                        if (view != null)
+                        {
+                            uidoc.ActiveView = view;
+                        }
+                    }
                     return Result.Succeeded;
                 }
 

@@ -19,3 +19,9 @@ RTS_OneClick_Installer.zip
 Backup_v1/
 extracted_strings.txt
 C:/Users/User/.gemini/antigravity/
+
+# Local working data
+local-data/
+CDCBIM*.xlsx
+*.tmp
+*.bak

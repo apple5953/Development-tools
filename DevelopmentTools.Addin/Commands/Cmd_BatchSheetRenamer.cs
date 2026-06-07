@@ -25,10 +25,7 @@ namespace DevelopmentTools.Commands
                 bool isAuthorized = true;
                 if (GoogleAuthManager.IsAuthEnabled())
                 {
-                    isAuthorized = System.Threading.Tasks.Task.Run(async () =>
-                    {
-                        return await GoogleAuthManager.VerifyAccessAsync("DT_BatchSheetRenamer", "圖紙批次更名");
-                    }).GetAwaiter().GetResult();
+                    isAuthorized = GoogleAuthManager.VerifyAccess("DT_BatchSheetRenamer", "圖紙批次更名");
                 }
 
                 if (!isAuthorized)

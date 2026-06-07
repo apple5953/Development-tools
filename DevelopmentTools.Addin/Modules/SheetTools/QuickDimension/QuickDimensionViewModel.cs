@@ -64,8 +64,8 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             set { _selectedDimensionType = value; OnPropertyChanged(); }
         }
 
-        // 偏移距離 (公釐，預設 900mm)
-        private double _offsetDistance = 900;
+        // 偏移距離 (公釐，預設 0mm)
+        private double _offsetDistance = 0;
         public double OffsetDistance
         {
             get => _offsetDistance;
@@ -115,8 +115,12 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
                 StatusText = "提示：點擊「開始標註」後選取多個柱子，自動標註柱中心到中心。";
             else if (SelectedMode == 1)
                 StatusText = "提示：點擊「開始標註」後選取多道平行牆體，自動標註牆中心到中心。";
+            else if (SelectedMode == 2)
+                StatusText = "提示：點擊「開始標註」後選取多道平行牆體，自動標註牆邊到牆邊的淨距與厚度。";
+            else if (SelectedMode == 3)
+                StatusText = "提示：點擊「開始標註」後選取一道牆體，自動標註該牆上的所有門、窗與開口邊界。";
             else
-                StatusText = "提示：點擊「開始標註」後選取門、窗或開口，自動標註開口寬度與淨距。";
+                StatusText = "提示：點擊「開始標註」後選取目標元素進行快速標註。";
         }
 
         /// <summary>
@@ -146,9 +150,13 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
                 {
                     TagWalls(uidoc, activeView);
                 }
+                else if (SelectedMode == 2)
+                {
+                    TagWallEdges(uidoc, activeView);
+                }
                 else
                 {
-                    TagOpenings(uidoc, activeView);
+                    TagWallOpenings(uidoc, activeView);
                 }
             }
             catch (Autodesk.Revit.Exceptions.OperationCanceledException)
@@ -411,6 +419,220 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
                 }
                 trans.Commit();
             }
+        }
+
+        // --- 牆邊到牆邊標註 ---
+        private void TagWallEdges(UIDocument uidoc, View view)
+        {
+            var selFilter = new ElementSelectionFilter<Wall>(e => true);
+            IList<Reference> pickedRefs = uidoc.Selection.PickObjects(
+                ObjectType.Element,
+                selFilter,
+                "請選取多道平行的牆體以建立牆邊標註："
+            );
+
+            if (pickedRefs.Count < 2) return;
+
+            var walls = pickedRefs
+                .Select(r => _doc.GetElement(r.ElementId) as Wall)
+                .Where(w => w != null)
+                .ToList();
+
+            ReferenceArray refArray = new ReferenceArray();
+            List<XYZ> pts = new List<XYZ>();
+
+            foreach (var w in walls)
+            {
+                IList<Reference> extFaces = HostObjectUtils.GetSideFaces(w, ShellLayerType.Exterior);
+                IList<Reference> intFaces = HostObjectUtils.GetSideFaces(w, ShellLayerType.Interior);
+
+                if (extFaces != null && extFaces.Count > 0)
+                {
+                    refArray.Append(extFaces[0]);
+                }
+                if (intFaces != null && intFaces.Count > 0)
+                {
+                    refArray.Append(intFaces[0]);
+                }
+
+                if (w.Location is LocationCurve lc && lc.Curve is Line line)
+                {
+                    pts.Add(line.Evaluate(0.5, true));
+                }
+            }
+
+            if (refArray.Size < 2 || pts.Count < 2)
+            {
+                MessageBox.Show("未能提取出足夠的牆邊參照，無法建立標註。", "標註提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 尺寸線定位：過各牆中點的平均點，平行於牆方向
+            XYZ avgPt = new XYZ(pts.Average(p => p.X), pts.Average(p => p.Y), pts.Average(p => p.Z));
+            
+            XYZ wallDir = XYZ.BasisX;
+            if (walls[0].Location is LocationCurve lc0 && lc0.Curve is Line line0)
+            {
+                wallDir = line0.Direction.Normalize();
+            }
+
+            XYZ normal = new XYZ(-wallDir.Y, wallDir.X, 0).Normalize();
+
+            double offsetFeet = (OffsetDistance / 304.8);
+            XYZ offsetVec = normal * offsetFeet;
+
+            XYZ lineStart = avgPt + offsetVec;
+            XYZ lineEnd = lineStart + wallDir * 10.0;
+            Line dimLine = Line.CreateBound(lineStart, lineEnd);
+
+            using (Transaction trans = new Transaction(_doc, "快速標註-牆邊到牆邊"))
+            {
+                trans.Start();
+                try
+                {
+                    Dimension dim = _doc.Create.NewDimension(view, dimLine, refArray);
+                    if (dim != null && SelectedDimensionType != null)
+                    {
+                        dim.DimensionType = SelectedDimensionType;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"無法建立牆邊標註，可能是因為牆體不平行。\n詳細資訊：{ex.Message}", "標註失敗", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                trans.Commit();
+            }
+        }
+
+        // --- 沿牆邊開口自動標註 ---
+        private void TagWallOpenings(UIDocument uidoc, View view)
+        {
+            var selFilter = new ElementSelectionFilter<Wall>(e => true);
+            Reference pickedRef = null;
+            try
+            {
+                pickedRef = uidoc.Selection.PickObject(
+                    ObjectType.Element,
+                    selFilter,
+                    "請選取一道牆體以自動標註開口："
+                );
+            }
+            catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+            {
+                return;
+            }
+
+            if (pickedRef == null) return;
+
+            Wall selectedWall = _doc.GetElement(pickedRef.ElementId) as Wall;
+            if (selectedWall == null) return;
+
+            // 1. 取得牆的方向與法向量
+            if (!(selectedWall.Location is LocationCurve lc && lc.Curve is Line line))
+            {
+                MessageBox.Show("該牆體沒有合法的線形定位線，無法進行標註。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            XYZ wallDir = line.Direction.Normalize();
+            XYZ normal = new XYZ(-wallDir.Y, wallDir.X, 0).Normalize();
+
+            // 2. 獲取牆體上的所有門和窗 (FamilyInstance)
+            var hostWallId = selectedWall.Id;
+            var openings = new FilteredElementCollector(_doc)
+                .OfClass(typeof(FamilyInstance))
+                .Cast<FamilyInstance>()
+                .Where(fi => fi.Host != null && fi.Host.Id == hostWallId)
+                .Where(fi => fi.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Doors || 
+                             fi.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Windows)
+                .ToList();
+
+            ReferenceArray refArray = new ReferenceArray();
+
+            // 3. 獲取牆體兩端的端面參照 (Wall End Cap Faces)
+            var endRefs = GetWallEndFacesReferences(selectedWall, wallDir);
+            foreach (var r in endRefs)
+            {
+                refArray.Append(r);
+            }
+
+            // 4. 獲取所有門窗的左右參照面
+            foreach (var item in openings)
+            {
+                var leftRefs = item.GetReferences(FamilyInstanceReferenceType.Left);
+                var rightRefs = item.GetReferences(FamilyInstanceReferenceType.Right);
+
+                if (leftRefs != null && leftRefs.Count > 0 && rightRefs != null && rightRefs.Count > 0)
+                {
+                    refArray.Append(leftRefs[0]);
+                    refArray.Append(rightRefs[0]);
+                }
+            }
+
+            if (refArray.Size < 2)
+            {
+                MessageBox.Show("未能提取出足夠的參照面（需至少有牆端面或開口邊界）。", "標註提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 5. 尺寸線定位：沿著牆體定位線，並往外側偏移
+            double offsetFeet = (OffsetDistance / 304.8);
+            XYZ offsetVec = normal * offsetFeet;
+
+            XYZ lineStart = line.GetEndPoint(0) + offsetVec;
+            XYZ lineEnd = line.GetEndPoint(1) + offsetVec;
+            Line dimLine = Line.CreateBound(lineStart, lineEnd);
+
+            using (Transaction trans = new Transaction(_doc, "快速標註-邊開口"))
+            {
+                trans.Start();
+                try
+                {
+                    Dimension dim = _doc.Create.NewDimension(view, dimLine, refArray);
+                    if (dim != null && SelectedDimensionType != null)
+                    {
+                        dim.DimensionType = SelectedDimensionType;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"無法建立開口標註，可能是因為部分開口參照不平行或幾何結構複雜。\n詳細資訊：{ex.Message}", "標註失敗", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                trans.Commit();
+            }
+        }
+
+        // 輔助方法：獲取牆兩端的端面 (End Cap Faces) PlanarFace 參照
+        private List<Reference> GetWallEndFacesReferences(Wall wall, XYZ wallDir)
+        {
+            List<Reference> endFaces = new List<Reference>();
+            Options opt = new Options { DetailLevel = ViewDetailLevel.Fine, ComputeReferences = true };
+            GeometryElement geomElem = wall.get_Geometry(opt);
+            if (geomElem == null) return endFaces;
+
+            foreach (GeometryObject geomObj in geomElem)
+            {
+                if (geomObj is Solid solid && solid.Volume > 0)
+                {
+                    foreach (Face face in solid.Faces)
+                    {
+                        if (face is PlanarFace pf)
+                        {
+                            // 檢查法向量是否與牆方向平行
+                            double dot = Math.Abs(pf.FaceNormal.DotProduct(wallDir));
+                            if (dot > 0.99)
+                            {
+                                Reference r = pf.Reference;
+                                if (r != null)
+                                {
+                                    endFaces.Add(r);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return endFaces;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

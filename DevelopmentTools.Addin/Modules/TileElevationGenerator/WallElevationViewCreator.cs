@@ -42,7 +42,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             }
             double bottomOffsetFeet = settings.BottomOffset / 304.8;            // 底部延伸量
             double topOffsetFeet = 50.0 / 304.8;                        // 頂部延伸預設維持 50mm
-            double leftRightExtensionFeet = 0.0;                        // 左右延伸改為 0.0，使多面牆能完美連續接合不重疊
+            double leftRightExtensionFeet = settings.SideExtension / 304.8;             // 左右延伸量，可解決剖面寬度不夠、無法顯示轉角貼磚厚度的問題
 
             XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.MidPoint.Z + heightFeet / 2.0);
             t.Origin = midPointWithZ + data.RoomSideDirection * offsetFeet;
@@ -62,9 +62,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             var bbox = new BoundingBoxXYZ();
             bbox.Transform = t;
 
-            // 設定裁剪邊界
+            // 設定裁剪邊界，將 Max.Z 設為 150mm (原本是 0.1mm) 以避免切掉牆面往外貼磚的厚度
             bbox.Min = new XYZ(-(lengthFeet / 2.0) - leftRightExtensionFeet, -(heightFeet / 2.0) - bottomOffsetFeet, -depthFeet);
-            bbox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, (heightFeet / 2.0) + topOffsetFeet, 0.1 / 304.8);
+            bbox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, (heightFeet / 2.0) + topOffsetFeet, 150.0 / 304.8);
 
             // 4. 建立 Section View
             ViewSection section = ViewSection.CreateSection(doc, sectionTypeId, bbox);

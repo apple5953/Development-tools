@@ -341,14 +341,53 @@ namespace DevelopmentTools.UI
 										bool flag7 = !this.HasFinishLayer(current);
 										if (!flag7)
 										{
-											Parameter parameter = current.LookupParameter("Tile_Joint_Width");
+										Parameter parameter = current.LookupParameter("Tile_Joint_Width");
 											bool flag8 = parameter != null && !parameter.IsReadOnly;
 											if (flag8)
 											{
-												bool flag9 = parameter.AsDouble() < 1E-06;
+												bool flag9 = !parameter.HasValue;
 												if (flag9)
 												{
-													parameter.Set(0.00984251968503937);
+													bool isLength = false;
+													try
+													{
+														var propParameterType = parameter.Definition.GetType().GetProperty("ParameterType");
+														if (propParameterType != null)
+														{
+															var val = propParameterType.GetValue(parameter.Definition).ToString();
+															isLength = val.Equals("Length", StringComparison.OrdinalIgnoreCase);
+														}
+														else
+														{
+															var methodGetDataType = parameter.Definition.GetType().GetMethod("GetDataType");
+															if (methodGetDataType != null)
+															{
+																var forgeTypeId = methodGetDataType.Invoke(parameter.Definition, null);
+																if (forgeTypeId != null)
+																{
+																	var propTypeId = forgeTypeId.GetType().GetProperty("TypeId");
+																	if (propTypeId != null)
+																	{
+																		string typeId = propTypeId.GetValue(forgeTypeId) as string;
+																		isLength = typeId != null && typeId.IndexOf("length", StringComparison.OrdinalIgnoreCase) >= 0;
+																	}
+																}
+															}
+														}
+													}
+													catch
+													{
+														isLength = false;
+													}
+
+													if (isLength)
+													{
+														parameter.Set(0.00984251968503937); // Length 類型寫入 3mm 轉 feet
+													}
+													else
+													{
+														parameter.Set(3.0); // Number 類型直接寫入 3.0 (mm)
+													}
 													num++;
 												}
 											}
@@ -1905,6 +1944,66 @@ namespace DevelopmentTools.UI
 			double num2 = p.JointWidth / 304.8;
 			double offset = (p.TileWidth + p.JointWidth) / 304.8;
 			double num3 = (p.TileHeight + p.JointWidth) / 304.8;
+			if (p.JointWidth <= 0.001)
+			{
+				switch (p.Style)
+				{
+				case TilePatternStyle.RunningBond:
+				case TilePatternStyle.StackOffset:
+				{
+					list.Add(new FillGrid
+					{
+						Angle = 0.0,
+						Origin = UV.Zero,
+						Offset = num
+					});
+					double shift = num * (p.OffsetPercent / 100.0);
+					FillGrid fillGrid = new FillGrid
+					{
+						Angle = 1.5707963267948966,
+						Origin = UV.Zero,
+						Offset = u,
+						Shift = shift
+					};
+					fillGrid.SetSegments(new List<double>
+					{
+						num,
+						-num
+					});
+					list.Add(fillGrid);
+					return list;
+				}
+				case TilePatternStyle.HorizontalJoint:
+					list.Add(new FillGrid
+					{
+						Angle = 0.0,
+						Origin = UV.Zero,
+						Offset = num
+					});
+					return list;
+				case TilePatternStyle.VerticalJoint:
+					list.Add(new FillGrid
+					{
+						Angle = 1.5707963267948966,
+						Origin = UV.Zero,
+						Offset = u
+					});
+					return list;
+				}
+				list.Add(new FillGrid
+				{
+					Angle = 0.0,
+					Origin = UV.Zero,
+					Offset = num
+				});
+				list.Add(new FillGrid
+				{
+					Angle = 1.5707963267948966,
+					Origin = UV.Zero,
+					Offset = u
+				});
+				return list;
+			}
 			switch (p.Style)
 			{
 			case TilePatternStyle.RunningBond:

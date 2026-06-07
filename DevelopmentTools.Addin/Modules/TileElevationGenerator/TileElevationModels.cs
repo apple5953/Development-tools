@@ -16,6 +16,17 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public ElementId Id => View != null ? View.Id : ElementId.InvalidElementId;
     }
 
+    public class ComboboxItem
+    {
+        public ElementId Id { get; set; }
+        public string Name { get; set; }
+        public ComboboxItem(ElementId id, string name)
+        {
+            Id = id;
+            Name = name;
+        }
+    }
+
     public class WallElevationData
     {
         public ElementId WallId { get; set; }
@@ -52,6 +63,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public bool AutoWallLength { get; set; } = true;
         
         public double BottomOffset { get; set; } = 0.0;
+        public double SideExtension { get; set; } = 0.0; // 左右延伸 (mm)
         public string NamePrefix { get; set; } = "TE";
         
         public bool SkipShortWall { get; set; } = true;

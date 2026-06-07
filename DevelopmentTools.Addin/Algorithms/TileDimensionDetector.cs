@@ -287,8 +287,14 @@ namespace DevelopmentTools.Algorithms
                 Parameter jointParam = elem.LookupParameter("Tile_Joint_Width");
                 if (jointParam != null && jointParam.HasValue)
                 {
-                    double jVal = jointParam.AsDouble(); // NUMBER 型別直接是 mm
-                    if (jVal > 0.1) parameters.JointWidth = jVal;
+                    double jVal = jointParam.AsDouble();
+                    // 啟發式自動判斷：如果數值非常小且大於 0（例如小於 0.1），
+                    // 則高度懷疑它是 LENGTH 類型（以英呎為單位），需乘以 304.8 轉為公釐
+                    if (jVal > 0.0 && jVal < 0.1)
+                    {
+                        jVal = jVal * 304.8;
+                    }
+                    if (jVal >= 0.0) parameters.JointWidth = jVal;
                 }
             }
             catch { }

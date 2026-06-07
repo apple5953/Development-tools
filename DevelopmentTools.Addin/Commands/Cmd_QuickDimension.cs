@@ -25,10 +25,7 @@ namespace DevelopmentTools.Commands
                 bool isAuthorized = true;
                 if (GoogleAuthManager.IsAuthEnabled())
                 {
-                    isAuthorized = System.Threading.Tasks.Task.Run(async () =>
-                    {
-                        return await GoogleAuthManager.VerifyAccessAsync("DT_QuickDimension", "快速尺寸標註");
-                    }).GetAwaiter().GetResult();
+                    isAuthorized = GoogleAuthManager.VerifyAccess("DT_QuickDimension", "快速尺寸標註");
                 }
 
                 if (!isAuthorized)

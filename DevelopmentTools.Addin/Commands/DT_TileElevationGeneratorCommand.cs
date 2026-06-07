@@ -22,11 +22,7 @@ namespace DevelopmentTools.Commands
                 bool isAuthorized = true;
                 if (GoogleAuthManager.IsAuthEnabled())
                 {
-                    // 同步等待非同步驗證，保留 Revit API Context 鎖
-                    isAuthorized = System.Threading.Tasks.Task.Run(async () =>
-                    {
-                        return await GoogleAuthManager.VerifyAccessAsync("Tiling", "磁磚展開圖生成器");
-                    }).GetAwaiter().GetResult();
+                    isAuthorized = GoogleAuthManager.VerifyAccess("Tiling", "磁磚展開圖生成器");
                 }
 
                 if (!isAuthorized)

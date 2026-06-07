@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -26,6 +26,74 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         // UI 綁定列表與選取項
         public List<ViewTemplateItem> ViewTemplates { get; private set; }
         
+        // 新增幾何參數繫結
+        public double ViewDepth
+        {
+            get => Settings.ViewDepth;
+            set
+            {
+                Settings.ViewDepth = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double WallOffset
+        {
+            get => Settings.WallOffset;
+            set
+            {
+                Settings.WallOffset = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double BottomOffset
+        {
+            get => Settings.BottomOffset;
+            set
+            {
+                Settings.BottomOffset = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double SideExtension
+        {
+            get => Settings.SideExtension;
+            set
+            {
+                Settings.SideExtension = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 新增圖框與視埠繫結
+        public List<ComboboxItem> TitleBlocks { get; private set; }
+        
+        private ComboboxItem _selectedTitleBlock;
+        public ComboboxItem SelectedTitleBlock
+        {
+            get => _selectedTitleBlock;
+            set
+            {
+                _selectedTitleBlock = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public List<ComboboxItem> ViewportTypes { get; private set; }
+        
+        private ComboboxItem _selectedViewportType;
+        public ComboboxItem SelectedViewportType
+        {
+            get => _selectedViewportType;
+            set
+            {
+                _selectedViewportType = value;
+                OnPropertyChanged();
+            }
+        }
+        
         private ViewTemplateItem _selectedTemplate;
         public ViewTemplateItem SelectedTemplate
         {
@@ -48,14 +116,14 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             }
         }
 
-        private string _statusText = "Ready. Please select Floor or Walls.";
+        private string _statusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_StatusReady"];
         public string StatusText
         {
             get => _statusText;
             set { _statusText = value; OnPropertyChanged(); }
         }
 
-        private string _selectedElementText = "No element selected.";
+        private string _selectedElementText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_NoElement"];
         public string SelectedElementText
         {
             get => _selectedElementText;
@@ -72,7 +140,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 if (value)
                 {
                     Settings.SourceMode = SourceMode.Floor;
-                    SelectedElementText = SelectedFloor != null ? $"Floor: {SelectedFloor.Name}" : "No Floor selected.";
+                    SelectedElementText = SelectedFloor != null ? DevelopmentTools.Core.LanguageManager.Instance["Elevation_FloorPrefix"] + SelectedFloor.Name : DevelopmentTools.Core.LanguageManager.Instance["Elevation_NoFloor"];
                     if (SelectedFloor != null)
                     {
                         string roomNum = DetectRoomNumber(SelectedFloor);
@@ -92,7 +160,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 if (value)
                 {
                     Settings.SourceMode = SourceMode.Wall;
-                    SelectedElementText = SelectedWalls.Count > 0 ? $"{SelectedWalls.Count} Walls selected." : "No Walls selected.";
+                    SelectedElementText = SelectedWalls.Count > 0 ? $"{SelectedWalls.Count}" + DevelopmentTools.Core.LanguageManager.Instance["Elevation_WallsSelectedSuffix"] : DevelopmentTools.Core.LanguageManager.Instance["Elevation_NoWalls"];
                     if (SelectedWalls.Count > 0)
                     {
                         string roomNum = DetectRoomNumber(SelectedWalls);
@@ -172,6 +240,42 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             _selectedTemplate = items[0];
             Settings.SelectedViewTemplateId = _selectedTemplate.Id;
 
+            // 載入圖框類型
+            var tbs = new FilteredElementCollector(_doc)
+                .OfCategory(BuiltInCategory.OST_TitleBlocks)
+                .WhereElementIsElementType()
+                .Cast<FamilySymbol>()
+                .OrderBy(x => x.Name)
+                .ToList();
+
+            var tbItems = new List<ComboboxItem>();
+            tbItems.Add(new ComboboxItem(ElementId.InvalidElementId, "<無圖框 - 建立空白圖紙>"));
+            foreach (var tb in tbs)
+            {
+                tbItems.Add(new ComboboxItem(tb.Id, $"{tb.FamilyName}: {tb.Name}"));
+            }
+            TitleBlocks = tbItems;
+            _selectedTitleBlock = tbItems.FirstOrDefault();
+
+            // 載入視埠類型 (Viewport Types)
+            var vps = new FilteredElementCollector(_doc)
+                .OfClass(typeof(ElementType))
+                .Cast<ElementType>()
+                .Where(x => (x.FamilyName != null && (x.FamilyName.Equals("Viewport", StringComparison.OrdinalIgnoreCase) 
+                                                  || x.FamilyName.Equals("視埠", StringComparison.OrdinalIgnoreCase)
+                                                  || x.FamilyName.Equals("視口", StringComparison.OrdinalIgnoreCase)))
+                         || (x.Category != null && x.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Viewports))
+                .OrderBy(x => x.Name)
+                .ToList();
+
+            var vpItems = new List<ComboboxItem>();
+            foreach (var vp in vps)
+            {
+                vpItems.Add(new ComboboxItem(vp.Id, vp.Name));
+            }
+            ViewportTypes = vpItems;
+            _selectedViewportType = vpItems.FirstOrDefault();
+
             // 2. 初始化 Commands
             SelectSourceCommand = new RelayCommand(OnSelectSource);
             GenerateCommand = new RelayCommand(OnGenerate);
@@ -194,7 +298,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                 if (IsFloorMode)
                 {
-                    StatusText = "Please click to select a Floor in Revit...";
+                    StatusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_PromptSelectFloor"];
                     var reference = _uidoc.Selection.PickObject(ObjectType.Element, new FloorSelectionFilter(), "Select a Floor element");
                     if (reference != null)
                     {
@@ -202,8 +306,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         if (floor != null)
                         {
                             SelectedFloor = floor;
-                            SelectedElementText = $"Floor: {floor.Name} (ID: {floor.Id})";
-                            StatusText = "Floor selected successfully.";
+                            SelectedElementText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_FloorPrefix"] + floor.Name;
+                            StatusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_FloorSuccess"];
                             
                             // 自動偵測房號
                             string roomNum = DetectRoomNumber(floor);
@@ -213,7 +317,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 }
                 else
                 {
-                    StatusText = "Please select multiple Walls in Revit...";
+                    StatusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_PromptSelectWalls"];
                     var references = _uidoc.Selection.PickObjects(ObjectType.Element, new WallSelectionFilter(), "Select multiple Wall elements");
                     if (references != null && references.Count > 0)
                     {
@@ -226,8 +330,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                                 SelectedWalls.Add(wall);
                             }
                         }
-                        SelectedElementText = $"{SelectedWalls.Count} Walls selected.";
-                        StatusText = "Walls selected successfully.";
+                        SelectedElementText = $"{SelectedWalls.Count}" + DevelopmentTools.Core.LanguageManager.Instance["Elevation_WallsSelectedSuffix"];
+                        StatusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_WallsSuccess"];
                         
                         // 自動偵測房號
                         string roomNum = DetectRoomNumber(SelectedWalls);
@@ -237,11 +341,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             }
             catch (Autodesk.Revit.Exceptions.OperationCanceledException)
             {
-                StatusText = "Selection cancelled by user.";
+                StatusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_SelectionCancelled"];
             }
             catch (Exception ex)
             {
-                StatusText = $"Selection error: {ex.Message}";
+                StatusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_SelectionError"] + ex.Message;
             }
             finally
             {
@@ -353,20 +457,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     {
                         tx.Start();
 
-                        FilteredElementCollector collector = new FilteredElementCollector(_doc);
-                        collector.OfCategory(BuiltInCategory.OST_TitleBlocks);
-                        collector.OfClass(typeof(FamilySymbol));
-                        FamilySymbol titleBlockSymbol = collector.FirstElement() as FamilySymbol;
-
-                        ViewSheet sheet = null;
-                        if (titleBlockSymbol != null)
-                        {
-                            sheet = ViewSheet.Create(_doc, titleBlockSymbol.Id);
-                        }
-                        else
-                        {
-                            sheet = ViewSheet.Create(_doc, ElementId.InvalidElementId);
-                        }
+                        ElementId tbId = SelectedTitleBlock?.Id ?? ElementId.InvalidElementId;
+                        ViewSheet sheet = ViewSheet.Create(_doc, tbId);
 
                         if (sheet == null)
                         {
@@ -395,6 +487,10 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                                 // 2. 在臨時位置建立 Viewport，以讀取 Outline
                                 Viewport vp = Viewport.Create(_doc, sheet.Id, view.Id, new XYZ(0, 0, 0));
+                                if (SelectedViewportType != null && SelectedViewportType.Id != ElementId.InvalidElementId)
+                                {
+                                    vp.ChangeTypeId(SelectedViewportType.Id);
+                                }
                                 Outline cropBoxOutline = vp.GetBoxOutline();
 
                                 double w = cropBoxOutline.MaximumPoint.X - cropBoxOutline.MinimumPoint.X;
@@ -631,20 +727,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     {
                         tx.Start();
 
-                        FilteredElementCollector collector = new FilteredElementCollector(_doc);
-                        collector.OfCategory(BuiltInCategory.OST_TitleBlocks);
-                        collector.OfClass(typeof(FamilySymbol));
-                        FamilySymbol titleBlockSymbol = collector.FirstElement() as FamilySymbol;
-
-                        ViewSheet sheet = null;
-                        if (titleBlockSymbol != null)
-                        {
-                            sheet = ViewSheet.Create(_doc, titleBlockSymbol.Id);
-                        }
-                        else
-                        {
-                            sheet = ViewSheet.Create(_doc, ElementId.InvalidElementId);
-                        }
+                        ElementId tbId = SelectedTitleBlock?.Id ?? ElementId.InvalidElementId;
+                        ViewSheet sheet = ViewSheet.Create(_doc, tbId);
 
                         if (sheet == null)
                         {
@@ -673,6 +757,10 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                                 // 2. 在臨時位置建立 Viewport，以讀取 Outline
                                 Viewport vp = Viewport.Create(_doc, sheet.Id, view.Id, new XYZ(0, 0, 0));
+                                if (SelectedViewportType != null && SelectedViewportType.Id != ElementId.InvalidElementId)
+                                {
+                                    vp.ChangeTypeId(SelectedViewportType.Id);
+                                }
                                 Outline cropBoxOutline = vp.GetBoxOutline();
 
                                 double w = cropBoxOutline.MaximumPoint.X - cropBoxOutline.MinimumPoint.X;
@@ -752,7 +840,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         private void OnOpenHelp()
         {
             TaskDialog td = new TaskDialog("展開圖生成器 - 使用指南");
-            td.MainInstruction = "磁磚展開圖生成器 (DT_TileElevationGenerator) 新手快速入門";
+            td.MainInstruction = "磁磚展開圖生成器 新手快速入門";
             td.MainContent = "本工具專為快速建立室內空間牆面之磁磚展開圖設計，提供以下兩種來源模式：\n\n" +
                              "1. Floor 模式 (自動相鄰牆模式)：\n" +
                              "   - 選擇此模式並點選「選取 Revit 目標物件」，在 Revit 視圖中選取一個地板元件 (Floor)。\n" +
