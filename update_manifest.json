@@ -1,12 +1,12 @@
-{
-    "published_at":  "2026-06-09T15:20:00+08:00",
-    "release_url":  "https://github.com/apple5953/Development-tools/releases/download/v2.1.1/DevelopmentTools_v2.1.1.zip",
-    "release_note":  "優化量化開圖預覽介面與樹狀結構顯示",
+﻿{
+    "published_at":  "2026-06-09T15:25:20",
+    "release_url":  "https://github.com/apple5953/Development-tools/releases/download/v2.1.2/DevelopmentTools_v2.1.2.zip",
+    "release_note":  "Remote update release v2.1.2.",
     "product_name":  "Room Tile System v3",
     "minimum_supported_version":  "1.0.0",
     "app_id":  "development_tools",
-    "latest_version":  "2.1.1",
+    "latest_version":  "2.1.2",
     "channel":  "stable",
-    "sha256":  "4A3753086DCE4CC3B568CF89D1757B1307F261DA33F723D94383AFCD1AFF30CE",
+    "sha256":  "7e0ebd497d2a8f343f04aa17a0079592d40d56ac6591fcf2947410d21b782b2d",
     "force_update":  false
 }
