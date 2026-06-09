@@ -579,9 +579,30 @@ namespace DevelopmentTools
                 {
                     btnData.LargeImage = new System.Windows.Media.Imaging.BitmapImage(new System.Uri(iconPath));
                 }
+                else
+                {
+                    // PNG 不存在時動態畫 fallback 圖示，讓按鈕永遠不會空白
+                    var fallbackMap = new System.Collections.Generic.Dictionary<string, (string emoji, string bg)>
+                    {
+                        { "tile-layout.png",         ("🟦", "#2980B9") },
+                        { "tile-elevation.png",      ("📐", "#8E44AD") },
+                        { "wall-finish.png",         ("🏗", "#27AE60") },
+                        { "room-finish-config.png",  ("🏠", "#16A085") },
+                        { "floor-snap-to-room.png",  ("⬇", "#D35400") },
+                        { "batch-sheet-renamer.png", ("📝", "#2C3E50") },
+                        { "quick-view-creator.png",  ("🖼", "#C0392B") },
+                        { "sheet-view-placer.png",   ("📋", "#1A5276") },
+                        { "quick-dimension.png",     ("📏", "#6C3483") },
+                    };
+                    if (fallbackMap.TryGetValue(iconFileName, out var info))
+                    {
+                        btnData.LargeImage = CreateDynamicIcon(info.emoji, info.bg, "#FFFFFF");
+                    }
+                }
             }
             catch { }
         }
+
 
         
         private System.Windows.Media.Imaging.BitmapImage CreateDynamicIcon(string text, string bgColorHex, string fgColorHex)
