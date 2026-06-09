@@ -1,4 +1,4 @@
-﻿﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -305,8 +305,18 @@ namespace DevelopmentTools.Core
             AddTranslation("RoomFinish_ConfigPanel", "配置設定", "Configuration", "設定");
             AddTranslation("RoomFinish_StatusReady", "準備就緒", "Ready", "準備完了");
             
+            AddTranslation("SheetDuplicator_Title", "📑 圖紙逐層量化開圖", "📑 Sheet Duplicator", "📑 シート複製ツール");
+            AddTranslation("SheetDuplicator_Prefix", "圖紙編號前綴：", "Sheet Prefix:", "シート接頭辞：");
+            AddTranslation("SheetDuplicator_Analyze", "分析", "Analyze", "分析");
+            AddTranslation("SheetDuplicator_Structure", "圖紙與視圖結構", "Sheet & View Structure", "シートとビューの構造");
+            AddTranslation("SheetDuplicator_TargetLevels", "選擇目標樓層", "Select Target Levels", "対象レベルを選択");
+            AddTranslation("SheetDuplicator_Generate", "執行量化開圖", "Generate Sheets", "シート作成実行");
+            AddTranslation("SheetDuplicator_PreviewTitle", "版面配置示意預覽", "Layout Preview", "レイアウトプレビュー");
+            AddTranslation("SheetDuplicator_PreviewPrompt", "請於左側樹狀圖選擇一張圖紙或視圖", "Please select a sheet or view from the tree on the left", "左側のツリーからシートまたはビューを選択してください");
             AddTranslation("Ribbon_Btn_SheetPlacer", "圖紙排版", "Sheet Placer", "シート配置");
             AddTranslation("Ribbon_TT_SheetPlacer", "快速將視圖排列至圖紙", "Quickly arrange views on sheets", "シートにビューをすばやく配置");
+            AddTranslation("Ribbon_Btn_SheetDuplicator", "圖紙逐層量化", "Sheet Duplicator", "シート複製ツール");
+            AddTranslation("Ribbon_TT_SheetDuplicator", "自動分析標準圖紙的內容並複製到多個目標樓層。", "Automatically analyze standard sheet content and duplicate to multiple target levels.", "標準シートの内容を自動分析し、複数の対象レベルに複製します。");
             AddTranslation("Ribbon_Btn_QuickDim", "快速標註", "Quick Dimension", "クイック寸法");
             AddTranslation("Ribbon_TT_QuickDim", "快速建立尺寸標註", "Quickly create dimensions", "すばやく寸法を作成");
             AddTranslation("Ribbon_Btn_LangDropdown", "語言切換", "Language", "言語切替");

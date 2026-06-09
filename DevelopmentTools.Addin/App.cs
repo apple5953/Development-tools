@@ -281,6 +281,7 @@ namespace DevelopmentTools
                 application.CreateRibbonTab(tabName);
                 
                 string assemblyPath = Assembly.GetExecutingAssembly().Location;
+                string originalPath = new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath;
 
                 // Panel 1: 系統管理
                 RibbonPanel adminPanel = application.CreateRibbonPanel(tabName, "系統管理");
@@ -334,7 +335,17 @@ namespace DevelopmentTools
                 langDropdownData.ToolTip = "切換系統語言 / Switch Language / 言語を切り替える";
                 
                 // Add icon for language dropdown
-                string iconPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(assemblyPath), "Resources", "RibbonIcons", "language.png");
+                string langDllPath = assemblyPath;
+                if (string.IsNullOrEmpty(langDllPath) || !System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(langDllPath), "Resources")))
+                {
+                    try { langDllPath = new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath; } catch { }
+                }
+                if (string.IsNullOrEmpty(langDllPath) || !System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(langDllPath), "Resources")))
+                {
+                    langDllPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "App", "dummy.dll");
+                }
+                
+                string iconPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(langDllPath), "Resources", "RibbonIcons", "language.png");
                 if (System.IO.File.Exists(iconPath))
                 {
                     langDropdownData.LargeImage = new System.Windows.Media.Imaging.BitmapImage(new Uri(iconPath));
@@ -483,9 +494,9 @@ namespace DevelopmentTools
                 sheetPanel.AddItem(viewPlaceBtn);
 
                 PushButtonData sheetDuplicatorBtn = new PushButtonData(
-                    "SheetDuplicator", "圖紙逐層量化",
+                    "SheetDuplicator", DevelopmentTools.Core.LanguageManager.Instance["Ribbon_Btn_SheetDuplicator"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_SheetDuplicator");
-                sheetDuplicatorBtn.ToolTip = "【圖紙逐層量化開圖】\n\n自動分析標準圖紙的內容並複製到多個目標樓層。";
+                sheetDuplicatorBtn.ToolTip = DevelopmentTools.Core.LanguageManager.Instance["Ribbon_TT_SheetDuplicator"];
                 // 暫時使用同一個 icon，或者如果有 sheet-duplicator.png 的話
                 ApplyRibbonIcon(sheetDuplicatorBtn, "sheet-view-placer.png");
                 sheetPanel.AddItem(sheetDuplicatorBtn);
@@ -547,7 +558,20 @@ namespace DevelopmentTools
         {
             try
             {
-                string iconPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "Resources", "RibbonIcons", iconFileName);
+                string dllPath = "";
+                try { dllPath = System.Reflection.Assembly.GetExecutingAssembly().Location; } catch { }
+
+                if (string.IsNullOrEmpty(dllPath) || !System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dllPath), "Resources")))
+                {
+                    try { dllPath = new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath; } catch { }
+                }
+
+                if (string.IsNullOrEmpty(dllPath) || !System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dllPath), "Resources")))
+                {
+                    dllPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "App", "dummy.dll");
+                }
+
+                string iconPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dllPath), "Resources", "RibbonIcons", iconFileName);
                 if (System.IO.File.Exists(iconPath))
                 {
                     btnData.LargeImage = new System.Windows.Media.Imaging.BitmapImage(new System.Uri(iconPath));
