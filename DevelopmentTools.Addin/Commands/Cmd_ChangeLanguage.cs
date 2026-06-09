@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
@@ -89,17 +89,32 @@ namespace DevelopmentTools.Commands
             else if (id.EndsWith("SheetViewPlacer")) { item.Text = lm["Ribbon_Btn_SheetPlacer"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetPlacer"] }; }
             else if (id.EndsWith("QuickDimension")) { item.Text = lm["Ribbon_Btn_QuickDim"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_QuickDim"] }; }
             else if (id.EndsWith("LanguageDropdown")) { item.Text = lm["Ribbon_Btn_LangDropdown"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_LangDropdown"] }; }
+            else if (id.EndsWith("SheetDuplicator")) { item.Text = lm["Ribbon_Btn_SheetDuplicator"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetDuplicator"] }; }
             else if (id.EndsWith("LanguageZH")) { item.Text = lm["Ribbon_Lang_ZH"];  }
             else if (id.EndsWith("LanguageEN")) { item.Text = lm["Ribbon_Lang_EN"];  }
             else if (id.EndsWith("LanguageJA")) { item.Text = lm["Ribbon_Lang_JA"];  }
 
 
-            // 如果是 Pulldown，也要更新子按鈕
+            // 用 reflection 遍歷任何帶有 Items 的容器型別（PulldownButton / SplitButton 等）
             if (item is Autodesk.Windows.RibbonSplitButton splitBtn)
             {
                 foreach (var child in splitBtn.Items)
-                {
                     UpdateRibbonItem(child, lm);
+            }
+            else
+            {
+                var itemsProp = item.GetType().GetProperty("Items");
+                if (itemsProp != null)
+                {
+                    var children = itemsProp.GetValue(item) as System.Collections.IEnumerable;
+                    if (children != null)
+                    {
+                        foreach (var child in children)
+                        {
+                            if (child is Autodesk.Windows.RibbonItem ribbonChild)
+                                UpdateRibbonItem(ribbonChild, lm);
+                        }
+                    }
                 }
             }
         }
