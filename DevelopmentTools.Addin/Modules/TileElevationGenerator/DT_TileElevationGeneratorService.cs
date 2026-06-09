@@ -12,7 +12,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             try
             {
                 // 1. 直接從樓板邊界建立數據列表 (已含樓高自適應與順時針排序)
-                var wallDataList = WallElevationDataBuilder.BuildDataFromFloorBoundary(doc, floor, settings);
+                var wallDataList = WallElevationDataBuilder.BuildDataFromFloorsAndSolids(doc, new List<Element> { floor }, settings);
                 if (wallDataList.Count == 0)
                 {
                     result.ErrorMessage = "在選定的地板上找不到任何有效的邊界線！";

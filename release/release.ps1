@@ -86,6 +86,9 @@ Copy-Item -Path (Join-Path $updaterBinDir "DevelopmentTools.Updater.exe") -Desti
 Copy-Item -Path (Join-Path $updaterBinDir "DevelopmentTools.Updater.exe.config") -Destination $zipTempDir
 Copy-Item -Path (Join-Path $updaterBinDir "*.dll") -Destination $zipTempDir
 
+# Copy Resources folder to ZIP
+Copy-Item -Path (Join-Path $parentRoot "DevelopmentTools.Addin\Resources") -Destination $zipTempDir -Recurse
+
 # Copy install.bat to ZIP
 Copy-Item -LiteralPath (Join-Path $parentRoot "installer\install.bat") -Destination $zipTempDir
 

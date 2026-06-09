@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -140,10 +140,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 if (value)
                 {
                     Settings.SourceMode = SourceMode.Floor;
-                    SelectedElementText = SelectedFloor != null ? DevelopmentTools.Core.LanguageManager.Instance["Elevation_FloorPrefix"] + SelectedFloor.Name : DevelopmentTools.Core.LanguageManager.Instance["Elevation_NoFloor"];
-                    if (SelectedFloor != null)
+                    SelectedElementText = SelectedFloors.Count > 0 ? "已選取 " + SelectedFloors.Count + " 個幾何元素" : DevelopmentTools.Core.LanguageManager.Instance["Elevation_NoFloor"];
+                    var firstFloor = SelectedFloors.FirstOrDefault(e => e is Floor) as Floor;
+                    if (firstFloor != null)
                     {
-                        string roomNum = DetectRoomNumber(SelectedFloor);
+                        string roomNum = DetectRoomNumber(firstFloor);
                         NamePrefix = !string.IsNullOrEmpty(roomNum) ? $"TE_{roomNum}" : "TE";
                     }
                 }
@@ -173,7 +174,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         }
 
         // 用於儲存 Revit 選定物件
-        public Floor SelectedFloor { get; private set; }
+        public List<Element> SelectedFloors { get; private set; } = new List<Element>();
         public List<Wall> SelectedWalls { get; private set; } = new List<Wall>();
 
         // 暫存中間產物
@@ -299,18 +300,26 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 if (IsFloorMode)
                 {
                     StatusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_PromptSelectFloor"];
-                    var reference = _uidoc.Selection.PickObject(ObjectType.Element, new FloorSelectionFilter(), "Select a Floor element");
-                    if (reference != null)
+                    var references = _uidoc.Selection.PickObjects(ObjectType.Element, "Select Floor(s) and any intersecting trench elements");
+                    if (references != null && references.Count > 0)
                     {
-                        var floor = _doc.GetElement(reference) as Floor;
-                        if (floor != null)
+                        SelectedFloors.Clear();
+                        foreach (var reference in references)
                         {
-                            SelectedFloor = floor;
-                            SelectedElementText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_FloorPrefix"] + floor.Name;
-                            StatusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_FloorSuccess"];
-                            
-                            // 自動偵測房號
-                            string roomNum = DetectRoomNumber(floor);
+                            var elem = _doc.GetElement(reference);
+                            if (elem != null)
+                            {
+                                SelectedFloors.Add(elem);
+                            }
+                        }
+                        SelectedElementText = "已選取 " + SelectedFloors.Count + " 個幾何元素";
+                        StatusText = DevelopmentTools.Core.LanguageManager.Instance["Elevation_FloorSuccess"];
+                        
+                        // 自動偵測房號 (取第一個有效樓板)
+                        var firstFloor = SelectedFloors.FirstOrDefault(e => e is Floor) as Floor;
+                        if (firstFloor != null)
+                        {
+                            string roomNum = DetectRoomNumber(firstFloor);
                             NamePrefix = !string.IsNullOrEmpty(roomNum) ? $"TE_{roomNum}" : "TE";
                         }
                     }
@@ -371,12 +380,12 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                     if (IsFloorMode)
                     {
-                        if (SelectedFloor == null)
+                        if (SelectedFloors.Count == 0)
                         {
-                            MessageBox.Show("請先選擇一個地板元件 (Floor)！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            MessageBox.Show("請先選擇至少一個地板或實體元件！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                             return;
                         }
-                        _tempWallDataList = WallElevationDataBuilder.BuildDataFromFloorBoundary(_doc, SelectedFloor, Settings);
+                        _tempWallDataList = WallElevationDataBuilder.BuildDataFromFloorsAndSolids(_doc, SelectedFloors, Settings);
                     }
                     else
                     {
@@ -551,12 +560,12 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                 if (IsFloorMode)
                 {
-                    if (SelectedFloor == null)
+                    if (SelectedFloors.Count == 0)
                     {
-                        MessageBox.Show("請先選擇一個地板元件 (Floor)！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageBox.Show("請先選擇至少一個地板或實體元件！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
-                    _tempWallDataList = WallElevationDataBuilder.BuildDataFromFloorBoundary(_doc, SelectedFloor, Settings);
+                    _tempWallDataList = WallElevationDataBuilder.BuildDataFromFloorsAndSolids(_doc, SelectedFloors, Settings);
                 }
                 else
                 {

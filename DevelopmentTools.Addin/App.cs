@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -481,6 +481,14 @@ namespace DevelopmentTools
                                                "■ 支援明細表與圖例：除了一般平面/剖立面/3D 視圖外，亦支援將明細表 (Schedule) 等可多重置入的視圖進行拖放排版。";
                 ApplyRibbonIcon(viewPlaceBtn, "sheet-view-placer.png");
                 sheetPanel.AddItem(viewPlaceBtn);
+
+                PushButtonData sheetDuplicatorBtn = new PushButtonData(
+                    "SheetDuplicator", "圖紙逐層量化",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_SheetDuplicator");
+                sheetDuplicatorBtn.ToolTip = "【圖紙逐層量化開圖】\n\n自動分析標準圖紙的內容並複製到多個目標樓層。";
+                // 暫時使用同一個 icon，或者如果有 sheet-duplicator.png 的話
+                ApplyRibbonIcon(sheetDuplicatorBtn, "sheet-view-placer.png");
+                sheetPanel.AddItem(sheetDuplicatorBtn);
 
                 // Panel 6: DT｜標註工具
                 RibbonPanel tagPanel = application.CreateRibbonPanel(tabName, "標註工具");

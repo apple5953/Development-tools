@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Autodesk.Revit.DB;
 
 namespace DevelopmentTools.Modules.TileElevationGenerator
@@ -95,24 +96,86 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             return dataList;
         }
 
-        public static List<WallElevationData> BuildDataFromFloorBoundary(Document doc, Floor floor, GeneratorSettings settings)
+        public static List<WallElevationData> BuildDataFromFloorsAndSolids(Document doc, List<Element> elements, GeneratorSettings settings)
         {
             var dataList = new List<WallElevationData>();
+            if (elements == null || elements.Count == 0) return dataList;
 
-            // 1. 取得 Floor 的邊界線 CurveLoop
-            var boundaryLoops = FloorBoundaryExtractor.GetFloorBoundaryLoops(floor);
-            if (boundaryLoops.Count == 0) return dataList;
-
-            // 2. 計算 Floor 的幾何中心點，並決定當層樓高
-            XYZ floorCenter = GetFloorCenter(floor);
-            double height = DetectLevelHeight(doc, floor); // 取得自適應樓高 (Feet)
-
-            double levelElevation = 0.0;
-            ElementId lvlId = floor.LevelId;
-            if (lvlId != ElementId.InvalidElementId)
+            // 1. 取得所有選取元件的幾何實體並聯集 (Boolean Union)
+            Solid combinedSolid = null;
+            Options opt = new Options { DetailLevel = ViewDetailLevel.Fine };
+            
+            foreach (var elem in elements)
             {
-                Level lvl = doc.GetElement(lvlId) as Level;
+                GeometryElement geomElem = elem.get_Geometry(opt);
+                if (geomElem != null)
+                {
+                    foreach (GeometryObject geomObj in geomElem)
+                    {
+                        if (geomObj is Solid solid && solid.Faces.Size > 0 && solid.Volume > 0)
+                        {
+                            try {
+                                if (combinedSolid == null) combinedSolid = solid;
+                                else combinedSolid = BooleanOperationsUtils.ExecuteBooleanOperation(combinedSolid, solid, BooleanOperationsType.Union);
+                            } catch { /* 忽略聯集失敗的實體 */ }
+                        }
+                        else if (geomObj is GeometryInstance instance)
+                        {
+                            GeometryElement instGeom = instance.GetInstanceGeometry();
+                            foreach (GeometryObject instObj in instGeom)
+                            {
+                                if (instObj is Solid solid2 && solid2.Faces.Size > 0 && solid2.Volume > 0)
+                                {
+                                    try {
+                                        if (combinedSolid == null) combinedSolid = solid2;
+                                        else combinedSolid = BooleanOperationsUtils.ExecuteBooleanOperation(combinedSolid, solid2, BooleanOperationsType.Union);
+                                    } catch { }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (combinedSolid == null) return dataList;
+
+            // 2. 找出最底部的水平面來取得邊界線 (避免抓到牆體的垂直面)
+            PlanarFace bottomFace = null;
+            double minZ = double.MaxValue;
+            foreach (Face face in combinedSolid.Faces)
+            {
+                if (face is PlanarFace pf)
+                {
+                    // 尋找法向量朝下的面，或是最接近底部的水平面
+                    if (pf.FaceNormal.IsAlmostEqualTo(new XYZ(0, 0, -1)) || pf.FaceNormal.IsAlmostEqualTo(new XYZ(0, 0, 1)))
+                    {
+                        if (pf.Origin.Z < minZ)
+                        {
+                            minZ = pf.Origin.Z;
+                            bottomFace = pf;
+                        }
+                    }
+                }
+            }
+
+            if (bottomFace == null) return dataList;
+            
+            IList<CurveLoop> boundaryLoops = bottomFace.GetEdgesAsCurveLoops();
+
+            // 3. 取得基準樓板來獲取參數
+            Floor baseFloor = elements.FirstOrDefault(e => e is Floor) as Floor;
+            XYZ floorCenter = baseFloor != null ? GetFloorCenter(baseFloor) : bottomFace.Origin;
+            double height = baseFloor != null ? DetectLevelHeight(doc, baseFloor) : 3000.0 / 304.8;
+            double levelElevation = 0.0;
+            
+            if (baseFloor != null && baseFloor.LevelId != ElementId.InvalidElementId)
+            {
+                Level lvl = doc.GetElement(baseFloor.LevelId) as Level;
                 if (lvl != null) levelElevation = lvl.Elevation;
+            }
+            else
+            {
+                levelElevation = bottomFace.Origin.Z;
             }
 
             int index = 1;
@@ -120,15 +183,16 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             {
                 foreach (Curve curve in loop)
                 {
+                    // 若邊界線段過短 (小於 5cm)，視為雜訊予以忽略
+                    if (curve.Length < (50.0 / 304.8)) continue;
+
                     XYZ start = curve.GetEndPoint(0);
                     XYZ end = curve.GetEndPoint(1);
                     XYZ mid = (start + end) / 2.0;
                     XYZ dir = (end - start).Normalize();
 
-                    // 指向 Floor 中心的方向
                     XYZ toCenter = new XYZ(floorCenter.X - mid.X, floorCenter.Y - mid.Y, 0).Normalize();
 
-                    // 計算邊界的法線並確保指向樓板中心 (向房間內側看)
                     XYZ normal = new XYZ(-dir.Y, dir.X, 0).Normalize();
                     if (normal.DotProduct(toCenter) < 0)
                     {
@@ -138,16 +202,16 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     var data = new WallElevationData
                     {
                         WallId = ElementId.InvalidElementId,
-                        WallName = $"FloorBoundary_{index}",
+                        WallName = $"Boundary_{index}",
                         StartPoint = start,
                         EndPoint = end,
                         MidPoint = mid,
                         WallLength = curve.Length,
-                        WallHeight = height, // 自適應樓高
+                        WallHeight = height, 
                         WallDirection = dir,
                         WallNormal = normal,
                         RoomSideDirection = normal,
-                        WallThickness = 0.0, // 樓板邊界沒有牆厚度
+                        WallThickness = 0.0, 
                         LevelElevation = levelElevation,
                         WallElement = null,
                         BoundaryCurve = curve
@@ -158,8 +222,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 }
             }
 
-            // 順時針排序 (依據中點與 floorCenter 角度)
-            if (floorCenter != null)
+            if (baseFloor != null)
             {
                 SortClockwise(dataList, floorCenter);
             }

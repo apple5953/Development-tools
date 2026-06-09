@@ -44,7 +44,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double topOffsetFeet = 50.0 / 304.8;                        // 頂部延伸預設維持 50mm
             double leftRightExtensionFeet = settings.SideExtension / 304.8;             // 左右延伸量，可解決剖面寬度不夠、無法顯示轉角貼磚厚度的問題
 
-            XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.MidPoint.Z + heightFeet / 2.0);
+            // 使用樓層高程(LevelElevation)做為 Z 軸基準，確保底部切齊樓層線，不受樓板高程偏移影響
+            XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.LevelElevation + (heightFeet / 2.0));
             t.Origin = midPointWithZ + data.RoomSideDirection * offsetFeet;
 
             // X 軸平行於牆面，Y 軸為 Z 正向 (朝上)
