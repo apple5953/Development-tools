@@ -28,7 +28,21 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
 
         public List<ViewSheet> MatchedSheets { get; private set; } = new List<ViewSheet>();
 
-        public ObservableCollection<ViewItem> AnalyzedViews { get; private set; } = new ObservableCollection<ViewItem>();
+        public ObservableCollection<SheetNode> AnalyzedSheets { get; private set; } = new ObservableCollection<SheetNode>();
+
+        private SheetNode _selectedSheetNode;
+        public SheetNode SelectedSheetNode
+        {
+            get => _selectedSheetNode;
+            set { _selectedSheetNode = value; OnPropertyChanged(); }
+        }
+
+        private ViewNode _selectedViewNode;
+        public ViewNode SelectedViewNode
+        {
+            get => _selectedViewNode;
+            set { _selectedViewNode = value; OnPropertyChanged(); }
+        }
         
         public ObservableCollection<LevelItem> TargetLevels { get; private set; } = new ObservableCollection<LevelItem>();
 
@@ -66,8 +80,10 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
 
         private void OnAnalyze()
         {
-            AnalyzedViews.Clear();
+            AnalyzedSheets.Clear();
             MatchedSheets.Clear();
+            SelectedSheetNode = null;
+            SelectedViewNode = null;
             
             if (string.IsNullOrWhiteSpace(SheetPrefix))
             {
@@ -88,8 +104,46 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
                 return;
             }
 
+            int viewCount = 0;
+
             foreach (var sheet in MatchedSheets)
             {
+                var sheetNode = new SheetNode
+                {
+                    SheetId = sheet.Id,
+                    SheetNumber = sheet.SheetNumber,
+                    SheetName = sheet.Name,
+                    NodeName = $"{sheet.SheetNumber} - {sheet.Name}"
+                };
+
+                // Find TitleBlock to get sheet bounds
+                var tb = new FilteredElementCollector(_doc, sheet.Id)
+                    .OfCategory(BuiltInCategory.OST_TitleBlocks)
+                    .WhereElementIsNotElementType()
+                    .FirstOrDefault();
+
+                const double uiScale = 100.0;
+
+                BoundingBoxXYZ sheetBox = null;
+                if (tb != null)
+                {
+                    sheetBox = tb.get_BoundingBox(sheet);
+                    if (sheetBox != null)
+                    {
+                        sheetNode.SheetWidth = (sheetBox.Max.X - sheetBox.Min.X) * uiScale;
+                        sheetNode.SheetHeight = (sheetBox.Max.Y - sheetBox.Min.Y) * uiScale;
+                    }
+                }
+                
+                // Fallback to arbitrary size if no titleblock
+                if (sheetNode.SheetWidth <= 0 || sheetNode.SheetHeight <= 0)
+                {
+                    sheetNode.SheetWidth = 2.75 * uiScale; // Approx A1 width in feet
+                    sheetNode.SheetHeight = 1.95 * uiScale; // Approx A1 height in feet
+                }
+
+                XYZ sheetMin = sheetBox?.Min ?? XYZ.Zero;
+
                 // 取得圖紙上所有的 Viewports
                 var viewportIds = sheet.GetAllViewports();
                 foreach (var vpId in viewportIds)
@@ -109,20 +163,31 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
                         if (template != null) templateName = template.Name;
                     }
 
-                    AnalyzedViews.Add(new ViewItem
+                    Outline outline = vp.GetBoxOutline();
+                    double w = (outline.MaximumPoint.X - outline.MinimumPoint.X) * uiScale;
+                    double h = (outline.MaximumPoint.Y - outline.MinimumPoint.Y) * uiScale;
+                    double left = (outline.MinimumPoint.X - sheetMin.X) * uiScale;
+                    double bottom = (outline.MinimumPoint.Y - sheetMin.Y) * uiScale;
+
+                    sheetNode.Views.Add(new ViewNode
                     {
-                        SourceSheetNumber = sheet.SheetNumber,
-                        SourceSheetId = sheet.Id,
-                        ViewId = view.Id,
-                        ViewportId = vp.Id,
+                        NodeName = view.Name,
                         ViewName = view.Name,
                         ViewType = viewTypeStr,
                         LevelName = levelName,
                         TemplateName = templateName,
-                        Location = vp.GetBoxCenter(),
+                        ViewId = view.Id,
+                        ViewportId = vp.Id,
                         ViewportTypeId = vp.GetTypeId(),
-                        OriginalView = view
+                        Location = vp.GetBoxCenter(),
+                        OriginalView = view,
+                        IsSchedule = false,
+                        Width = w,
+                        Height = h,
+                        Left = left,
+                        Bottom = bottom
                     });
+                    viewCount++;
                 }
 
                 // ScheduleSheetInstances
@@ -132,25 +197,49 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
 
                 foreach (var sch in schedules)
                 {
-                    AnalyzedViews.Add(new ViewItem
+                    BoundingBoxXYZ schBox = sch.get_BoundingBox(sheet);
+                    double w = 0, h = 0, left = 0, bottom = 0;
+                    if (schBox != null)
                     {
-                        SourceSheetNumber = sheet.SheetNumber,
-                        SourceSheetId = sheet.Id,
-                        ViewId = sch.ScheduleId,
-                        ViewportId = sch.Id,
+                        w = (schBox.Max.X - schBox.Min.X) * uiScale;
+                        h = (schBox.Max.Y - schBox.Min.Y) * uiScale;
+                        left = (schBox.Min.X - sheetMin.X) * uiScale;
+                        bottom = (schBox.Min.Y - sheetMin.Y) * uiScale;
+                    }
+                    else
+                    {
+                        // Fallback if schedule has no bounding box (rare, but possible if empty schedule)
+                        w = 0.5 * uiScale;
+                        h = 0.5 * uiScale;
+                        left = (sch.Point.X - sheetMin.X) * uiScale;
+                        bottom = (sch.Point.Y - sheetMin.Y) * uiScale;
+                    }
+
+                    sheetNode.Views.Add(new ViewNode
+                    {
+                        NodeName = sch.Name,
                         ViewName = sch.Name,
                         ViewType = "Schedule",
                         LevelName = "-",
                         TemplateName = "-",
-                        Location = sch.Point,
+                        ViewId = sch.ScheduleId,
+                        ViewportId = sch.Id,
                         ViewportTypeId = ElementId.InvalidElementId,
+                        Location = sch.Point,
                         OriginalView = null,
-                        IsSchedule = true
+                        IsSchedule = true,
+                        Width = w,
+                        Height = h,
+                        Left = left,
+                        Bottom = bottom
                     });
+                    viewCount++;
                 }
+
+                AnalyzedSheets.Add(sheetNode);
             }
 
-            StatusText = $"共分析 {MatchedSheets.Count} 張圖紙，找到 {AnalyzedViews.Count} 個視圖/明細表。";
+            StatusText = $"共分析 {AnalyzedSheets.Count} 張圖紙，找到 {viewCount} 個視圖/明細表。";
         }
 
         private void OnGenerate()
@@ -179,11 +268,11 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
                         int sheetCount = 0;
                         foreach (var targetLvl in selectedLevels)
                         {
-                            foreach (var sourceSheet in MatchedSheets)
+                            foreach (var sheetNode in AnalyzedSheets)
                             {
                                 ViewSheet newSheet = null;
                                 ElementId tbId = ElementId.InvalidElementId;
-                                var tbs = new FilteredElementCollector(_doc, sourceSheet.Id)
+                                var tbs = new FilteredElementCollector(_doc, sheetNode.SheetId)
                                     .OfCategory(BuiltInCategory.OST_TitleBlocks)
                                     .WhereElementIsNotElementType()
                                     .Cast<FamilyInstance>()
@@ -195,12 +284,10 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
                                 else
                                     newSheet = ViewSheet.Create(_doc, ElementId.InvalidElementId);
 
-                                newSheet.Name = sourceSheet.Name + $" ({targetLvl.Level.Name})";
+                                newSheet.Name = sheetNode.SheetName + $" ({targetLvl.Level.Name})";
                                 sheetCount++;
 
-                                var viewsForThisSheet = AnalyzedViews.Where(v => v.SourceSheetId == sourceSheet.Id).ToList();
-
-                                foreach (var item in viewsForThisSheet)
+                                foreach (var item in sheetNode.Views)
                                 {
                                     try
                                     {
@@ -300,20 +387,63 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
         public void Execute(object parameter) => _execute();
     }
 
-    public class ViewItem
+    public class SheetNode : INotifyPropertyChanged
     {
-        public string SourceSheetNumber { get; set; }
-        public ElementId SourceSheetId { get; set; }
-        public ElementId ViewId { get; set; }
-        public ElementId ViewportId { get; set; }
+        public string NodeName { get; set; }
+        public string SheetNumber { get; set; }
+        public string SheetName { get; set; }
+        public ElementId SheetId { get; set; }
+        public ObservableCollection<ViewNode> Views { get; set; } = new ObservableCollection<ViewNode>();
+        
+        public double SheetWidth { get; set; }
+        public double SheetHeight { get; set; }
+
+        private bool _isSelected;
+        public bool IsSelected 
+        { 
+            get => _isSelected; 
+            set { _isSelected = value; OnPropertyChanged(); } 
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    public class ViewNode : INotifyPropertyChanged
+    {
+        public string NodeName { get; set; }
         public string ViewName { get; set; }
         public string ViewType { get; set; }
         public string LevelName { get; set; }
         public string TemplateName { get; set; }
-        public XYZ Location { get; set; }
+        
+        public ElementId ViewId { get; set; }
+        public ElementId ViewportId { get; set; }
         public ElementId ViewportTypeId { get; set; }
+        public XYZ Location { get; set; }
         public View OriginalView { get; set; }
-        public bool IsSchedule { get; set; } = false;
+        public bool IsSchedule { get; set; }
+
+        public double Left { get; set; }
+        public double Bottom { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+
+        private bool _isSelected;
+        public bool IsSelected 
+        { 
+            get => _isSelected; 
+            set { _isSelected = value; OnPropertyChanged(); } 
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
     public class LevelItem : INotifyPropertyChanged
