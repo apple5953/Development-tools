@@ -543,6 +543,9 @@ namespace DevelopmentTools
                         DevelopmentTools.Commands.Cmd_ChangeLanguageBase.UpdateRibbonTexts();
                     }
                     catch { }
+
+                    // 每次 Revit 啟動就檢查更新，不再等使用者點特定按鈕
+                    TriggerSilentUpdateCheck();
                 };
 
                 return Result.Succeeded;
