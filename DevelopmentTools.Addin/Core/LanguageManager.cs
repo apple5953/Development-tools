@@ -116,6 +116,11 @@ namespace DevelopmentTools.Core
             AddTranslation("Ribbon_Panel_Floor", "樓板工具", "Floors", "床ツール");
             AddTranslation("Ribbon_Panel_Sheet", "圖紙工具", "Sheets", "シートツール");
             AddTranslation("Ribbon_Panel_Language", "語言切換", "Language", "言語設定");
+            AddTranslation("Ribbon_Panel_AI", "AI 助手", "AI Assistant", "AIアシスト");
+
+            // AI Assistant
+            AddTranslation("Ribbon_Btn_AI", "AI 模型分析", "AI Analysis", "AIモデル分析");
+            AddTranslation("Ribbon_TT_AI", "使用大語言模型分析 Revit 模型元件，提供優化建議（API 串接建置中）。", "Analyze Revit model elements with LLM and get optimization suggestions (API integration in progress).", "大規模言語モデルでRevitモデルを分析し、最適化提案を提供します（API連携構築中）。");
 
             // Google Login
             AddTranslation("TileSys_InstallWallPattern", "安裝[牆粉刷線]至此專案", "Install Wall Pattern", "壁パターンをインストール");

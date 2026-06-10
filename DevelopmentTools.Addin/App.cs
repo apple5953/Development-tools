@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using DevelopmentTools.Core;
+using DevelopmentTools.Modules.AIAssistant;
 using DevelopmentTools.UI;
 
 namespace DevelopmentTools
@@ -20,6 +21,11 @@ namespace DevelopmentTools
         // 持有視窗單例，避免重複開啟
         private static MainWindow _window;
         private static MainViewModel _viewModel;
+
+        // AI 助手
+        private static AIAssistantWindow _aiWindow;
+        private static AISelectionHandler _aiSelectionHandler;
+        private static ExternalEvent _aiSelectionEvent;
 
         private static readonly System.Collections.Generic.HashSet<string> _activeDocs = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -200,6 +206,22 @@ namespace DevelopmentTools
             });
         }
 
+        public static void ShowOrActivateAIAssistant(ExternalCommandData commandData)
+        {
+            if (_aiWindow != null && _aiWindow.IsLoaded)
+            {
+                _aiWindow.Activate();
+                _aiWindow.Focus();
+                return;
+            }
+
+            _aiWindow = new AIAssistantWindow(_aiSelectionEvent, _aiSelectionHandler);
+            var helper = new System.Windows.Interop.WindowInteropHelper(_aiWindow);
+            helper.Owner = commandData.Application.MainWindowHandle;
+            _aiWindow.Closed += (s, e) => { _aiWindow = null; };
+            _aiWindow.Show();
+        }
+
         public static void ShowOrActivateWindow(ExternalCommandData commandData)
         {
             TriggerSilentUpdateCheck();
@@ -275,6 +297,10 @@ namespace DevelopmentTools
                 // 1. 建立 ExternalEvent（在 OnStartup 建立，才能在整個 session 存活）
                 EventHandler = new TileSyncEventHandler();
                 SyncEvent = ExternalEvent.Create(EventHandler);
+
+                // AI 助手 ExternalEvent
+                _aiSelectionHandler = new AISelectionHandler();
+                _aiSelectionEvent = ExternalEvent.Create(_aiSelectionHandler);
 
                 // 2. 建立 Ribbon 頁籤
                 string tabName = "Development tools";
@@ -518,6 +544,18 @@ namespace DevelopmentTools
                                               "■ 開口邊到邊：讀取門、窗、洞口元件內部的 Left 與 Right 強參照面，實現開口淨寬與間距的快速一鍵尺寸標註。";
                 ApplyRibbonIcon(quickDimBtn, "quick-dimension.png");
                 tagPanel.AddItem(quickDimBtn);
+
+                // Panel 7: AI 助手
+                RibbonPanel aiPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_AI"]);
+
+                PushButtonData aiAssistantBtn = new PushButtonData(
+                    "AIAssistant", LanguageManager.Instance["Ribbon_Btn_AI"],
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_AIAssistant");
+                aiAssistantBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_AI"];
+                aiAssistantBtn.LargeImage = CreateDynamicIcon("🤖", "#6E40C9", "#FFFFFF");
+                aiPanel.AddItem(aiAssistantBtn);
+
+
 
                 // 3. 註冊 DMU Updater
                 _updater = new TileUpdater(application.ActiveAddInId);
