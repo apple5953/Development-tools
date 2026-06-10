@@ -101,7 +101,7 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
         public ICommand BrowseCommand { get; }
         public ICommand TransferCommand { get; }
 
-        private async void ExecuteBrowse(object obj)
+        private async void ExecuteBrowse()
         {
             System.Windows.Forms.OpenFileDialog ofd = new System.Windows.Forms.OpenFileDialog
             {
@@ -151,7 +151,7 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
                 var assets = await Task.Run(() => analyzer.AnalyzeAssets());
 
                 // Update UI
-                App.Current.Dispatcher.Invoke(() =>
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     foreach (var group in AssetGroups) group.Assets.Clear();
 
@@ -184,12 +184,12 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
             }
         }
 
-        private bool CanExecuteTransfer(object obj)
+        private bool CanExecuteTransfer()
         {
             return CanTransfer;
         }
 
-        private async void ExecuteTransfer(object obj)
+        private async void ExecuteTransfer()
         {
             IsTransferring = true;
             StatusMessage = "正在執行轉移...";
