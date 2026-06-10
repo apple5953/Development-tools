@@ -57,6 +57,16 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             }
         }
 
+        public double TopOffset
+        {
+            get => Settings.TopOffset;
+            set
+            {
+                Settings.TopOffset = value;
+                OnPropertyChanged();
+            }
+        }
+
         public double SideExtension
         {
             get => Settings.SideExtension;

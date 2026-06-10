@@ -63,6 +63,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public bool AutoWallLength { get; set; } = true;
         
         public double BottomOffset { get; set; } = 0.0;
+        public double TopOffset { get; set; } = 50.0; // mm
         public double SideExtension { get; set; } = 0.0; // 左右延伸 (mm)
         public string NamePrefix { get; set; } = "TE";
         

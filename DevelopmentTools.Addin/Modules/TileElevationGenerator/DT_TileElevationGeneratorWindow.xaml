@@ -1,7 +1,7 @@
 <Window x:Class="DevelopmentTools.UI.DT_TileElevationGeneratorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:core="clr-namespace:DevelopmentTools.Core"
-        Title="{Binding [TileElev_Title], Source={x:Static core:LanguageManager.Instance}}" Height="570" Width="380"
+        Title="{Binding [TileElev_Title], Source={x:Static core:LanguageManager.Instance}}" Height="480" Width="660"
         Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Segoe UI"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize">
@@ -152,10 +152,17 @@
             </StackPanel>
         </Border>
 
-        <!-- 參數設定 -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
-            <StackPanel Margin="0,0,6,0">
-                <TextBlock Text="{Binding [TileElev_SettingTitle], Source={x:Static core:LanguageManager.Instance}}" Style="{StaticResource SectionLabel}"/>
+        <!-- 參數設定 (雙欄佈局) -->
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左欄：視圖與圖紙設定 -->
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="視圖與圖紙設定" Style="{StaticResource SectionLabel}"/>
                 
                 <Grid Margin="0,4">
                     <Grid.ColumnDefinitions>
@@ -187,7 +194,7 @@
                     <TextBlock Grid.Column="0" Text="{Binding [TileElev_TitleBlock], Source={x:Static core:LanguageManager.Instance}}" Style="{StaticResource NormalText}"/>
                     <ComboBox  Grid.Column="1" ItemsSource="{Binding TitleBlocks}" 
                               SelectedItem="{Binding SelectedTitleBlock}" 
-                              DisplayMemberPath="DisplayText" 
+                              DisplayMemberPath="Name" 
                               Height="24"
                               BorderThickness="1" BorderBrush="#45475A"/>
                 </Grid>
@@ -200,9 +207,26 @@
                     <TextBlock Grid.Column="0" Text="{Binding [TileElev_ViewportType], Source={x:Static core:LanguageManager.Instance}}" Style="{StaticResource NormalText}"/>
                     <ComboBox  Grid.Column="1" ItemsSource="{Binding ViewportTypes}" 
                               SelectedItem="{Binding SelectedViewportType}" 
-                              DisplayMemberPath="DisplayText" 
+                              DisplayMemberPath="Name" 
                               Height="24"
                               BorderThickness="1" BorderBrush="#45475A"/>
+                </Grid>
+
+                <TextBlock Text="{Binding [TileElev_Tip], Source={x:Static core:LanguageManager.Instance}}" 
+                           Foreground="#89B4FA" FontSize="9.5" Margin="2,16,0,0" TextWrapping="Wrap" LineHeight="14"/>
+            </StackPanel>
+
+            <!-- 右欄：幾何與範圍參數 -->
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="幾何與範圍參數" Style="{StaticResource SectionLabel}"/>
+
+                <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="剖面視圖深度 (mm)" Style="{StaticResource NormalText}"/>
+                    <TextBox Grid.Column="1" Text="{Binding ViewDepth, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                 </Grid>
 
                 <Grid Margin="0,4">
@@ -214,10 +238,28 @@
                     <TextBox Grid.Column="1" Text="{Binding SideExtension, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                 </Grid>
 
-                <TextBlock Text="{Binding [TileElev_Tip], Source={x:Static core:LanguageManager.Instance}}" 
+                <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="頂部偏移 (mm)" Style="{StaticResource NormalText}"/>
+                    <TextBox Grid.Column="1" Text="{Binding TopOffset, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                </Grid>
+
+                <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="底部偏移 (mm)" Style="{StaticResource NormalText}"/>
+                    <TextBox Grid.Column="1" Text="{Binding BottomOffset, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
+                </Grid>
+                
+                <TextBlock Text="💡 提示：剖面頂部與底部範圍是根據您選取的樓板/牆體高程自動抓取基準，再疊加此處設定的偏移量生成。" 
                            Foreground="#89B4FA" FontSize="9.5" Margin="2,16,0,0" TextWrapping="Wrap" LineHeight="14"/>
             </StackPanel>
-        </ScrollViewer>
+        </Grid>
 
         <!-- Action -->
         <StackPanel Grid.Row="3" Margin="0,6,0,0">

@@ -41,7 +41,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 depthFeet = wallThickness + userViewDepthFeet;          // 牆厚度 + 剖切深度，確保切透牆面
             }
             double bottomOffsetFeet = settings.BottomOffset / 304.8;            // 底部延伸量
-            double topOffsetFeet = 50.0 / 304.8;                        // 頂部延伸預設維持 50mm
+            double topOffsetFeet = settings.TopOffset / 304.8;                        // 頂部延伸量
             double leftRightExtensionFeet = settings.SideExtension / 304.8;             // 左右延伸量，可解決剖面寬度不夠、無法顯示轉角貼磚厚度的問題
 
             // 使用樓層高程(LevelElevation)做為 Z 軸基準，確保底部切齊樓層線，不受樓板高程偏移影響
