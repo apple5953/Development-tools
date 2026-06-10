@@ -117,10 +117,15 @@ namespace DevelopmentTools.Core
             AddTranslation("Ribbon_Panel_Sheet", "圖紙工具", "Sheets", "シートツール");
             AddTranslation("Ribbon_Panel_Language", "語言切換", "Language", "言語設定");
             AddTranslation("Ribbon_Panel_AI", "AI 助手", "AI Assistant", "AIアシスト");
+            AddTranslation("Ribbon_Panel_DocTools", "文件工具", "Document Tools", "ドキュメントツール");
 
             // AI Assistant
             AddTranslation("Ribbon_Btn_AI", "AI 模型分析", "AI Analysis", "AIモデル分析");
             AddTranslation("Ribbon_TT_AI", "使用大語言模型分析 Revit 模型元件，提供優化建議（API 串接建置中）。", "Analyze Revit model elements with LLM and get optimization suggestions (API integration in progress).", "大規模言語モデルでRevitモデルを分析し、最適化提案を提供します（API連携構築中）。");
+
+            // Sheet Transfer
+            AddTranslation("Ribbon_Btn_SheetTransfer", "跨專案圖紙轉移", "Sheet Transfer", "シート転送");
+            AddTranslation("Ribbon_TT_SheetTransfer", "將其他 Revit 專案中的圖紙、詳圖、圖例、明細表快速轉移至目前專案。", "Transfer sheets, drafting views, legends, and schedules from another Revit project to the current project.", "他のRevitプロジェクトからシート、ドラフトビュー、凡例、集計表を現在のプロジェクトに転送します。");
 
             // Google Login
             AddTranslation("TileSys_InstallWallPattern", "安裝[牆粉刷線]至此專案", "Install Wall Pattern", "壁パターンをインストール");

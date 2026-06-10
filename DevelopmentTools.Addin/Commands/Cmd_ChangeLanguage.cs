@@ -59,6 +59,8 @@ namespace DevelopmentTools.Commands
                                 panel.Source.Title = lm["Ribbon_Panel_Language"];
                             else if (panel.Source.Id.Contains("AI") || panel.Source.Title == "AI 助手" || panel.Source.Title == "AI Assistant" || panel.Source.Title == "AIアシスト")
                                 panel.Source.Title = lm["Ribbon_Panel_AI"];
+                            else if (panel.Source.Id.Contains("Doc") || panel.Source.Title == "文件工具" || panel.Source.Title == "Document Tools" || panel.Source.Title == "ドキュメントツール")
+                                panel.Source.Title = lm["Ribbon_Panel_DocTools"];
 
                             foreach (var item in panel.Source.Items)
                             {
@@ -93,6 +95,7 @@ namespace DevelopmentTools.Commands
             else if (id.EndsWith("LanguageDropdown")) { item.Text = lm["Ribbon_Btn_LangDropdown"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_LangDropdown"] }; }
             else if (id.EndsWith("SheetDuplicator")) { item.Text = lm["Ribbon_Btn_SheetDuplicator"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetDuplicator"] }; }
             else if (id.EndsWith("AIAssistant")) { item.Text = lm["Ribbon_Btn_AI"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_AI"] }; }
+            else if (id.EndsWith("SheetTransfer")) { item.Text = lm["Ribbon_Btn_SheetTransfer"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetTransfer"] }; }
             else if (id.EndsWith("LanguageZH")) { item.Text = lm["Ribbon_Lang_ZH"];  }
             else if (id.EndsWith("LanguageEN")) { item.Text = lm["Ribbon_Lang_EN"];  }
             else if (id.EndsWith("LanguageJA")) { item.Text = lm["Ribbon_Lang_JA"];  }

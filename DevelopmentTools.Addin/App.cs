@@ -555,6 +555,17 @@ namespace DevelopmentTools
                 aiAssistantBtn.LargeImage = CreateDynamicIcon("🤖", "#6E40C9", "#FFFFFF");
                 aiPanel.AddItem(aiAssistantBtn);
 
+                // Panel 8: Document Tools
+                RibbonPanel docToolsPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_DocTools"]);
+
+                PushButtonData sheetTransferBtn = new PushButtonData(
+                    "SheetTransfer", LanguageManager.Instance["Ribbon_Btn_SheetTransfer"],
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_SheetTransfer");
+                sheetTransferBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_SheetTransfer"];
+                // 找不到 icon 先用 emoji fallback 即可
+                ApplyRibbonIcon(sheetTransferBtn, "sheet-transfer.png");
+                docToolsPanel.AddItem(sheetTransferBtn);
+
 
 
                 // 3. 註冊 DMU Updater
@@ -631,6 +642,7 @@ namespace DevelopmentTools
                         { "quick-view-creator.png",  ("🖼", "#C0392B") },
                         { "sheet-view-placer.png",   ("📋", "#1A5276") },
                         { "quick-dimension.png",     ("📏", "#6C3483") },
+                        { "sheet-transfer.png",      ("📦", "#0052CC") },
                     };
                     if (fallbackMap.TryGetValue(iconFileName, out var info))
                     {
