@@ -159,7 +159,8 @@ git push origin "v$Version"
 # 8. Create GitHub Release using gh CLI
 if (Get-Command gh -ErrorAction SilentlyContinue) {
     Write-Host "[RTS] Creating GitHub Release using gh CLI..."
-    gh release create "v$Version" $zipPath --title "v$Version" --notes "Auto release v$Version"
+    $exePath = Join-Path $distDir "DevelopmentTools_Setup.exe"
+    gh release create "v$Version" $zipPath $exePath --title "v$Version" --notes "Auto release v$Version"
 } else {
     Write-Warning "gh CLI is not installed. Please upload the ZIP file manually to: https://github.com/$Owner/$Repo/releases/tag/v$Version"
 }
