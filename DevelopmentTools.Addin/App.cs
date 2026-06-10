@@ -356,12 +356,11 @@ namespace DevelopmentTools
 
                 // Panel 1.5: 語言切換 (Added next to 系統管理)
                 
-
                 PulldownButtonData langDropdownData = new PulldownButtonData("LanguageDropdown", "語言 / Language");
                 langDropdownData.ToolTip = "切換系統語言 / Switch Language / 言語を切り替える";
                 
-                // Add icon for language dropdown
-                string langDllPath = assemblyPath;
+                string langDllPath = "";
+                try { langDllPath = System.Reflection.Assembly.GetExecutingAssembly().Location; } catch { }
                 if (string.IsNullOrEmpty(langDllPath) || !System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(langDllPath), "Resources")))
                 {
                     try { langDllPath = new System.Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath; } catch { }
@@ -624,13 +623,25 @@ namespace DevelopmentTools
                 }
 
                 string iconPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dllPath), "Resources", "RibbonIcons", iconFileName);
+                bool iconLoaded = false;
                 if (System.IO.File.Exists(iconPath))
                 {
-                    btnData.LargeImage = new System.Windows.Media.Imaging.BitmapImage(new System.Uri(iconPath));
+                    try
+                    {
+                        var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                        bmp.BeginInit();
+                        bmp.UriSource = new System.Uri(iconPath, System.UriKind.Absolute);
+                        bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                        bmp.EndInit();
+                        btnData.LargeImage = bmp;
+                        iconLoaded = true;
+                    }
+                    catch { }
                 }
-                else
+                
+                if (!iconLoaded)
                 {
-                    // PNG 不存在時動態畫 fallback 圖示，讓按鈕永遠不會空白
+                    // PNG 不存在或讀取失敗時動態畫 fallback 圖示，讓按鈕永遠不會空白
                     var fallbackMap = new System.Collections.Generic.Dictionary<string, (string emoji, string bg)>
                     {
                         { "tile-layout.png",         ("🟦", "#2980B9") },
