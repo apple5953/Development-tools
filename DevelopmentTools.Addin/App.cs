@@ -405,7 +405,7 @@ namespace DevelopmentTools
                                           "■ 排磚原理：程式會取得 Room 牆體的最外側裝修面，並直接在表面 Paint .pat 填充線，不需手動繪製。\n" +
                                           "■ 設計微調：可在面板中微調起磚原點偏移量 X/Y，或調整整體排磚旋轉角度，以避開碎磚或對齊特定縫隙。\n" +
                                           "■ 動態關聯：外掛在專案中註冊了 DMU (Dynamic Model Update)，當房間的牆壁被手動拖動時，面域內的磁磚會自動重新計算，無須人工手動重做。";
-                ApplyRibbonIcon(mainBtn, "tile-layout.png");
+                mainBtn.LargeImage = CreateDynamicIcon("🟦", "#2980B9", "#FFFFFF");
                 layoutPanel.AddItem(mainBtn);
 
                 PushButtonData elevationBtn = new PushButtonData(
@@ -420,7 +420,7 @@ namespace DevelopmentTools
                                                "■ 無縫對接技術：排版至圖紙時，系統會自動在背景隱藏 Section 視圖中的標高、軸線、剖面線等干擾符號，以便抓取純淨的 CropBox 邊界尺寸進行完美貼合排版。\n" +
                                                "■ 高低差自動補償：讀取各牆面底部的 Level 標高高程，在圖紙 Y 軸對齊時自動進行偏移量扣除，確保所有立面圖的樓面線 (Floor Line) 處於同一條水平線上。\n" +
                                                "■ 剖面方向：生成剖面線視角預設是從樓板中心點朝牆體表面向外看。";
-                ApplyRibbonIcon(elevationBtn, "tile-elevation.png");
+                elevationBtn.LargeImage = CreateDynamicIcon("📐", "#8E44AD", "#FFFFFF");
                 layoutPanel.AddItem(elevationBtn);
 
                 // Panel 3: 粉刷裝修
@@ -436,7 +436,7 @@ namespace DevelopmentTools
                 wallFinishBtn.LongDescription = "【自動粉刷 - 進階生成原理說明】\n\n" +
                                                 "■ 牆體生成：分析房間的 Finish 邊界，在牆面外側快速繪製並長出具有厚度的薄牆。您可以自訂粉刷厚度（如 15mm）與對應的 Revit 材料（如水泥砂漿）。\n" +
                                                 "■ 門窗精準洞口扣減：外掛會自動偵測牆上的 Window 窗與 Door 門，分析其原有的洞口形狀，在生成的粉刷層實體中自動扣除重疊的洞口，確保明細表工程量計算精準無誤。";
-                ApplyRibbonIcon(wallFinishBtn, "wall-finish.png");
+                wallFinishBtn.LargeImage = CreateDynamicIcon("🏗", "#27AE60", "#FFFFFF");
                 finishPanel.AddItem(wallFinishBtn);
 
                 PushButtonData roomFinishConfigBtn = new PushButtonData(
@@ -450,7 +450,7 @@ namespace DevelopmentTools
                 roomFinishConfigBtn.LongDescription = "【房間裝修配置 - 數據關聯說明】\n\n" +
                                                       "■ 參數對應：直接讀寫 Revit Room 元件內建的地板裝修 (Base Finish)、牆面裝修 (Wall Finish) 與天花板裝修 (Ceiling Finish) 屬性。\n" +
                                                       "■ 自動化工作流：透過本工具在房間中預先填入好裝修編號或材質（如: T01 地磚、P01 乳膠漆），後續其他裝修生成工具在分析房間時，即可自動識別並生成相應厚度與材質的實體牆/板/填充線，實現 BIM 智慧化裝修自動化。";
-                ApplyRibbonIcon(roomFinishConfigBtn, "room-finish-config.png");
+                roomFinishConfigBtn.LargeImage = CreateDynamicIcon("🏠", "#16A085", "#FFFFFF");
                 finishPanel.AddItem(roomFinishConfigBtn);
 
                 // Panel 4: DT｜樓板工具
@@ -467,7 +467,7 @@ namespace DevelopmentTools
                                                "■ 幾何對齊原理：分析樓板所在的 Room 房間完成面（Finish Boundary）。針對草圖中與牆面平行、距離在 MaxSnapDistance (預設 300 mm) 內且有一定重疊長度的直線段進行平移對齊。\n" +
                                                "■ 端點重建：移動後，程式會針對所有相鄰的直線在 2D XY 平面上重新求無限延伸線的交點，重設其端點。對於圓弧 (Arc)，則會保持其曲率半徑，僅微調其相鄰端點，確保草圖 100% 閉合。\n" +
                                                "■ 獨立防崩潰控制：框選多個樓板時，每塊樓板都會使用獨立的事務群組 (TransactionGroup) 處理。若有部分樓板因為草圖本身太亂或自交而對齊失敗，程式會單獨 Rollback 該樓板並提供報告，其餘成功的樓板依然會照常套用。";
-                ApplyRibbonIcon(floorSnapBtn, "floor-snap-to-room.png");
+                floorSnapBtn.LargeImage = CreateDynamicIcon("⬇", "#D35400", "#FFFFFF");
                 floorPanel.AddItem(floorSnapBtn);
 
                 // Panel 5: DT｜圖紙工具
@@ -484,7 +484,7 @@ namespace DevelopmentTools
                 sheetRenameBtn.LongDescription = "【圖紙批次更名 - 衝突防護與批次功能說明】\n\n" +
                                                  "■ 衝突防護機制：Revit 原生要求圖紙編號必須唯一。如果您想對調兩張圖紙的編號（如 A:001->002，B:002->001），本工具會自動偵測衝突並採用「兩步暫存修改法」（先暫時加上隨機或 Temp 後綴，再統一修改為目標編號），完美避開 Revit 限制。\n" +
                                                  "■ 批次修改與預覽：支援即時編輯，提供直觀的介面，防止因手動一個個修改圖紙屬性而造成的繁瑣操作與編號衝突。";
-                ApplyRibbonIcon(sheetRenameBtn, "batch-sheet-renamer.png");
+                sheetRenameBtn.LargeImage = CreateDynamicIcon("📝", "#2C3E50", "#FFFFFF");
                 sheetPanel.AddItem(sheetRenameBtn);
 
                 PushButtonData viewCreateBtn = new PushButtonData(
@@ -500,7 +500,7 @@ namespace DevelopmentTools
                                                 "■ 複製機制：支援「僅複製結構 (Duplicate)」、「複製詳圖 (With Detailing)」與「建立相依 (As Dependent)」三種模式，完美應對不同的出圖需求。\n" +
                                                 "■ 命名防碰撞：新視圖名稱為 [來源視圖名稱]-[樣板名稱]。若名稱已存在，系統會自動遞增後綴 (如 _1, _2) 避免 Revit 衝突崩潰。\n" +
                                                 "■ 一鍵自動出圖：若勾選「同步建立圖紙」，系統會自動採用專案圖框為新視圖建立對齊圖紙，並自動將視圖放置到圖紙正中央，實現開圖到排版的一鍵完成。";
-                ApplyRibbonIcon(viewCreateBtn, "quick-view-creator.png");
+                viewCreateBtn.LargeImage = CreateDynamicIcon("🖼", "#C0392B", "#FFFFFF");
                 sheetPanel.AddItem(viewCreateBtn);
 
                 PushButtonData viewPlaceBtn = new PushButtonData(
@@ -515,7 +515,7 @@ namespace DevelopmentTools
                                                "■ 智能跨圖紙搬移：由於 Revit 限制普通視圖只能放置在單一圖紙上，當您跨圖紙拖曳時，系統會自動在後台刪除舊圖紙的 Viewport 並於新圖紙重建，避免 Revit 異常。\n" +
                                                "■ 位置自動偏移：置入新視圖時，若圖紙已有視窗，系統會自動套用微幅偏移以防完全重疊遮擋，並會自動套用下拉選定的視埠樣式。\n" +
                                                "■ 支援明細表與圖例：除了一般平面/剖立面/3D 視圖外，亦支援將明細表 (Schedule) 等可多重置入的視圖進行拖放排版。";
-                ApplyRibbonIcon(viewPlaceBtn, "sheet-view-placer.png");
+                viewPlaceBtn.LargeImage = CreateDynamicIcon("📋", "#1A5276", "#FFFFFF");
                 sheetPanel.AddItem(viewPlaceBtn);
 
                 PushButtonData sheetDuplicatorBtn = new PushButtonData(
@@ -523,7 +523,7 @@ namespace DevelopmentTools
                     assemblyPath, "DevelopmentTools.Commands.Cmd_SheetDuplicator");
                 sheetDuplicatorBtn.ToolTip = DevelopmentTools.Core.LanguageManager.Instance["Ribbon_TT_SheetDuplicator"];
                 // 暫時使用同一個 icon，或者如果有 sheet-duplicator.png 的話
-                ApplyRibbonIcon(sheetDuplicatorBtn, "sheet-view-placer.png");
+                sheetDuplicatorBtn.LargeImage = CreateDynamicIcon("📋", "#1A5276", "#FFFFFF");
                 sheetPanel.AddItem(sheetDuplicatorBtn);
 
                 // Panel 6: DT｜標註工具
@@ -541,7 +541,7 @@ namespace DevelopmentTools
                                               "■ 柱中心對齊：自動讀取結構柱/建築柱內部的 Center 幾何面參照，依柱子排列方向（水平或垂直）建立橫向或縱向的尺寸標註。\n" +
                                               "■ 牆中心對齊：藉由牆體定位中心線直接提取 Reference，自動在平行牆體中線建立連續的對齊標註。\n" +
                                               "■ 開口邊到邊：讀取門、窗、洞口元件內部的 Left 與 Right 強參照面，實現開口淨寬與間距的快速一鍵尺寸標註。";
-                ApplyRibbonIcon(quickDimBtn, "quick-dimension.png");
+                quickDimBtn.LargeImage = CreateDynamicIcon("📏", "#6C3483", "#FFFFFF");
                 tagPanel.AddItem(quickDimBtn);
 
                 // Panel 7: AI 助手
@@ -562,7 +562,7 @@ namespace DevelopmentTools
                     assemblyPath, "DevelopmentTools.Commands.Cmd_SheetTransfer");
                 sheetTransferBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_SheetTransfer"];
                 // 找不到 icon 先用 emoji fallback 即可
-                ApplyRibbonIcon(sheetTransferBtn, "sheet-transfer.png");
+                sheetTransferBtn.LargeImage = CreateDynamicIcon("📦", "#0052CC", "#FFFFFF");
                 docToolsPanel.AddItem(sheetTransferBtn);
 
 
