@@ -92,7 +92,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 dataList.Add(data);
             }
 
-            // 如果有給定有效的地板中心點，則進行順時針排序
+            // 如果有給定有效的地板中心點且是在樓板模式下，才進行順時針排序。
+            // 牆體模式下保留點選順序 (PickObjects 回傳的順序)。
             if (settings.SourceMode == SourceMode.Floor && floorCenter != null)
             {
                 SortClockwise(dataList, floorCenter);
