@@ -53,8 +53,11 @@ if (-not $env:GH_TOKEN -and -not $env:GITHUB_TOKEN) {
 # }
 
 # 2. Build entire Solution
-Write-Host "[RTS] Building Solution in Release mode..."
-dotnet build (Join-Path $parentRoot "DevelopmentTools.sln") -c Release
+Write-Host "[RTS] Cleaning Solution in Release mode..."
+dotnet clean (Join-Path $parentRoot "DevelopmentTools.sln") -c Release
+
+Write-Host "[RTS] Building Solution in Release mode (No Incremental)..."
+dotnet build (Join-Path $parentRoot "DevelopmentTools.sln") -c Release --no-incremental
 
 # 3. Ensure obfuscated DLL is generated
 $releaseDir = Join-Path $parentRoot "DevelopmentTools.Addin\bin\Release\net48"

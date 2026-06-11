@@ -428,6 +428,16 @@ namespace DevelopmentTools.Core
             AddTranslation("RoomFinish_ColFloor", "地板裝修 (Base Finish)", "Base Finish", "床仕上げ");
             AddTranslation("RoomFinish_ColWall", "牆面裝修 (Wall Finish)", "Wall Finish", "壁仕上げ");
             AddTranslation("RoomFinish_ColCeiling", "天花板裝修 (Ceiling Finish)", "Ceiling Finish", "天井仕上げ");
+            AddTranslation("RoomFinish_BaseboardFinish", "踢腳板裝修 (Baseboard Finish)", "Baseboard Finish", "幅木仕上げ");
+            AddTranslation("RoomFinish_CloudSyncTitle", "🌐 雲端材質同步", "🌐 Cloud Material Sync", "🌐 クラウド同期");
+            AddTranslation("RoomFinish_CloudUrlLabel", "雲端連結", "Cloud URL", "クラウドURL");
+            AddTranslation("RoomFinish_SyncBtn", "同步雲端設定", "Sync Cloud Config", "クラウドと同期");
+            AddTranslation("RoomFinish_DownloadTemplateBtn", "📥 下載 Excel 範本", "📥 Download Excel Template", "📥 テンプレートをダウンロード");
+            AddTranslation("RoomFinish_GenerateTitle", "🏗️ 實體裝修模型生成", "🏗️ Generate Finish Geometry", "🏗️ 仕上げジオメトリ生成");
+            AddTranslation("RoomFinish_JointRelationLabel", "接合關係", "Joint Relation", "接合関係");
+            AddTranslation("RoomFinish_JointFloorFirst", "地坪接牆 (牆作到底)", "Floor First (Wall to Bottom)", "床優先");
+            AddTranslation("RoomFinish_JointWallFirst", "牆接地坪 (地坪作到底)", "Wall First (Floor to Bottom)", "壁優先");
+            AddTranslation("RoomFinish_GenerateBtn", "生成選中房間的裝修", "Generate Room Finishes", "仕上げモデルを生成");
             AddTranslation("Feedback_SubmitBtn", "送出反饋", "Submit Feedback", "フィードバックを送信");
             AddTranslation("TileSys_ExportSection", "▍ 統計與明細表匯出", "▍ Stats & Schedule Export", "▍ 統計と集計表のエクスポート");
             AddTranslation("TileSys_OtherSection", "▍ 其他", "▍ Others", "▍ その他");

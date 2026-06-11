@@ -39,7 +39,13 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 
                 // 計算牆高 (Revit Feet)
                 double height = 3000.0 / 304.8; // 預設 3 米
-                if (settings.AutoWallHeight)
+                ElementId lvlId = wall.LevelId;
+                if (lvlId != ElementId.InvalidElementId)
+                {
+                    double levelHeight = DetectLevelHeight(doc, lvlId);
+                    if (levelHeight > 0.1) height = levelHeight;
+                }
+                else if (settings.AutoWallHeight)
                 {
                     var heightParam = wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM);
                     if (heightParam != null && heightParam.HasValue)
@@ -60,7 +66,6 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 }
 
                 double levelElevation = 0.0;
-                ElementId lvlId = wall.LevelId;
                 if (lvlId != ElementId.InvalidElementId)
                 {
                     Level lvl = doc.GetElement(lvlId) as Level;
@@ -165,7 +170,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             // 3. 取得基準樓板來獲取參數
             Floor baseFloor = elements.FirstOrDefault(e => e is Floor) as Floor;
             XYZ floorCenter = baseFloor != null ? GetFloorCenter(baseFloor) : bottomFace.Origin;
-            double height = baseFloor != null ? DetectLevelHeight(doc, baseFloor) : 3000.0 / 304.8;
+            double height = 3000.0 / 304.8;
+            if (baseFloor != null && baseFloor.LevelId != ElementId.InvalidElementId)
+            {
+                height = DetectLevelHeight(doc, baseFloor.LevelId);
+            }
             double levelElevation = 0.0;
             
             if (baseFloor != null && baseFloor.LevelId != ElementId.InvalidElementId)
@@ -242,14 +251,12 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             return XYZ.Zero;
         }
 
-        private static double DetectLevelHeight(Document doc, Floor floor)
+        private static double DetectLevelHeight(Document doc, ElementId currentLevelId)
         {
             double defaultHeightFeet = 3000.0 / 304.8; // 預設 3.0 米
+            if (currentLevelId == ElementId.InvalidElementId) return defaultHeightFeet;
             try
             {
-                ElementId currentLevelId = floor.LevelId;
-                if (currentLevelId == ElementId.InvalidElementId) return defaultHeightFeet;
-
                 Level currentLevel = doc.GetElement(currentLevelId) as Level;
                 if (currentLevel == null) return defaultHeightFeet;
 

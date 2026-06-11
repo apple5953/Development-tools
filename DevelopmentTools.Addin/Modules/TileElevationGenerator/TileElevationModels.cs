@@ -50,6 +50,68 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public Curve BoundaryCurve { get; set; }
     }
 
+    public class WallElevationDataItem : System.ComponentModel.INotifyPropertyChanged
+    {
+        private bool _isSelected = true;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { _isSelected = value; OnPropertyChanged(); }
+        }
+
+        private string _viewName;
+        public string ViewName
+        {
+            get => _viewName;
+            set { _viewName = value; OnPropertyChanged(); }
+        }
+
+        public double WallLength => GeometryData != null ? GeometryData.WallLength * 304.8 : 0.0; // mm
+
+        private double _viewDepth = 600.0;
+        public double ViewDepth
+        {
+            get => _viewDepth;
+            set { _viewDepth = value; OnPropertyChanged(); }
+        }
+
+        private double _wallOffset = 30.0;
+        public double WallOffset
+        {
+            get => _wallOffset;
+            set { _wallOffset = value; OnPropertyChanged(); }
+        }
+
+        private double _sideExtension = 150.0;
+        public double SideExtension
+        {
+            get => _sideExtension;
+            set { _sideExtension = value; OnPropertyChanged(); }
+        }
+
+        private double _topOffset = 50.0;
+        public double TopOffset
+        {
+            get => _topOffset;
+            set { _topOffset = value; OnPropertyChanged(); }
+        }
+
+        private double _bottomOffset = 0.0;
+        public double BottomOffset
+        {
+            get => _bottomOffset;
+            set { _bottomOffset = value; OnPropertyChanged(); }
+        }
+
+        public WallElevationData GeometryData { get; set; }
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string name = null)
+        {
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
+        }
+    }
+
     public class GeneratorSettings
     {
         public SourceMode SourceMode { get; set; } = SourceMode.Floor;
@@ -64,7 +126,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         
         public double BottomOffset { get; set; } = 0.0;
         public double TopOffset { get; set; } = 50.0; // mm
-        public double SideExtension { get; set; } = 0.0; // 左右延伸 (mm)
+        public double SideExtension { get; set; } = 150.0; // 左右延伸 (mm)
         public string NamePrefix { get; set; } = "TE";
         
         public bool SkipShortWall { get; set; } = true;

@@ -31,27 +31,32 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             if (data.WallElement == null)
             {
                 // 樓板外廓剖切 (無牆體)
-                offsetFeet = userWallOffsetFeet;  // 前移偏移量
+                // 剖刀往房間內退 (即法線的反方向)
+                offsetFeet = -userWallOffsetFeet;  
                 depthFeet = userViewDepthFeet;    // 剖切深度
             }
             else
             {
                 // 牆面剖切
-                offsetFeet = (wallThickness / 2.0) + userWallOffsetFeet; // 牆體半寬 + 前移偏移量
-                depthFeet = wallThickness + userViewDepthFeet;          // 牆厚度 + 剖切深度，確保切透牆面
+                // 剖刀往房間內退：從中心退牆體半寬，再退 WallOffset
+                offsetFeet = -(wallThickness / 2.0) - userWallOffsetFeet; 
+                // 深度為 WallOffset 加上牆厚度 + userViewDepthFeet，以確保切到牆體並看透
+                depthFeet = userWallOffsetFeet + wallThickness + userViewDepthFeet;          
             }
             double bottomOffsetFeet = settings.BottomOffset / 304.8;            // 底部延伸量
             double topOffsetFeet = settings.TopOffset / 304.8;                        // 頂部延伸量
-            double leftRightExtensionFeet = settings.SideExtension / 304.8;             // 左右延伸量，可解決剖面寬度不夠、無法顯示轉角貼磚厚度的問題
+            double leftRightExtensionFeet = settings.SideExtension / 304.8;             // 左右延伸量
 
-            // 使用樓層高程(LevelElevation)做為 Z 軸基準，確保底部切齊樓層線，不受樓板高程偏移影響
+            // 使用樓層高程(LevelElevation)做為 Z 軸基準，確保底部切齊樓層線
             XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.LevelElevation + (heightFeet / 2.0));
+            // 剖刀原點定位在往房間內偏移 offsetFeet 處
             t.Origin = midPointWithZ + data.RoomSideDirection * offsetFeet;
 
             // X 軸平行於牆面，Y 軸為 Z 正向 (朝上)
             t.BasisX = data.WallDirection;
             t.BasisY = XYZ.BasisZ;
-            t.BasisZ = -data.RoomSideDirection; // 觀看方向為 BasisZ (向外朝向牆面，即樓板向外看)
+            // 觀看方向朝向牆面（與 RoomSideDirection 相反，亦即朝向牆體方向看）
+            t.BasisZ = -data.RoomSideDirection; 
 
             // 確保 BasisX、BasisY、BasisZ 為右手坐標系 (X x Y = Z)
             if (!t.BasisX.CrossProduct(t.BasisY).IsAlmostEqualTo(t.BasisZ))

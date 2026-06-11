@@ -34,6 +34,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             {
                 Settings.ViewDepth = value;
                 OnPropertyChanged();
+                RaiseDrawingPropertiesChanged();
             }
         }
 
@@ -44,6 +45,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             {
                 Settings.WallOffset = value;
                 OnPropertyChanged();
+                RaiseDrawingPropertiesChanged();
             }
         }
 
@@ -74,7 +76,507 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             {
                 Settings.SideExtension = value;
                 OnPropertyChanged();
+                RaiseDrawingPropertiesChanged();
             }
+        }
+
+        // UI 剖面項目清單與選中項目
+        public System.Collections.ObjectModel.ObservableCollection<WallElevationDataItem> ElevationItems { get; } = new System.Collections.ObjectModel.ObservableCollection<WallElevationDataItem>();
+
+        private WallElevationDataItem _selectedElevationItem;
+        public WallElevationDataItem SelectedElevationItem
+        {
+            get => _selectedElevationItem;
+            set
+            {
+                if (_selectedElevationItem != null)
+                {
+                    _selectedElevationItem.PropertyChanged -= OnSelectedElevationItemPropertyChanged;
+                }
+                _selectedElevationItem = value;
+                if (_selectedElevationItem != null)
+                {
+                    _selectedElevationItem.PropertyChanged += OnSelectedElevationItemPropertyChanged;
+                }
+                OnPropertyChanged();
+                RaiseDrawingPropertiesChanged();
+            }
+        }
+
+        private void OnSelectedElevationItemPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(WallElevationDataItem.WallOffset) ||
+                e.PropertyName == nameof(WallElevationDataItem.ViewDepth) ||
+                e.PropertyName == nameof(WallElevationDataItem.SideExtension) ||
+                e.PropertyName == nameof(WallElevationDataItem.TopOffset) ||
+                e.PropertyName == nameof(WallElevationDataItem.BottomOffset))
+            {
+                RaiseDrawingPropertiesChanged();
+            }
+        }
+
+        // 批次套用當前參數為預設值並更新清單中所有項目
+        public ICommand SetAsDefaultCommand { get; }
+
+        private void OnSetAsDefault()
+        {
+            if (SelectedElevationItem == null) return;
+            
+            // 1. 儲存至全域 Settings 預設值
+            Settings.WallOffset = SelectedElevationItem.WallOffset;
+            Settings.ViewDepth = SelectedElevationItem.ViewDepth;
+            Settings.SideExtension = SelectedElevationItem.SideExtension;
+            Settings.TopOffset = SelectedElevationItem.TopOffset;
+            Settings.BottomOffset = SelectedElevationItem.BottomOffset;
+
+            // 2. 將此設定批次覆蓋到清單內的所有剖面項目
+            foreach (var item in ElevationItems)
+            {
+                item.WallOffset = Settings.WallOffset;
+                item.ViewDepth = Settings.ViewDepth;
+                item.SideExtension = Settings.SideExtension;
+                item.TopOffset = Settings.TopOffset;
+                item.BottomOffset = Settings.BottomOffset;
+            }
+
+            RaiseDrawingPropertiesChanged();
+            StatusText = $"[已更新預設值] 已將「{SelectedElevationItem.ViewName}」的參數設定為全域預設值，並套用到所有剖面。";
+        }
+
+        // 立面示意圖高度預覽屬性 (模擬總樓高 3000mm 對應 60px 繪圖區)
+        // 地板基底 Y = 85，天花頂部 Y = 25
+        public double DrawSectionCropTop
+        {
+            get
+            {
+                double topOffset = SelectedElevationItem != null ? SelectedElevationItem.TopOffset : TopOffset;
+                // 1mm ＝ 0.02px, TopOffset 往上移 (即 Y 變小)
+                return 25.0 - (topOffset * 0.02);
+            }
+        }
+
+        public double DrawSectionCropHeight
+        {
+            get
+            {
+                double topOffset = SelectedElevationItem != null ? SelectedElevationItem.TopOffset : TopOffset;
+                double bottomOffset = SelectedElevationItem != null ? SelectedElevationItem.BottomOffset : BottomOffset;
+                // 總高 ＝ 預設高 60 + topOffset*0.02 + bottomOffset*0.02
+                double h = 60.0 + (topOffset * 0.02) + (bottomOffset * 0.02);
+                return h > 5 ? h : 5;
+            }
+        }
+
+        // UI 向量繪圖 Binding 屬性
+        private const double ScalePx = 0.15;
+        private const double BaseWallY = 120; // 備用牆面 Y 位置
+        private const double BaseWallX = 60;  // 備用牆面左端 X 位置
+        private const double BaseWallWidth = 120; // 備用牆面寬度固定值
+
+        public double DrawWallY => BaseWallY;
+        public double DrawWallX => BaseWallX;
+        public double DrawWallWidth => BaseWallWidth;
+
+        // 計算選取邊界的實際平面多邊形座標串以在 UI Canvas 繪製
+        public System.Windows.Media.PointCollection FloorPolygonPoints
+        {
+            get
+            {
+                var points = new System.Windows.Media.PointCollection();
+                if (ElevationItems.Count == 0)
+                {
+                    // 備用預設矩形樓板
+                    points.Add(new System.Windows.Point(40, 20));
+                    points.Add(new System.Windows.Point(220, 20));
+                    points.Add(new System.Windows.Point(220, 130));
+                    points.Add(new System.Windows.Point(40, 130));
+                    return points;
+                }
+
+                // 1. 收集所有線段的端點並計算邊界範圍 (Bounding Box)
+                double minX = double.MaxValue, maxX = double.MinValue;
+                double minY = double.MaxValue, maxY = double.MinValue;
+                var segments = new List<Tuple<XYZ, XYZ>>();
+
+                foreach (var item in ElevationItems)
+                {
+                    var geom = item.GeometryData;
+                    if (geom == null) continue;
+                    segments.Add(Tuple.Create(geom.StartPoint, geom.EndPoint));
+                    minX = Math.Min(minX, Math.Min(geom.StartPoint.X, geom.EndPoint.X));
+                    maxX = Math.Max(maxX, Math.Max(geom.StartPoint.X, geom.EndPoint.X));
+                    minY = Math.Min(minY, Math.Min(geom.StartPoint.Y, geom.EndPoint.Y));
+                    maxY = Math.Max(maxY, Math.Max(geom.StartPoint.Y, geom.EndPoint.Y));
+                }
+
+                double w = maxX - minX;
+                double h = maxY - minY;
+                if (w < 0.001) w = 1.0;
+                if (h < 0.001) h = 1.0;
+
+                // 2. 計算等比例縮放以適應 240 x 140 的 Canvas 顯示區
+                double canvasW = 220;
+                double canvasH = 120;
+                double padX = 25;
+                double padY = 20;
+
+                double scale = Math.Min(canvasW / w, canvasH / h);
+                // 居中對齊偏移
+                double offsetX = padX + (canvasW - w * scale) / 2.0;
+                double offsetY = padY + (canvasH - h * scale) / 2.0;
+
+                // 3. 按照線段連接順序提取多邊形頂點
+                // 為了避免線段亂序，我們從第一個線段的 StartPoint 開始，逐步尋找首尾相連的點
+                var orderedPoints = new List<XYZ>();
+                if (segments.Count > 0)
+                {
+                    var remaining = new List<Tuple<XYZ, XYZ>>(segments);
+                    var currentSeg = remaining[0];
+                    orderedPoints.Add(currentSeg.Item1);
+                    XYZ currentPoint = currentSeg.Item2;
+                    remaining.RemoveAt(0);
+
+                    while (remaining.Count > 0)
+                    {
+                        orderedPoints.Add(currentPoint);
+                        int nextIdx = -1;
+                        bool reverse = false;
+
+                        for (int i = 0; i < remaining.Count; i++)
+                        {
+                            if (remaining[i].Item1.DistanceTo(currentPoint) < 0.1)
+                            {
+                                nextIdx = i;
+                                reverse = false;
+                                break;
+                            }
+                            if (remaining[i].Item2.DistanceTo(currentPoint) < 0.1)
+                            {
+                                nextIdx = i;
+                                reverse = true;
+                                break;
+                            }
+                        }
+
+                        if (nextIdx != -1)
+                        {
+                            currentPoint = reverse ? remaining[nextIdx].Item1 : remaining[nextIdx].Item2;
+                            remaining.RemoveAt(nextIdx);
+                        }
+                        else
+                        {
+                            // 找不到相連線段 (可能是不連續邊界，直接加對面端點並跳出)
+                            break;
+                        }
+                    }
+                }
+
+                // 如果拼合順序頂點太少，退回到使用最單純的頂點收集
+                if (orderedPoints.Count < 3)
+                {
+                    orderedPoints.Clear();
+                    foreach (var seg in segments)
+                    {
+                        if (!orderedPoints.Any(p => p.DistanceTo(seg.Item1) < 0.01)) orderedPoints.Add(seg.Item1);
+                        if (!orderedPoints.Any(p => p.DistanceTo(seg.Item2) < 0.01)) orderedPoints.Add(seg.Item2);
+                    }
+                }
+
+                // 4. 將 Revit 座標轉換至 Canvas 繪圖座標
+                foreach (var pt in orderedPoints)
+                {
+                    double x = offsetX + (pt.X - minX) * scale;
+                    // Revit 的 Y 軸朝上，Canvas 的 Y 軸朝下，需以 minY 鏡射
+                    double y = offsetY + canvasH - (pt.Y - minY) * scale;
+                    points.Add(new System.Windows.Point(x, y));
+                }
+
+                return points;
+            }
+        }
+
+        // 當前選取之剖切刀線的起點與終點 (在 Canvas 座標系下)
+        public double SelectedCutLineX1
+        {
+            get
+            {
+                if (SelectedElevationItem?.GeometryData == null) return 30;
+                var geom = SelectedElevationItem.GeometryData;
+                double scale = GetCanvasGeometryScale();
+                double minX = GetCanvasMinX();
+                double offsetX = GetCanvasOffsetX();
+
+                // 剖刀線位置：朝著房間中心內進（順著法線方向 +）
+                double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
+                double targetX = geom.StartPoint.X + geom.WallNormal.X * offsetFeet;
+                return offsetX + (targetX - minX) * scale;
+            }
+        }
+
+        public double SelectedCutLineY1
+        {
+            get
+            {
+                if (SelectedElevationItem?.GeometryData == null) return 70;
+                var geom = SelectedElevationItem.GeometryData;
+                double scale = GetCanvasGeometryScale();
+                double minY = GetCanvasMinY();
+                double offsetY = GetCanvasOffsetY();
+                double canvasH = 120;
+
+                double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
+                // Revit Y 與 Canvas Y 鏡像反轉，因此 Revit 中 +WallNormal.Y 對應到 Canvas 應為減去 WallNormal.Y
+                double targetY = geom.StartPoint.Y + geom.WallNormal.Y * offsetFeet;
+                return offsetY + canvasH - (targetY - minY) * scale;
+            }
+        }
+
+        public double SelectedCutLineX2
+        {
+            get
+            {
+                if (SelectedElevationItem?.GeometryData == null) return 210;
+                var geom = SelectedElevationItem.GeometryData;
+                double scale = GetCanvasGeometryScale();
+                double minX = GetCanvasMinX();
+                double offsetX = GetCanvasOffsetX();
+
+                double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
+                double targetX = geom.EndPoint.X + geom.WallNormal.X * offsetFeet;
+                return offsetX + (targetX - minX) * scale;
+            }
+        }
+
+        public double SelectedCutLineY2
+        {
+            get
+            {
+                if (SelectedElevationItem?.GeometryData == null) return 70;
+                var geom = SelectedElevationItem.GeometryData;
+                double scale = GetCanvasGeometryScale();
+                double minY = GetCanvasMinY();
+                double offsetY = GetCanvasOffsetY();
+                double canvasH = 120;
+
+                double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
+                double targetY = geom.EndPoint.Y + geom.WallNormal.Y * offsetFeet;
+                return offsetY + canvasH - (targetY - minY) * scale;
+            }
+        }
+
+        // 剖面視圖深度範圍的 4 個多邊形端點 (呈現一個半透明區域，從剖刀線往牆體方向看 depth 深度)
+        // 剖刀方向朝牆面（即法線相反方向： -geom.WallNormal），所以深度的延伸是往牆體前進（-geom.WallNormal 方向的相反，即朝著 -geom.WallNormal 延伸，Revit 剖面視圖深度是向後看，BasisZ 是 -WallNormal，所以深度是往 -WallNormal 方向延伸）
+        public System.Windows.Media.PointCollection SelectedDepthRangePoints
+        {
+            get
+            {
+                var points = new System.Windows.Media.PointCollection();
+                if (SelectedElevationItem?.GeometryData == null) return points;
+
+                var geom = SelectedElevationItem.GeometryData;
+                double scale = GetCanvasGeometryScale();
+                double minX = GetCanvasMinX();
+                double minY = GetCanvasMinY();
+                double offsetX = GetCanvasOffsetX();
+                double offsetY = GetCanvasOffsetY();
+                double canvasH = 120;
+
+                double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
+                double depthFeet = SelectedElevationItem.ViewDepth / 304.8;
+
+                // 剖刀線端點 1 與 2 (Revit 坐標)
+                XYZ cutStart = geom.StartPoint + geom.WallNormal * offsetFeet;
+                XYZ cutEnd = geom.EndPoint + geom.WallNormal * offsetFeet;
+
+                // 剖切深度終點 (往 -geom.WallNormal 延伸 depthFeet)
+                XYZ depthStart = cutStart - geom.WallNormal * depthFeet;
+                XYZ depthEnd = cutEnd - geom.WallNormal * depthFeet;
+
+                // 轉為 Canvas 坐標
+                System.Windows.Point pCutStart = new System.Windows.Point(
+                    offsetX + (cutStart.X - minX) * scale,
+                    offsetY + canvasH - (cutStart.Y - minY) * scale
+                );
+                System.Windows.Point pCutEnd = new System.Windows.Point(
+                    offsetX + (cutEnd.X - minX) * scale,
+                    offsetY + canvasH - (cutEnd.Y - minY) * scale
+                );
+                System.Windows.Point pDepthEnd = new System.Windows.Point(
+                    offsetX + (depthEnd.X - minX) * scale,
+                    offsetY + canvasH - (depthEnd.Y - minY) * scale
+                );
+                System.Windows.Point pDepthStart = new System.Windows.Point(
+                    offsetX + (depthStart.X - minX) * scale,
+                    offsetY + canvasH - (depthStart.Y - minY) * scale
+                );
+
+                points.Add(pCutStart);
+                points.Add(pCutEnd);
+                points.Add(pDepthEnd);
+                points.Add(pDepthStart);
+
+                return points;
+            }
+        }
+
+        private double GetCanvasMinX()
+        {
+            double minX = double.MaxValue;
+            foreach (var item in ElevationItems)
+            {
+                var geom = item.GeometryData;
+                if (geom == null) continue;
+                minX = Math.Min(minX, Math.Min(geom.StartPoint.X, geom.EndPoint.X));
+            }
+            return minX == double.MaxValue ? 0.0 : minX;
+        }
+
+        private double GetCanvasMinY()
+        {
+            double minY = double.MaxValue;
+            foreach (var item in ElevationItems)
+            {
+                var geom = item.GeometryData;
+                if (geom == null) continue;
+                minY = Math.Min(minY, Math.Min(geom.StartPoint.Y, geom.EndPoint.Y));
+            }
+            return minY == double.MaxValue ? 0.0 : minY;
+        }
+
+        private double GetCanvasOffsetX()
+        {
+            double minX = double.MaxValue, maxX = double.MinValue;
+            foreach (var item in ElevationItems)
+            {
+                var geom = item.GeometryData;
+                if (geom == null) continue;
+                minX = Math.Min(minX, Math.Min(geom.StartPoint.X, geom.EndPoint.X));
+                maxX = Math.Max(maxX, Math.Max(geom.StartPoint.X, geom.EndPoint.X));
+            }
+            double w = maxX - minX;
+            if (w < 0.001) w = 1.0;
+            double scale = GetCanvasGeometryScale();
+            return 25.0 + (220.0 - w * scale) / 2.0;
+        }
+
+        private double GetCanvasOffsetY()
+        {
+            double minY = double.MaxValue, maxY = double.MinValue;
+            foreach (var item in ElevationItems)
+            {
+                var geom = item.GeometryData;
+                if (geom == null) continue;
+                minY = Math.Min(minY, Math.Min(geom.StartPoint.Y, geom.EndPoint.Y));
+                maxY = Math.Max(maxY, Math.Max(geom.StartPoint.Y, geom.EndPoint.Y));
+            }
+            double h = maxY - minY;
+            if (h < 0.001) h = 1.0;
+            double scale = GetCanvasGeometryScale();
+            return 20.0 + (120.0 - h * scale) / 2.0;
+        }
+
+        // 取得當前選定剖切面編號 (以 1-based index 顯示在示意圖上)
+        public string SelectedSectionIndexText
+        {
+            get
+            {
+                if (SelectedElevationItem == null) return "";
+                int idx = ElevationItems.IndexOf(SelectedElevationItem);
+                return $"當前選中剖面: {SelectedElevationItem.ViewName} (刀位置 #{idx + 1})";
+            }
+        }
+
+        private double GetCanvasGeometryScale()
+        {
+            if (ElevationItems.Count == 0) return 1.0;
+            double minX = double.MaxValue, maxX = double.MinValue;
+            double minY = double.MaxValue, maxY = double.MinValue;
+            foreach (var item in ElevationItems)
+            {
+                var geom = item.GeometryData;
+                if (geom == null) continue;
+                minX = Math.Min(minX, Math.Min(geom.StartPoint.X, geom.EndPoint.X));
+                maxX = Math.Max(maxX, Math.Max(geom.StartPoint.X, geom.EndPoint.X));
+                minY = Math.Min(minY, Math.Min(geom.StartPoint.Y, geom.EndPoint.Y));
+                maxY = Math.Max(maxY, Math.Max(geom.StartPoint.Y, geom.EndPoint.Y));
+            }
+            double w = maxX - minX;
+            double h = maxY - minY;
+            if (w < 0.001) w = 1.0;
+            if (h < 0.001) h = 1.0;
+            return Math.Min(220.0 / w, 120.0 / h);
+        }
+
+        // 剖刀線 Y 坐標 (在牆面下方，亦即房間內)
+        public double DrawCutLineY
+        {
+            get
+            {
+                double offset = SelectedElevationItem != null ? SelectedElevationItem.WallOffset : WallOffset;
+                return BaseWallY + (offset * ScalePx);
+            }
+        }
+
+        // 剖面左右延伸後的 X 與 Width
+        public double DrawCropX
+        {
+            get
+            {
+                double sideExt = SelectedElevationItem != null ? SelectedElevationItem.SideExtension : SideExtension;
+                return BaseWallX - (sideExt * ScalePx);
+            }
+        }
+
+        public double DrawCropWidth
+        {
+            get
+            {
+                double sideExt = SelectedElevationItem != null ? SelectedElevationItem.SideExtension : SideExtension;
+                return BaseWallWidth + (sideExt * 2.0 * ScalePx);
+            }
+        }
+
+        // 剖切框 (CropBox) 的 Y 與 Height
+        // 因為是朝向牆面看，所以裁剪框是從剖刀線(DrawCutLineY)往牆面(減 Y 方向)延伸 ViewDepth 深度
+        public double DrawCropY => DrawCutLineY - DrawCropHeight;
+        public double DrawCropHeight
+        {
+            get
+            {
+                double depth = SelectedElevationItem != null ? SelectedElevationItem.ViewDepth : ViewDepth;
+                return depth * ScalePx;
+            }
+        }
+
+        // 箭頭點座標 (朝上的觀看方向箭頭)
+        public string DrawArrowPoints
+        {
+            get
+            {
+                double centerX = BaseWallX + (BaseWallWidth / 2.0);
+                double arrowStartY = DrawCutLineY;
+                double arrowEndY = arrowStartY - 12; // 往上指 12 像素
+                return $"{centerX-6},{arrowStartY} {centerX},{arrowEndY} {centerX+6},{arrowStartY}";
+            }
+        }
+
+        private void RaiseDrawingPropertiesChanged()
+        {
+            OnPropertyChanged(nameof(FloorPolygonPoints));
+            OnPropertyChanged(nameof(SelectedCutLineX1));
+            OnPropertyChanged(nameof(SelectedCutLineY1));
+            OnPropertyChanged(nameof(SelectedCutLineX2));
+            OnPropertyChanged(nameof(SelectedCutLineY2));
+            OnPropertyChanged(nameof(SelectedDepthRangePoints));
+            OnPropertyChanged(nameof(SelectedSectionIndexText));
+            OnPropertyChanged(nameof(DrawCutLineY));
+            OnPropertyChanged(nameof(DrawCropX));
+            OnPropertyChanged(nameof(DrawCropWidth));
+            OnPropertyChanged(nameof(DrawCropY));
+            OnPropertyChanged(nameof(DrawCropHeight));
+            OnPropertyChanged(nameof(DrawArrowPoints));
+            OnPropertyChanged(nameof(DrawSectionCropTop));
+            OnPropertyChanged(nameof(DrawSectionCropHeight));
         }
 
         // 新增圖框與視埠繫結
@@ -291,6 +793,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             SelectSourceCommand = new RelayCommand(OnSelectSource);
             GenerateCommand = new RelayCommand(OnGenerate);
             OpenHelpCommand = new RelayCommand(OnOpenHelp);
+            SetAsDefaultCommand = new RelayCommand(OnSetAsDefault);
             
             Step1AnalyzeCommand = new RelayCommand(OnStep1Analyze);
             Step2CreateCommand = new RelayCommand(OnStep2Create);
@@ -332,6 +835,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             string roomNum = DetectRoomNumber(firstFloor);
                             NamePrefix = !string.IsNullOrEmpty(roomNum) ? $"TE_{roomNum}" : "TE";
                         }
+
+                        AnalyzeSourceAndFillItems();
                     }
                 }
                 else
@@ -355,6 +860,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         // 自動偵測房號
                         string roomNum = DetectRoomNumber(SelectedWalls);
                         NamePrefix = !string.IsNullOrEmpty(roomNum) ? $"TE_{roomNum}" : "TE";
+
+                        AnalyzeSourceAndFillItems();
                     }
                 }
             }
@@ -372,6 +879,68 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             }
         }
 
+        private void AnalyzeSourceAndFillItems()
+        {
+            try
+            {
+                ElevationItems.Clear();
+                _tempWallDataList.Clear();
+                _isStep1Ok = false;
+                RefreshStepButtons();
+
+                List<WallElevationData> dataList;
+                if (IsFloorMode)
+                {
+                    if (SelectedFloors.Count == 0) return;
+                    dataList = WallElevationDataBuilder.BuildDataFromFloorsAndSolids(_doc, SelectedFloors, Settings);
+                }
+                else
+                {
+                    if (SelectedWalls.Count == 0) return;
+                    XYZ referenceCenter = GetWallsAverageCenter(SelectedWalls);
+                    dataList = WallElevationDataBuilder.BuildData(_doc, SelectedWalls, Settings, referenceCenter);
+                }
+
+                _tempWallDataList = dataList;
+
+                for (int i = 0; i < dataList.Count; i++)
+                {
+                    var data = dataList[i];
+                    string defaultName = ElevationNamingService.GenerateViewName(_doc, NamePrefix, i);
+                    
+                    var item = new WallElevationDataItem
+                    {
+                        IsSelected = true,
+                        ViewName = defaultName,
+                        ViewDepth = Settings.ViewDepth,
+                        WallOffset = Settings.WallOffset,
+                        SideExtension = Settings.SideExtension,
+                        TopOffset = Settings.TopOffset,
+                        BottomOffset = Settings.BottomOffset,
+                        GeometryData = data
+                    };
+                    ElevationItems.Add(item);
+                }
+
+                if (ElevationItems.Count > 0)
+                {
+                    SelectedElevationItem = ElevationItems[0];
+                    _isStep1Ok = true;
+                    StatusText = $"[分析成功] 已識別出 {ElevationItems.Count} 個剖面幾何定位，請在下方列表中確認與微調參數。";
+                }
+                else
+                {
+                    StatusText = "未偵測到任何有效邊界！";
+                }
+
+                RefreshStepButtons();
+            }
+            catch (Exception ex)
+            {
+                StatusText = "分析幾何失敗：" + ex.Message;
+            }
+        }
+
         private void OnGenerate()
         {
             _externalEventHandler.SetAction(() =>
@@ -380,62 +949,47 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 {
                     StatusText = "開始一鍵自動生成流程...";
 
-                    // 1. 分析幾何
-                    _tempWallDataList.Clear();
                     _tempCreatedViews.Clear();
-                    _isStep1Ok = false;
                     _isStep2Ok = false;
                     _isStep3Ok = false;
                     _isStep4Ok = false;
 
-                    if (IsFloorMode)
+                    var selectedItems = ElevationItems.Where(x => x.IsSelected).ToList();
+                    if (selectedItems.Count == 0)
                     {
-                        if (SelectedFloors.Count == 0)
-                        {
-                            MessageBox.Show("請先選擇至少一個地板或實體元件！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
-                            return;
-                        }
-                        _tempWallDataList = WallElevationDataBuilder.BuildDataFromFloorsAndSolids(_doc, SelectedFloors, Settings);
-                    }
-                    else
-                    {
-                        if (SelectedWalls.Count == 0)
-                        {
-                            MessageBox.Show("請先選取至少一面牆元件 (Walls)！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
-                            return;
-                        }
-                        XYZ referenceCenter = GetWallsAverageCenter(SelectedWalls);
-                        _tempWallDataList = WallElevationDataBuilder.BuildData(_doc, SelectedWalls, Settings, referenceCenter);
-                    }
-
-                    if (_tempWallDataList.Count == 0)
-                      {
-                        StatusText = "[步驟 1 失敗] 未分析出任何有效的幾何邊界！";
-                        RefreshStepButtons();
+                        MessageBox.Show("目前清單中沒有被勾選的剖面項目！請勾選至少一個剖面再執行生成。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
-                    _isStep1Ok = true;
 
-                    // 2. 建立視圖
+                    // 1. 建立視圖
                     using (var tx = new Transaction(_doc, "DT: Create Section Views"))
                     {
                         tx.Start();
                         _viewToDataMap.Clear();
-                        foreach (var wallData in _tempWallDataList)
+                        foreach (var item in selectedItems)
                         {
-                            string tempName = $"DT_TempElevation_{Guid.NewGuid().ToString().Substring(0, 8)}";
-                            var view = WallElevationViewCreator.CreateElevationView(_doc, wallData, Settings, tempName);
+                            var tempSettings = new GeneratorSettings
+                            {
+                                ViewDepth = item.ViewDepth,
+                                WallOffset = item.WallOffset,
+                                SideExtension = item.SideExtension,
+                                TopOffset = item.TopOffset,
+                                BottomOffset = item.BottomOffset,
+                                SelectedViewTemplateId = Settings.SelectedViewTemplateId
+                            };
+
+                            var view = WallElevationViewCreator.CreateElevationView(_doc, item.GeometryData, tempSettings, item.ViewName);
                             if (view != null)
                             {
                                 _tempCreatedViews.Add(view);
-                                _viewToDataMap[view.Id] = wallData;
+                                _viewToDataMap[view.Id] = item.GeometryData;
                             }
                         }
                         tx.Commit();
                         _isStep2Ok = true;
                     }
 
-                    // 3. 套用樣板
+                    // 2. 套用樣板
                     ElementId templateId = SelectedTemplate?.Id ?? ElementId.InvalidElementId;
                     if (templateId != ElementId.InvalidElementId)
                     {
@@ -455,21 +1009,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         _isStep3Ok = true;
                     }
 
-                    // 4. 重新命名
-                    using (var tx = new Transaction(_doc, "DT: Rename Section Views"))
-                    {
-                        tx.Start();
-                        int count = 0;
-                        for (int i = 0; i < _tempCreatedViews.Count; i++)
-                        {
-                            var view = _tempCreatedViews[i];
-                            string finalName = ElevationNamingService.GenerateViewName(_doc, NamePrefix, i);
-                            view.Name = finalName;
-                            count++;
-                        }
-                        tx.Commit();
-                        _isStep4Ok = true;
-                    }
+                    // 3. 視圖名稱已在建立時直接給定，故無需重新命名，直接標記為完成
+                    _isStep4Ok = true;
 
                     // 5. 建立圖紙並置入視圖
                     using (var tx = new Transaction(_doc, "DT: Create Sheet and Place Viewports"))
@@ -559,56 +1100,17 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         // --- 逐步製作分解方法 ---
         private void OnStep1Analyze()
         {
-            try
-            {
-                _tempWallDataList.Clear();
-                _tempCreatedViews.Clear();
-                _isStep1Ok = false;
-                _isStep2Ok = false;
-                _isStep3Ok = false;
-                _isStep4Ok = false;
-
-                if (IsFloorMode)
-                {
-                    if (SelectedFloors.Count == 0)
-                    {
-                        MessageBox.Show("請先選擇至少一個地板或實體元件！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
-                    }
-                    _tempWallDataList = WallElevationDataBuilder.BuildDataFromFloorsAndSolids(_doc, SelectedFloors, Settings);
-                }
-                else
-                {
-                    if (SelectedWalls.Count == 0)
-                    {
-                        MessageBox.Show("請先選取至少一面牆元件 (Walls)！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
-                    }
-                    XYZ referenceCenter = GetWallsAverageCenter(SelectedWalls);
-                    _tempWallDataList = WallElevationDataBuilder.BuildData(_doc, SelectedWalls, Settings, referenceCenter);
-                }
-
-                if (_tempWallDataList.Count == 0)
-                {
-                    StatusText = "[步驟 1 失敗] 未分析出 any 有效的幾何邊界！";
-                    RefreshStepButtons();
-                    return;
-                }
-
-                _isStep1Ok = true;
-                StatusText = $"[步驟 1 成功] 成功分析出 {_tempWallDataList.Count} 條邊界定位線幾何數據。請執行 [步驟 2]。";
-                RefreshStepButtons();
-            }
-            catch (Exception ex)
-            {
-                StatusText = $"[步驟 1 錯誤] 分析幾何失敗: {ex.Message}";
-                RefreshStepButtons();
-            }
+            AnalyzeSourceAndFillItems();
         }
 
         private void OnStep2Create()
         {
-            if (!_isStep1Ok || _tempWallDataList.Count == 0) return;
+            var selectedItems = ElevationItems.Where(x => x.IsSelected).ToList();
+            if (selectedItems.Count == 0)
+            {
+                MessageBox.Show("目前清單中沒有被勾選的剖面項目！請勾選至少一個剖面再執行建立。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
             _externalEventHandler.SetAction(() =>
             {
@@ -620,20 +1122,29 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         _tempCreatedViews.Clear();
                         _viewToDataMap.Clear();
 
-                        foreach (var wallData in _tempWallDataList)
+                        foreach (var item in selectedItems)
                         {
-                            string tempName = $"DT_TempElevation_{Guid.NewGuid().ToString().Substring(0, 8)}";
-                            var view = WallElevationViewCreator.CreateElevationView(_doc, wallData, Settings, tempName);
+                            var tempSettings = new GeneratorSettings
+                            {
+                                ViewDepth = item.ViewDepth,
+                                WallOffset = item.WallOffset,
+                                SideExtension = item.SideExtension,
+                                TopOffset = item.TopOffset,
+                                BottomOffset = item.BottomOffset,
+                                SelectedViewTemplateId = Settings.SelectedViewTemplateId
+                            };
+
+                            var view = WallElevationViewCreator.CreateElevationView(_doc, item.GeometryData, tempSettings, item.ViewName);
                             if (view != null)
                             {
                                 _tempCreatedViews.Add(view);
-                                _viewToDataMap[view.Id] = wallData;
+                                _viewToDataMap[view.Id] = item.GeometryData;
                             }
                         }
 
                         tx.Commit();
                         _isStep2Ok = true;
-                        StatusText = $"[步驟 2 成功] 成功建立 {_tempCreatedViews.Count} 個剖面視圖。請執行 [步驟 3] 或 [步驟 4]。";
+                        StatusText = $"[步驟 2 成功] 成功建立 {_tempCreatedViews.Count} 個剖面視圖。請執行 [步驟 3] 或 [步驟 5] 建立圖紙。";
                         RefreshStepButtons();
                     }
                     catch (Exception ex)
