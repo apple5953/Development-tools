@@ -117,6 +117,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
         // 批次套用當前參數為預設值並更新清單中所有項目
         public ICommand SetAsDefaultCommand { get; }
+        public ICommand MoveUpCommand { get; }
+        public ICommand MoveDownCommand { get; }
 
         private void OnSetAsDefault()
         {
@@ -141,6 +143,38 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
             RaiseDrawingPropertiesChanged();
             StatusText = $"[已更新預設值] 已將「{SelectedElevationItem.ViewName}」的參數設定為全域預設值，並套用到所有剖面。";
+        }
+
+        private void OnMoveUp()
+        {
+            if (SelectedElevationItem == null) return;
+            int index = ElevationItems.IndexOf(SelectedElevationItem);
+            if (index <= 0) return;
+
+            ElevationItems.Move(index, index - 1);
+            ReorderAndRenameViews();
+        }
+
+        private void OnMoveDown()
+        {
+            if (SelectedElevationItem == null) return;
+            int index = ElevationItems.IndexOf(SelectedElevationItem);
+            if (index < 0 || index >= ElevationItems.Count - 1) return;
+
+            ElevationItems.Move(index, index + 1);
+            ReorderAndRenameViews();
+        }
+
+        private void ReorderAndRenameViews()
+        {
+            for (int i = 0; i < ElevationItems.Count; i++)
+            {
+                var item = ElevationItems[i];
+                string defaultName = ElevationNamingService.GenerateViewName(_doc, NamePrefix, i);
+                item.ViewName = defaultName;
+            }
+            RaiseDrawingPropertiesChanged();
+            StatusText = "已重新排列剖面順序並更新編號。";
         }
 
         // 立面示意圖高度預覽屬性 (模擬總樓高 3000mm 對應 60px 繪圖區)
@@ -794,6 +828,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             GenerateCommand = new RelayCommand(OnGenerate);
             OpenHelpCommand = new RelayCommand(OnOpenHelp);
             SetAsDefaultCommand = new RelayCommand(OnSetAsDefault);
+            MoveUpCommand = new RelayCommand(OnMoveUp);
+            MoveDownCommand = new RelayCommand(OnMoveDown);
             
             Step1AnalyzeCommand = new RelayCommand(OnStep1Analyze);
             Step2CreateCommand = new RelayCommand(OnStep2Create);

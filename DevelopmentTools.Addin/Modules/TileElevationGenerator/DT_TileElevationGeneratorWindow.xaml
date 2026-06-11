@@ -256,7 +256,22 @@
                     </Grid>
                 </StackPanel>
 
-                <TextBlock Grid.Row="2" Text="剖刀視圖清單 (選取以進行個別微調)" Style="{StaticResource SectionLabel}" Margin="2,4,0,2"/>
+                <Grid Grid.Row="2" Margin="2,4,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="剖刀視圖清單 (雙擊更名/點擊右側上下移動順序)" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content=" ▲ 上移 " 
+                            Command="{Binding MoveUpCommand}"
+                            Style="{StaticResource PrimaryBtn}" 
+                            Height="18" Padding="6,0" Margin="0,0,4,0" FontSize="9"/>
+                    <Button Grid.Column="2" Content=" ▼ 下移 " 
+                            Command="{Binding MoveDownCommand}"
+                            Style="{StaticResource PrimaryBtn}" 
+                            Height="18" Padding="6,0" FontSize="9"/>
+                </Grid>
                 
                 <!-- 剖刀清單 DataGrid -->
                 <DataGrid Grid.Row="3" ItemsSource="{Binding ElevationItems}" SelectedItem="{Binding SelectedElevationItem, Mode=TwoWay}" Style="{StaticResource DarkDataGrid}">
