@@ -22,6 +22,13 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double lengthFeet = data.WallLength;
             double wallThickness = data.WallThickness;
 
+            // 判斷剖面觀看方向是否需要反向
+            XYZ roomSideDir = data.RoomSideDirection;
+            if (settings.FlipDirection)
+            {
+                roomSideDir = -roomSideDir;
+            }
+
             // 讀取 UI 設定參數並轉為英呎 (Revit 內部單位)
             double userWallOffsetFeet = settings.WallOffset / 304.8;
             double userViewDepthFeet = settings.ViewDepth / 304.8;
@@ -50,13 +57,13 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             // 使用樓層高程(LevelElevation)做為 Z 軸基準，確保底部切齊樓層線
             XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.LevelElevation + (heightFeet / 2.0));
             // 剖刀原點定位在往房間內偏移 offsetFeet 處
-            t.Origin = midPointWithZ + data.RoomSideDirection * offsetFeet;
+            t.Origin = midPointWithZ + roomSideDir * offsetFeet;
 
             // X 軸平行於牆面，Y 軸為 Z 正向 (朝上)
             t.BasisX = data.WallDirection;
             t.BasisY = XYZ.BasisZ;
-            // 觀看方向朝向牆面（與 RoomSideDirection 相反，亦即朝向牆體方向看）
-            t.BasisZ = -data.RoomSideDirection; 
+            // 觀看方向朝向牆面（與 roomSideDir 相反，亦即朝向牆體方向看）
+            t.BasisZ = -roomSideDir; 
 
             // 確保 BasisX、BasisY、BasisZ 為右手坐標系 (X x Y = Z)
             if (!t.BasisX.CrossProduct(t.BasisY).IsAlmostEqualTo(t.BasisZ))

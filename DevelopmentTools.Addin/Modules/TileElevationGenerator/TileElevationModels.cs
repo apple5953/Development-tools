@@ -103,6 +103,13 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             set { _bottomOffset = value; OnPropertyChanged(); }
         }
 
+        private bool _flipDirection = false;
+        public bool FlipDirection
+        {
+            get => _flipDirection;
+            set { _flipDirection = value; OnPropertyChanged(); }
+        }
+
         public WallElevationData GeometryData { get; set; }
 
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
@@ -131,5 +138,6 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         
         public bool SkipShortWall { get; set; } = true;
         public double MinWallLength { get; set; } = 500.0; // mm
+        public bool FlipDirection { get; set; } = false;
     }
 }

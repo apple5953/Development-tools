@@ -37,39 +37,37 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 // 計算牆長 (Revit Feet)
                 double length = settings.AutoWallLength ? curve.Length : (wall.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH)?.AsDouble() ?? curve.Length);
                 
-                // 計算牆高 (Revit Feet)
+                // 優先使用 BoundingBox 計算牆的實際高度與底部起點
                 double height = 3000.0 / 304.8; // 預設 3 米
-                ElementId lvlId = wall.LevelId;
-                if (lvlId != ElementId.InvalidElementId)
-                {
-                    double levelHeight = DetectLevelHeight(doc, lvlId);
-                    if (levelHeight > 0.1) height = levelHeight;
-                }
-                else if (settings.AutoWallHeight)
-                {
-                    var heightParam = wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM);
-                    if (heightParam != null && heightParam.HasValue)
-                    {
-                        double pVal = heightParam.AsDouble();
-                        if (pVal > 0.1) height = pVal;
-                    }
-                    else
-                    {
-                        // 備用方案：使用 BoundingBox 計算高度
-                        var bbox = wall.get_BoundingBox(null);
-                        if (bbox != null)
-                        {
-                            double bboxHeight = bbox.Max.Z - bbox.Min.Z;
-                            if (bboxHeight > 0.1) height = bboxHeight;
-                        }
-                    }
-                }
-
                 double levelElevation = 0.0;
-                if (lvlId != ElementId.InvalidElementId)
+                ElementId lvlId = wall.LevelId;
+
+                var bbox = wall.get_BoundingBox(null);
+                if (bbox != null)
                 {
-                    Level lvl = doc.GetElement(lvlId) as Level;
-                    if (lvl != null) levelElevation = lvl.Elevation;
+                    double bboxHeight = bbox.Max.Z - bbox.Min.Z;
+                    if (bboxHeight > 0.1) height = bboxHeight;
+                    levelElevation = bbox.Min.Z;
+                }
+                else
+                {
+                    // 備用方案 1：使用牆高參數與 Level 高程
+                    var heightParam = wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM);
+                    if (heightParam != null && heightParam.HasValue && heightParam.AsDouble() > 0.1)
+                    {
+                        height = heightParam.AsDouble();
+                    }
+                    else if (lvlId != ElementId.InvalidElementId)
+                    {
+                        double levelHeight = DetectLevelHeight(doc, lvlId);
+                        if (levelHeight > 0.1) height = levelHeight;
+                    }
+
+                    if (lvlId != ElementId.InvalidElementId)
+                    {
+                        Level lvl = doc.GetElement(lvlId) as Level;
+                        if (lvl != null) levelElevation = lvl.Elevation;
+                    }
                 }
 
                 var data = new WallElevationData

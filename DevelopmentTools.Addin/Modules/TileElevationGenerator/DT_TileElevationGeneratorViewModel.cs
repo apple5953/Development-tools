@@ -109,7 +109,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 e.PropertyName == nameof(WallElevationDataItem.ViewDepth) ||
                 e.PropertyName == nameof(WallElevationDataItem.SideExtension) ||
                 e.PropertyName == nameof(WallElevationDataItem.TopOffset) ||
-                e.PropertyName == nameof(WallElevationDataItem.BottomOffset))
+                e.PropertyName == nameof(WallElevationDataItem.BottomOffset) ||
+                e.PropertyName == nameof(WallElevationDataItem.FlipDirection))
             {
                 RaiseDrawingPropertiesChanged();
             }
@@ -130,6 +131,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             Settings.SideExtension = SelectedElevationItem.SideExtension;
             Settings.TopOffset = SelectedElevationItem.TopOffset;
             Settings.BottomOffset = SelectedElevationItem.BottomOffset;
+            Settings.FlipDirection = SelectedElevationItem.FlipDirection;
 
             // 2. 將此設定批次覆蓋到清單內的所有剖面項目
             foreach (var item in ElevationItems)
@@ -139,6 +141,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 item.SideExtension = Settings.SideExtension;
                 item.TopOffset = Settings.TopOffset;
                 item.BottomOffset = Settings.BottomOffset;
+                item.FlipDirection = Settings.FlipDirection;
             }
 
             RaiseDrawingPropertiesChanged();
@@ -342,6 +345,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                 // 剖刀線位置：朝著房間中心內進（順著法線方向 +）
                 double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
+                if (SelectedElevationItem.FlipDirection) offsetFeet = -offsetFeet;
                 double targetX = geom.StartPoint.X + geom.WallNormal.X * offsetFeet;
                 return offsetX + (targetX - minX) * scale;
             }
@@ -359,6 +363,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 double canvasH = 120;
 
                 double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
+                if (SelectedElevationItem.FlipDirection) offsetFeet = -offsetFeet;
                 // Revit Y 與 Canvas Y 鏡像反轉，因此 Revit 中 +WallNormal.Y 對應到 Canvas 應為減去 WallNormal.Y
                 double targetY = geom.StartPoint.Y + geom.WallNormal.Y * offsetFeet;
                 return offsetY + canvasH - (targetY - minY) * scale;
@@ -376,6 +381,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 double offsetX = GetCanvasOffsetX();
 
                 double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
+                if (SelectedElevationItem.FlipDirection) offsetFeet = -offsetFeet;
                 double targetX = geom.EndPoint.X + geom.WallNormal.X * offsetFeet;
                 return offsetX + (targetX - minX) * scale;
             }
@@ -393,6 +399,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 double canvasH = 120;
 
                 double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
+                if (SelectedElevationItem.FlipDirection) offsetFeet = -offsetFeet;
                 double targetY = geom.EndPoint.Y + geom.WallNormal.Y * offsetFeet;
                 return offsetY + canvasH - (targetY - minY) * scale;
             }
@@ -417,14 +424,15 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                 double offsetFeet = SelectedElevationItem.WallOffset / 304.8;
                 double depthFeet = SelectedElevationItem.ViewDepth / 304.8;
+                double sign = SelectedElevationItem.FlipDirection ? -1.0 : 1.0;
 
-                // 剖刀線端點 1 與 2 (Revit 坐標)
-                XYZ cutStart = geom.StartPoint + geom.WallNormal * offsetFeet;
-                XYZ cutEnd = geom.EndPoint + geom.WallNormal * offsetFeet;
+                // 剖刀線端點 1 與 2 (Revit 坐報)
+                XYZ cutStart = geom.StartPoint + geom.WallNormal * (offsetFeet * sign);
+                XYZ cutEnd = geom.EndPoint + geom.WallNormal * (offsetFeet * sign);
 
                 // 剖切深度終點 (往 -geom.WallNormal 延伸 depthFeet)
-                XYZ depthStart = cutStart - geom.WallNormal * depthFeet;
-                XYZ depthEnd = cutEnd - geom.WallNormal * depthFeet;
+                XYZ depthStart = cutStart - geom.WallNormal * (depthFeet * sign);
+                XYZ depthEnd = cutEnd - geom.WallNormal * (depthFeet * sign);
 
                 // 轉為 Canvas 坐標
                 System.Windows.Point pCutStart = new System.Windows.Point(
@@ -1011,6 +1019,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                                 SideExtension = item.SideExtension,
                                 TopOffset = item.TopOffset,
                                 BottomOffset = item.BottomOffset,
+                                FlipDirection = item.FlipDirection,
                                 SelectedViewTemplateId = Settings.SelectedViewTemplateId
                             };
 
@@ -1167,6 +1176,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                                 SideExtension = item.SideExtension,
                                 TopOffset = item.TopOffset,
                                 BottomOffset = item.BottomOffset,
+                                FlipDirection = item.FlipDirection,
                                 SelectedViewTemplateId = Settings.SelectedViewTemplateId
                             };
 

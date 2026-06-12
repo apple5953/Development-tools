@@ -369,6 +369,15 @@
                     <TextBox Grid.Column="1" Text="{Binding SelectedElevationItem.BottomOffset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkTextBox}"/>
                 </Grid>
 
+                <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="相反方向 (反轉)" Style="{StaticResource NormalText}" ToolTip="將剖切方向反轉 180 度"/>
+                    <CheckBox Grid.Column="1" IsChecked="{Binding SelectedElevationItem.FlipDirection, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Cursor="Hand"/>
+                </Grid>
+
                 <Button Content="套用此設定至所有剖刀 (設為預設)" 
                         Command="{Binding SetAsDefaultCommand}"
                         Style="{StaticResource PrimaryBtn}" 
