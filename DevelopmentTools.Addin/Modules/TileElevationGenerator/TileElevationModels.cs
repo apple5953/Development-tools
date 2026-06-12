@@ -115,6 +115,14 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
         public WallElevationData GeometryData { get; set; }
 
+        public void RaiseGeometryPropertiesChanged()
+        {
+            OnPropertyChanged(nameof(WallLength));
+            OnPropertyChanged(nameof(WallHeight));
+            OnPropertyChanged(nameof(BaseElevation));
+            OnPropertyChanged(nameof(TopElevation));
+        }
+
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string name = null)
         {

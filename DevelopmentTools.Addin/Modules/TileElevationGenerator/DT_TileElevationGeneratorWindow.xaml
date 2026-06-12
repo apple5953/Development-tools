@@ -1,7 +1,7 @@
 <Window x:Class="DevelopmentTools.UI.DT_TileElevationGeneratorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:core="clr-namespace:DevelopmentTools.Core"
-        Title="{Binding [TileElev_Title], Source={x:Static core:LanguageManager.Instance}}" Height="580" Width="1020"
+        Title="{Binding [TileElev_Title], Source={x:Static core:LanguageManager.Instance}}" Height="650" Width="1020"
         Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Segoe UI"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize">
@@ -254,6 +254,32 @@
                                   Height="24"
                                   BorderThickness="1" BorderBrush="#45475A"/>
                     </Grid>
+
+                    <Grid Margin="0,3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="基準樓層 (Base Level)" Style="{StaticResource NormalText}"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding ProjectLevels}" 
+                                  SelectedItem="{Binding SelectedBaseLevel}" 
+                                  DisplayMemberPath="Name" 
+                                  Height="24"
+                                  BorderThickness="1" BorderBrush="#45475A"/>
+                    </Grid>
+
+                    <Grid Margin="0,3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="頂部樓層 (Top Level)" Style="{StaticResource NormalText}"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding ProjectLevels}" 
+                                  SelectedItem="{Binding SelectedTopLevel}" 
+                                  DisplayMemberPath="Name" 
+                                  Height="24"
+                                  BorderThickness="1" BorderBrush="#45475A"/>
+                    </Grid>
                 </StackPanel>
 
                 <Grid Grid.Row="2" Margin="2,4,0,2">
@@ -474,14 +500,14 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Text="立面剖視高度 (Section View Height Preview)" Foreground="#89B4FA" FontSize="9.5" Margin="4,0,0,2"/>
-                        <Canvas Grid.Row="1" Background="#11111B" ClipToBounds="True">
+                        <Canvas Grid.Row="1" Background="#11111B" ClipToBounds="True" MouseWheel="Canvas_MouseWheel">
                             <!-- 地板 -->
-                            <Line X1="10" Y1="85" X2="270" Y2="85" Stroke="#7F849C" StrokeThickness="1.5"/>
+                            <Line X1="10" Y1="{Binding DrawFloorY}" X2="270" Y2="{Binding DrawFloorY}" Stroke="#7F849C" StrokeThickness="1.5"/>
                             <TextBlock Text="當前樓板面 (Level Floor)" Foreground="#7F849C" FontSize="8.5" Canvas.Left="15" Canvas.Top="88"/>
 
                             <!-- 天花板 -->
-                            <Line X1="10" Y1="25" X2="270" Y2="25" Stroke="#7F849C" StrokeThickness="1" StrokeDashArray="2,2"/>
-                            <TextBlock Text="上層樓板面/天花高度 (Upper Level)" Foreground="#7F849C" FontSize="8.5" Canvas.Left="15" Canvas.Top="10"/>
+                            <Line X1="10" Y1="{Binding DrawCeilingY}" X2="270" Y2="{Binding DrawCeilingY}" Stroke="#7F849C" StrokeThickness="1" StrokeDashArray="2,2"/>
+                            <TextBlock Text="上層樓板面/天花高度 (Upper Level)" Foreground="#7F849C" FontSize="8.5" Canvas.Left="15" Canvas.Top="{Binding DrawCeilingTextTop}"/>
 
                             <!-- 剖切範圍 -->
                             <Rectangle Fill="#1A89B4FA" Stroke="#89B4FA" StrokeThickness="1.5" StrokeDashArray="2,2"
@@ -495,9 +521,9 @@
                                        
                             <!-- 顯示頂底偏移的文字標註 -->
                             <TextBlock Text="{Binding SelectedElevationItem.TopOffset, StringFormat=頂部偏移: \{0\} mm}" Foreground="#F9E2AF" FontSize="8"
-                                       Canvas.Left="85" Canvas.Top="28"/>
+                                       Canvas.Left="85" Canvas.Top="{Binding DrawCeilingY}"/>
                             <TextBlock Text="{Binding SelectedElevationItem.BottomOffset, StringFormat=底部偏移: \{0\} mm}" Foreground="#F9E2AF" FontSize="8"
-                                       Canvas.Left="85" Canvas.Top="70"/>
+                                       Canvas.Left="85" Canvas.Top="68"/>
                         </Canvas>
                     </Grid>
                 </Grid>

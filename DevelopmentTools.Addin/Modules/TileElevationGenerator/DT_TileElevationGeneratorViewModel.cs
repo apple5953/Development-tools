@@ -25,6 +25,50 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         
         // UI 綁定列表與選取項
         public List<ViewTemplateItem> ViewTemplates { get; private set; }
+        public List<Level> ProjectLevels { get; private set; }
+
+        private Level _selectedBaseLevel;
+        public Level SelectedBaseLevel
+        {
+            get => _selectedBaseLevel;
+            set
+            {
+                _selectedBaseLevel = value;
+                OnPropertyChanged();
+                UpdateElevationItemsGeometry();
+            }
+        }
+
+        private Level _selectedTopLevel;
+        public Level SelectedTopLevel
+        {
+            get => _selectedTopLevel;
+            set
+            {
+                _selectedTopLevel = value;
+                OnPropertyChanged();
+                UpdateElevationItemsGeometry();
+            }
+        }
+
+        private void UpdateElevationItemsGeometry()
+        {
+            if (_selectedBaseLevel == null) return;
+            double baseElev = _selectedBaseLevel.Elevation;
+            double topElev = _selectedTopLevel != null ? _selectedTopLevel.Elevation : (baseElev + 3000.0 / 304.8);
+            double height = topElev - baseElev;
+
+            foreach (var item in ElevationItems)
+            {
+                if (item.GeometryData != null)
+                {
+                    item.GeometryData.LevelElevation = baseElev;
+                    item.GeometryData.WallHeight = height;
+                    item.RaiseGeometryPropertiesChanged();
+                }
+            }
+            RaiseDrawingPropertiesChanged();
+        }
         
         // 新增幾何參數繫結
         public double ViewDepth
@@ -181,14 +225,20 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         }
 
         // 立面示意圖高度預覽屬性 (模擬總樓高 3000mm 對應 60px 繪圖區)
-        // 地板基底 Y = 85，天花頂部 Y = 25
+        // 地板基底 Y = 85，天花頂部基準 Y = 85 - 60*ZoomFactor
+        public double DrawFloorY => 85.0;
+
+        public double DrawCeilingY => 85.0 - (60.0 * ZoomFactor);
+
+        public double DrawCeilingTextTop => DrawCeilingY - 15.0;
+
         public double DrawSectionCropTop
         {
             get
             {
                 double topOffset = SelectedElevationItem != null ? SelectedElevationItem.TopOffset : TopOffset;
-                // 1mm ＝ 0.02px, TopOffset 往上移 (即 Y 變小)
-                return 25.0 - (topOffset * 0.02);
+                // 1mm ＝ 0.02px, TopOffset 往上移 (即 Y 變小) 且乘上縮放
+                return DrawCeilingY - (topOffset * 0.02 * ZoomFactor);
             }
         }
 
@@ -198,8 +248,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             {
                 double topOffset = SelectedElevationItem != null ? SelectedElevationItem.TopOffset : TopOffset;
                 double bottomOffset = SelectedElevationItem != null ? SelectedElevationItem.BottomOffset : BottomOffset;
-                // 總高 ＝ 預設高 60 + topOffset*0.02 + bottomOffset*0.02
-                double h = 60.0 + (topOffset * 0.02) + (bottomOffset * 0.02);
+                
+                double cropBottom = 85.0 + (bottomOffset * 0.02 * ZoomFactor);
+                double cropTop = DrawSectionCropTop;
+                
+                double h = cropBottom - cropTop;
                 return h > 5 ? h : 5;
             }
         }
@@ -257,7 +310,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 double padX = 25;
                 double padY = 20;
 
-                double scale = Math.Min(canvasW / w, canvasH / h);
+                double scale = GetCanvasGeometryScale();
                 // 居中對齊偏移
                 double offsetX = padX + (canvasW - w * scale) / 2.0;
                 double offsetY = padY + (canvasH - h * scale) / 2.0;
@@ -635,6 +688,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             OnPropertyChanged(nameof(DrawCropY));
             OnPropertyChanged(nameof(DrawCropHeight));
             OnPropertyChanged(nameof(DrawArrowPoints));
+            OnPropertyChanged(nameof(DrawFloorY));
+            OnPropertyChanged(nameof(DrawCeilingY));
+            OnPropertyChanged(nameof(DrawCeilingTextTop));
             OnPropertyChanged(nameof(DrawSectionCropTop));
             OnPropertyChanged(nameof(DrawSectionCropHeight));
         }
@@ -813,6 +869,15 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             _selectedTemplate = items[0];
             Settings.SelectedViewTemplateId = _selectedTemplate.Id;
 
+            // 載入專案中所有的 Level 並排序
+            var levelCollector = new FilteredElementCollector(_doc)
+                .OfClass(typeof(Level))
+                .WhereElementIsNotElementType()
+                .Cast<Level>()
+                .ToList();
+            levelCollector.Sort((a, b) => a.Elevation.CompareTo(b.Elevation));
+            ProjectLevels = levelCollector;
+
             // 載入圖框類型
             var tbs = new FilteredElementCollector(_doc)
                 .OfCategory(BuiltInCategory.OST_TitleBlocks)
@@ -989,6 +1054,16 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     SelectedElevationItem = ElevationItems[0];
                     _isStep1Ok = true;
                     StatusText = $"[分析成功] 已識別出 {ElevationItems.Count} 個剖面幾何定位，請在下方列表中確認與微調參數。";
+                    
+                    // 預設自動選定樓層
+                    if (IsFloorMode)
+                    {
+                        SetDefaultLevels(SelectedFloors);
+                    }
+                    else
+                    {
+                        SetDefaultLevels(SelectedWalls);
+                    }
                 }
                 else
                 {
@@ -1000,6 +1075,67 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             catch (Exception ex)
             {
                 StatusText = "分析幾何失敗：" + ex.Message;
+            }
+        }
+
+        private void SetDefaultLevels(System.Collections.IEnumerable elements)
+        {
+            if (elements == null || ProjectLevels == null || ProjectLevels.Count == 0) return;
+            
+            ElementId levelId = ElementId.InvalidElementId;
+            double approxMinZ = 0.0;
+            double approxHeight = 3000.0 / 304.8;
+            
+            object firstObj = null;
+            foreach (var obj in elements)
+            {
+                firstObj = obj;
+                break;
+            }
+            
+            if (firstObj is Floor floor)
+            {
+                levelId = floor.LevelId;
+                var bbox = floor.get_BoundingBox(null);
+                if (bbox != null) approxMinZ = bbox.Min.Z;
+            }
+            else if (firstObj is Wall wall)
+            {
+                levelId = wall.LevelId;
+                var bbox = wall.get_BoundingBox(null);
+                if (bbox != null)
+                {
+                    approxMinZ = bbox.Min.Z;
+                    approxHeight = bbox.Max.Z - bbox.Min.Z;
+                }
+            }
+            
+            Level baseLvl = null;
+            if (levelId != null && levelId != ElementId.InvalidElementId)
+            {
+                baseLvl = ProjectLevels.FirstOrDefault(l => l.Id == levelId);
+            }
+            
+            if (baseLvl == null)
+            {
+                baseLvl = ProjectLevels.OrderBy(l => Math.Abs(l.Elevation - approxMinZ)).FirstOrDefault();
+            }
+            
+            if (baseLvl != null)
+            {
+                _selectedBaseLevel = baseLvl;
+                OnPropertyChanged(nameof(SelectedBaseLevel));
+                
+                int idx = ProjectLevels.IndexOf(baseLvl);
+                if (idx >= 0 && idx < ProjectLevels.Count - 1)
+                {
+                    _selectedTopLevel = ProjectLevels[idx + 1];
+                }
+                else
+                {
+                    _selectedTopLevel = baseLvl;
+                }
+                OnPropertyChanged(nameof(SelectedTopLevel));
             }
         }
 
