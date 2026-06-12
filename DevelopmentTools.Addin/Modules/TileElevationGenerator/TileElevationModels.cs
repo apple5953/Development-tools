@@ -67,6 +67,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         }
 
         public double WallLength => GeometryData != null ? GeometryData.WallLength * 304.8 : 0.0; // mm
+        public double WallHeight => GeometryData != null ? GeometryData.WallHeight * 304.8 : 0.0; // mm
+        public double BaseElevation => GeometryData != null ? GeometryData.LevelElevation * 304.8 : 0.0; // mm
+        public double TopElevation => GeometryData != null ? (GeometryData.LevelElevation + GeometryData.WallHeight) * 304.8 : 0.0; // mm
 
         private double _viewDepth = 600.0;
         public double ViewDepth

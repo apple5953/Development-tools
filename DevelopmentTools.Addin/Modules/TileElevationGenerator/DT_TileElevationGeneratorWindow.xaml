@@ -186,7 +186,7 @@
         <Grid Grid.Row="2" Margin="0,0,0,6">
             <Grid.ColumnDefinitions>
                 <!-- 左欄：設定與清單 -->
-                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="480"/>
                 <ColumnDefinition Width="10"/>
                 <!-- 中欄：當前選中剖面的微調參數 -->
                 <ColumnDefinition Width="280"/>
@@ -306,7 +306,37 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="長度 (mm)" Binding="{Binding WallLength, StringFormat=\{0:F0\}}" Width="65" IsReadOnly="True">
+                        <DataGridTextColumn Header="長度" Binding="{Binding WallLength, StringFormat=\{0:F0\}}" Width="55" IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="Margin" Value="0,0,4,0"/>
+                                    <Setter Property="Foreground" Value="#BAC2E0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="高度" Binding="{Binding WallHeight, StringFormat=\{0:F0\}}" Width="55" IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="Margin" Value="0,0,4,0"/>
+                                    <Setter Property="Foreground" Value="#BAC2E0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="底部" Binding="{Binding BaseElevation, StringFormat=\{0:F0\}}" Width="55" IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="Margin" Value="0,0,4,0"/>
+                                    <Setter Property="Foreground" Value="#BAC2E0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="頂部" Binding="{Binding TopElevation, StringFormat=\{0:F0\}}" Width="55" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
