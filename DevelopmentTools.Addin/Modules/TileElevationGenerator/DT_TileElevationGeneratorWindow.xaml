@@ -440,6 +440,12 @@
                         Background="#FAB387" Foreground="#1E1E2E"
                         Height="24" Margin="0,8,0,0"/>
                 
+                <Button Content="將選中項目設為起始位置 (順時針排列)" 
+                        Command="{Binding SetAsStartCommand}"
+                        Style="{StaticResource PrimaryBtn}" 
+                        Background="#89B4FA" Foreground="#1E1E2E"
+                        Height="24" Margin="0,6,0,0"/>
+                
                 <TextBlock Text="💡 提示：在左側清單點選不同的剖刀項目，即可單獨調整該切面的前移距離、深度、延伸量與高程範圍。右側示意圖將即時連動呈現該剖刀的位置。" 
                            Foreground="#89B4FA" FontSize="9.5" Margin="2,12,0,0" TextWrapping="Wrap" LineHeight="14"/>
             </StackPanel>

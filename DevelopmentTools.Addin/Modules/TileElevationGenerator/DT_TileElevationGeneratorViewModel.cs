@@ -162,8 +162,44 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
         // 批次套用當前參數為預設值並更新清單中所有項目
         public ICommand SetAsDefaultCommand { get; }
+        public ICommand SetAsStartCommand { get; }
         public ICommand MoveUpCommand { get; }
         public ICommand MoveDownCommand { get; }
+
+        private void OnSetAsStart()
+        {
+            if (SelectedElevationItem == null || ElevationItems.Count <= 1) return;
+
+            int index = ElevationItems.IndexOf(SelectedElevationItem);
+            if (index <= 0) return; // 已經是起始位置，無需調整
+
+            var tempList = new System.Collections.Generic.List<WallElevationDataItem>(ElevationItems);
+            var rotatedList = new System.Collections.Generic.List<WallElevationDataItem>();
+
+            // 循環移位，以選中項為第 0 項
+            for (int i = index; i < tempList.Count; i++)
+            {
+                rotatedList.Add(tempList[i]);
+            }
+            for (int i = 0; i < index; i++)
+            {
+                rotatedList.Add(tempList[i]);
+            }
+
+            // 重新填入列表，並依序重新生成 ABCD 的預設剖面名稱
+            ElevationItems.Clear();
+            for (int i = 0; i < rotatedList.Count; i++)
+            {
+                var item = rotatedList[i];
+                item.ViewName = ElevationNamingService.GenerateViewName(_doc, NamePrefix, i);
+                ElevationItems.Add(item);
+            }
+
+            // 將選取項重新指回新列表的第 0 項
+            SelectedElevationItem = ElevationItems[0];
+            RaiseDrawingPropertiesChanged();
+            StatusText = $"[設為起始點] 已將「{SelectedElevationItem.ViewName}」設定為展開圖起點，並完成順時針重排。";
+        }
 
         private void OnSetAsDefault()
         {
@@ -804,8 +840,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         // 暫存中間產物
         private List<WallElevationData> _tempWallDataList = new List<WallElevationData>();
         private List<ViewSection> _tempCreatedViews = new List<ViewSection>();
-        private System.Collections.Generic.Dictionary<ElementId, WallElevationData> _viewToDataMap = new System.Collections.Generic.Dictionary<ElementId, WallElevationData>();
-        private System.Collections.Generic.Dictionary<ElementId, GeneratorSettings> _viewToSettingsMap = new System.Collections.Generic.Dictionary<ElementId, GeneratorSettings>();
+        private readonly System.Collections.Generic.Dictionary<ElementId, WallElevationDataItem> _viewToItemMap = new System.Collections.Generic.Dictionary<ElementId, WallElevationDataItem>();
 
         // 步驟是否完成的狀態 flags
         private bool _isStep1Ok = false;
@@ -916,6 +951,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             GenerateCommand = new RelayCommand(OnGenerate);
             OpenHelpCommand = new RelayCommand(OnOpenHelp);
             SetAsDefaultCommand = new RelayCommand(OnSetAsDefault);
+            SetAsStartCommand = new RelayCommand(OnSetAsStart);
             MoveUpCommand = new RelayCommand(OnMoveUp);
             MoveDownCommand = new RelayCommand(OnMoveDown);
             
@@ -1163,8 +1199,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     using (var tx = new Transaction(_doc, "DT: Create Section Views"))
                     {
                         tx.Start();
-                        _viewToDataMap.Clear();
-                        _viewToSettingsMap.Clear();
+                        _viewToItemMap.Clear();
                         foreach (var item in selectedItems)
                         {
                             var tempSettings = new GeneratorSettings
@@ -1182,8 +1217,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             if (view != null)
                             {
                                 _tempCreatedViews.Add(view);
-                                _viewToDataMap[view.Id] = item.GeometryData;
-                                _viewToSettingsMap[view.Id] = tempSettings;
+                                _viewToItemMap[view.Id] = item;
                             }
                         }
                         tx.Commit();
@@ -1196,15 +1230,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             try
                             {
                                 BoundingBoxXYZ box = view.CropBox;
-                                WallElevationData data = null;
-                                GeneratorSettings tempSettings = null;
-                                _viewToDataMap.TryGetValue(view.Id, out data);
-                                _viewToSettingsMap.TryGetValue(view.Id, out tempSettings);
-                                double originZ = (data != null && tempSettings != null) ? 
-                                    (data.LevelElevation + (data.WallHeight + tempSettings.TopOffset / 304.8 - tempSettings.BottomOffset / 304.8) / 2.0) : 
-                                    view.Origin.Z;
-                                double minZ = (originZ + box.Min.Y) * 304.8;
-                                double maxZ = (originZ + box.Max.Y) * 304.8;
+                                double originZ = box.Transform.Origin.Z;
+                                double basisYZ = box.Transform.BasisY.Z;
+                                if (Math.Abs(basisYZ) < 0.001) basisYZ = 1.0;
+                                double minZ = (originZ + box.Min.Y * basisYZ) * 304.8;
+                                double maxZ = (originZ + box.Max.Y * basisYZ) * 304.8;
                                 double width = (box.Max.X - box.Min.X) * 304.8;
 
                                 reportLines.Add($"• {view.Name}:\n" +
@@ -1236,13 +1266,19 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                             foreach (var view in _tempCreatedViews)
                             {
-                                WallElevationData data = null;
-                                GeneratorSettings tempSettings = null;
-                                _viewToDataMap.TryGetValue(view.Id, out data);
-                                _viewToSettingsMap.TryGetValue(view.Id, out tempSettings);
-                                if (data != null && tempSettings != null)
+                                if (_viewToItemMap.TryGetValue(view.Id, out var item))
                                 {
-                                    WallElevationViewCreator.ReApplyCropBox(view, data, tempSettings);
+                                    var latestSettings = new GeneratorSettings
+                                    {
+                                        ViewDepth = item.ViewDepth,
+                                        WallOffset = item.WallOffset,
+                                        SideExtension = item.SideExtension,
+                                        TopOffset = item.TopOffset,
+                                        BottomOffset = item.BottomOffset,
+                                        FlipDirection = item.FlipDirection,
+                                        SelectedViewTemplateId = templateId
+                                    };
+                                    WallElevationViewCreator.ReApplyCropBox(view, item.GeometryData, latestSettings);
                                 }
                             }
                             tx.Commit();
@@ -1281,9 +1317,6 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         for (int i = 0; i < _tempCreatedViews.Count; i++)
                         {
                             var view = _tempCreatedViews[i];
-                            WallElevationData data = null;
-                            _viewToDataMap.TryGetValue(view.Id, out data);
-
                             if (Viewport.CanAddViewToSheet(_doc, sheet.Id, view.Id))
                             {
                                 // 1. 暫存原先註解隱藏狀態，並將其隱藏以取得乾淨的裁剪區 Outline
@@ -1306,14 +1339,14 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                                 if (scale <= 0) scale = 50.0;
 
                                 double yFloorOffset = 0.0;
-                                if (data != null)
+                                if (_viewToItemMap.TryGetValue(view.Id, out var item) && item.GeometryData != null)
                                 {
                                     BoundingBoxXYZ box = view.CropBox;
                                     double originZ = box.Transform.Origin.Z;
                                     double basisYZ = box.Transform.BasisY.Z;
                                     if (Math.Abs(basisYZ) < 0.001) basisYZ = 1.0;
                                     double currentCenterZ = originZ + ((box.Min.Y + box.Max.Y) / 2.0) * basisYZ;
-                                    yFloorOffset = (data.LevelElevation - currentCenterZ) / scale;
+                                    yFloorOffset = (item.GeometryData.LevelElevation - currentCenterZ) / scale;
                                 }
 
                                 // 4. 精確設定 Viewport BoxCenter
@@ -1369,8 +1402,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     {
                         tx.Start();
                         _tempCreatedViews.Clear();
-                        _viewToDataMap.Clear();
-                        _viewToSettingsMap.Clear();
+                        _viewToItemMap.Clear();
 
                         foreach (var item in selectedItems)
                         {
@@ -1389,8 +1421,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             if (view != null)
                             {
                                 _tempCreatedViews.Add(view);
-                                _viewToDataMap[view.Id] = item.GeometryData;
-                                _viewToSettingsMap[view.Id] = tempSettings;
+                                _viewToItemMap[view.Id] = item;
                             }
                         }
 
@@ -1404,10 +1435,6 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             try
                             {
                                 BoundingBoxXYZ box = view.CropBox;
-                                WallElevationData data = null;
-                                GeneratorSettings tempSettings = null;
-                                _viewToDataMap.TryGetValue(view.Id, out data);
-                                _viewToSettingsMap.TryGetValue(view.Id, out tempSettings);
                                 double originZ = box.Transform.Origin.Z;
                                 double basisYZ = box.Transform.BasisY.Z;
                                 if (Math.Abs(basisYZ) < 0.001) basisYZ = 1.0;
@@ -1474,13 +1501,19 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                         foreach (var view in _tempCreatedViews)
                         {
-                            WallElevationData data = null;
-                            GeneratorSettings tempSettings = null;
-                            _viewToDataMap.TryGetValue(view.Id, out data);
-                            _viewToSettingsMap.TryGetValue(view.Id, out tempSettings);
-                            if (data != null && tempSettings != null)
+                            if (_viewToItemMap.TryGetValue(view.Id, out var item))
                             {
-                                WallElevationViewCreator.ReApplyCropBox(view, data, tempSettings);
+                                var latestSettings = new GeneratorSettings
+                                {
+                                    ViewDepth = item.ViewDepth,
+                                    WallOffset = item.WallOffset,
+                                    SideExtension = item.SideExtension,
+                                    TopOffset = item.TopOffset,
+                                    BottomOffset = item.BottomOffset,
+                                    FlipDirection = item.FlipDirection,
+                                    SelectedViewTemplateId = templateId
+                                };
+                                WallElevationViewCreator.ReApplyCropBox(view, item.GeometryData, latestSettings);
                             }
 
                             count++;
@@ -1574,9 +1607,6 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         for (int i = 0; i < _tempCreatedViews.Count; i++)
                         {
                             var view = _tempCreatedViews[i];
-                            WallElevationData data = null;
-                            _viewToDataMap.TryGetValue(view.Id, out data);
-
                             if (Viewport.CanAddViewToSheet(_doc, sheet.Id, view.Id))
                             {
                                 // 1. 暫存原先註解隱藏狀態，並將其隱藏以取得乾淨的裁剪區 Outline
@@ -1599,14 +1629,14 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                                 if (scale <= 0) scale = 50.0;
 
                                 double yFloorOffset = 0.0;
-                                if (data != null)
+                                if (_viewToItemMap.TryGetValue(view.Id, out var item) && item.GeometryData != null)
                                 {
                                     BoundingBoxXYZ box = view.CropBox;
                                     double originZ = box.Transform.Origin.Z;
                                     double basisYZ = box.Transform.BasisY.Z;
                                     if (Math.Abs(basisYZ) < 0.001) basisYZ = 1.0;
                                     double currentCenterZ = originZ + ((box.Min.Y + box.Max.Y) / 2.0) * basisYZ;
-                                    yFloorOffset = (data.LevelElevation - currentCenterZ) / scale;
+                                    yFloorOffset = (item.GeometryData.LevelElevation - currentCenterZ) / scale;
                                 }
 
                                 // 4. 精確設定 Viewport BoxCenter
