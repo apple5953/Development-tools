@@ -92,14 +92,14 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             set { _sideExtension = value; OnPropertyChanged(); }
         }
 
-        private double _topOffset = 50.0;
+        private double _topOffset = -100.0;
         public double TopOffset
         {
             get => _topOffset;
             set { _topOffset = value; OnPropertyChanged(); }
         }
 
-        private double _bottomOffset = 0.0;
+        private double _bottomOffset = 100.0;
         public double BottomOffset
         {
             get => _bottomOffset;
@@ -142,8 +142,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         public bool AutoWallHeight { get; set; } = true;
         public bool AutoWallLength { get; set; } = true;
         
-        public double BottomOffset { get; set; } = 0.0;
-        public double TopOffset { get; set; } = 50.0; // mm
+        public double BottomOffset { get; set; } = 100.0;
+        public double TopOffset { get; set; } = -100.0; // mm
         public double SideExtension { get; set; } = 150.0; // 左右延伸 (mm)
         public string NamePrefix { get; set; } = "TE";
         
