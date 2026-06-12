@@ -54,8 +54,13 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double topOffsetFeet = settings.TopOffset / 304.8;                        // 頂部延伸量
             double leftRightExtensionFeet = settings.SideExtension / 304.8;             // 左右延伸量
 
-            // 使用樓層高程(LevelElevation)做為 Z 軸基準，確保原點在樓層線上，避免被 Revit API 強制重設產生高度偏移
-            XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.LevelElevation);
+            // 計算剖面垂直半高度 (Half Height)，確保 BoundingBox 在 Y 軸方向完全對稱（Revit CropBox 強制對稱限制）
+            double halfHeightFeet = (heightFeet + topOffsetFeet + bottomOffsetFeet) / 2.0;
+            // 計算剖面原點的中心高程 Z (將基準樓層與頂底偏移合併計算)
+            double centerElevationZ = data.LevelElevation + (heightFeet + topOffsetFeet - bottomOffsetFeet) / 2.0;
+
+            // 確保原點置於剖切範圍的幾何中心
+            XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, centerElevationZ);
             // 剖刀原點定位在往房間內偏移 offsetFeet 處
             t.Origin = midPointWithZ + roomSideDir * offsetFeet;
 
@@ -76,8 +81,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             bbox.Transform = t;
 
             // 設定裁剪邊界，將 Max.Z 設為 150mm (原本是 0.1mm) 以避免切掉牆面往外貼磚的厚度
-            bbox.Min = new XYZ(-(lengthFeet / 2.0) - leftRightExtensionFeet, -bottomOffsetFeet, -depthFeet);
-            bbox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, heightFeet + topOffsetFeet, 150.0 / 304.8);
+            // Y 軸範圍設為完全對稱的 [-halfHeightFeet, halfHeightFeet]，符合 Revit 對剖面裁剪框的要求
+            bbox.Min = new XYZ(-(lengthFeet / 2.0) - leftRightExtensionFeet, -halfHeightFeet, -depthFeet);
+            bbox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, halfHeightFeet, 150.0 / 304.8);
 
             // 4. 建立 Section View
             ViewSection section = ViewSection.CreateSection(doc, sectionTypeId, bbox);
