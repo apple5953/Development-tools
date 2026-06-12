@@ -100,9 +100,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double localMinY = zMin - actualOrigin.Z;
             double localMaxY = zMax - actualOrigin.Z;
 
-            // 保留 Revit 鎖定的 Transform，僅覆寫局部坐標邊界限制
-            actualBox.Min = new XYZ(-(lengthFeet / 2.0) - leftRightExtensionFeet, localMinY, -depthFeet);
-            actualBox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, localMaxY, 150.0 / 304.8);
+            // 僅覆寫局部 Y 座標 (高度)，其餘 X (寬度) 和 Z (深度) 完全繼承自 Revit 建立時的正確邊界，防堵寬度被改壞
+            actualBox.Min = new XYZ(actualBox.Min.X, localMinY, actualBox.Min.Z);
+            actualBox.Max = new XYZ(actualBox.Max.X, localMaxY, actualBox.Max.Z);
 
             // 重新套用
             section.CropBox = actualBox;
