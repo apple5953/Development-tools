@@ -45,7 +45,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     Level lvl = doc.GetElement(lvlId) as Level;
                     if (lvl != null)
                     {
-                        levelElevation = lvl.Elevation;
+                        levelElevation = lvl.ProjectElevation;
                     }
                 }
                 else
@@ -198,7 +198,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             if (baseFloor != null && baseFloor.LevelId != ElementId.InvalidElementId)
             {
                 Level lvl = doc.GetElement(baseFloor.LevelId) as Level;
-                if (lvl != null) levelElevation = lvl.Elevation;
+                if (lvl != null) levelElevation = lvl.ProjectElevation;
             }
             else
             {
@@ -278,7 +278,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 Level currentLevel = doc.GetElement(currentLevelId) as Level;
                 if (currentLevel == null) return defaultHeightFeet;
 
-                double currentElevation = currentLevel.Elevation;
+                double currentElevation = currentLevel.ProjectElevation;
 
                 // 獲取所有 Level，並按照 Elevation 排序
                 var levelCollector = new FilteredElementCollector(doc)
@@ -294,13 +294,13 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     }
                 }
 
-                levels.Sort((a, b) => a.Elevation.CompareTo(b.Elevation));
+                levels.Sort((a, b) => a.ProjectElevation.CompareTo(b.ProjectElevation));
 
                 // 找出 elevation 大於 currentElevation，且最接近的下一個 Level
                 Level nextLevel = null;
                 foreach (var lvl in levels)
                 {
-                    if (lvl.Elevation > currentElevation + 0.01)
+                    if (lvl.ProjectElevation > currentElevation + 0.01)
                     {
                         nextLevel = lvl;
                         break;
@@ -309,7 +309,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 
                 if (nextLevel != null)
                 {
-                    double delta = nextLevel.Elevation - currentElevation;
+                    double delta = nextLevel.ProjectElevation - currentElevation;
                     if (delta > 1.0)
                     {
                         return delta;

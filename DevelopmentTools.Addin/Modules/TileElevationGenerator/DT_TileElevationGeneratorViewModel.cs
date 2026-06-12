@@ -54,8 +54,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         private void UpdateElevationItemsGeometry()
         {
             if (_selectedBaseLevel == null) return;
-            double baseElev = _selectedBaseLevel.Elevation;
-            double topElev = _selectedTopLevel != null ? _selectedTopLevel.Elevation : (baseElev + 3000.0 / 304.8);
+            double baseElev = _selectedBaseLevel.ProjectElevation;
+            double topElev = _selectedTopLevel != null ? _selectedTopLevel.ProjectElevation : (baseElev + 3000.0 / 304.8);
             double height = topElev - baseElev;
 
             foreach (var item in ElevationItems)
