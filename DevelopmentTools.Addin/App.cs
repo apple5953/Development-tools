@@ -33,7 +33,8 @@ namespace DevelopmentTools
         {
             try
             {
-                string logPath = @"D:\Room Tile Local 3 System\RevitAddinLog.txt";
+                string dllDir = Path.GetDirectoryName(typeof(App).Assembly.Location);
+                string logPath = Path.Combine(dllDir, "RevitAddinLog.txt");
                 File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {msg}{Environment.NewLine}");
             }
             catch { }

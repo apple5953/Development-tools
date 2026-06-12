@@ -5,8 +5,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
 {
     public static class WallElevationViewCreator
     {
+        public static bool HasShownDebugDialog = false;
+
         public static ViewSection CreateElevationView(Document doc, WallElevationData data, GeneratorSettings settings, string viewName)
         {
+            HasShownDebugDialog = false;
             // 1. 取得 Section ViewFamilyType
             ElementId sectionTypeId = GetSectionViewFamilyTypeId(doc);
             if (sectionTypeId == ElementId.InvalidElementId)
@@ -149,8 +152,31 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             try
             {
                 BoundingBoxXYZ afterBox = section.CropBox;
+                double finalOriginZ = afterBox.Transform.Origin.Z;
+                double finalMinZ = (finalOriginZ + afterBox.Min.Y) * 304.8;
+                double finalMaxZ = (finalOriginZ + afterBox.Max.Y) * 304.8;
+
+                double targetMinZ = (data.LevelElevation - bottomOffsetFeet) * 304.8;
+                double targetMaxZ = (data.LevelElevation + heightFeet + topOffsetFeet) * 304.8;
+
                 App.Log($"[TileElevation] afterBox.Min: ({afterBox.Min.X}, {afterBox.Min.Y}, {afterBox.Min.Z})");
                 App.Log($"[TileElevation] afterBox.Max: ({afterBox.Max.X}, {afterBox.Max.Y}, {afterBox.Max.Z})");
+
+                if (!HasShownDebugDialog)
+                {
+                    HasShownDebugDialog = true;
+                    string debugMsg = $"【剖面幾何高度對齊診斷】\n\n" +
+                                      $"剖面名稱：{section.Name}\n" +
+                                      $"剖面底端高程 (寫入後)：{finalMinZ:F1} mm\n" +
+                                      $"剖面頂端高程 (寫入後)：{finalMaxZ:F1} mm\n\n" +
+                                      $"UI 期望底端 (zMin)：{targetMinZ:F1} mm\n" +
+                                      $"UI 期望頂端 (zMax)：{targetMaxZ:F1} mm\n\n" +
+                                      $"記憶體基準 LevelElevation：{data.LevelElevation * 304.8:F1} mm\n" +
+                                      $"記憶體高度 WallHeight：{data.WallHeight * 304.8:F1} mm\n" +
+                                      $"BottomOffset: {settings.BottomOffset:F1} mm\n" +
+                                      $"TopOffset: {settings.TopOffset:F1} mm";
+                    Autodesk.Revit.UI.TaskDialog.Show("幾何高度對齊診斷", debugMsg);
+                }
             }
             catch (Exception ex)
             {
