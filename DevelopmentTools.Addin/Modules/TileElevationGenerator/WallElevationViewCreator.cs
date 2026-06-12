@@ -54,14 +54,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double topOffsetFeet = settings.TopOffset / 304.8;                        // 頂部延伸量
             double leftRightExtensionFeet = settings.SideExtension / 304.8;             // 左右延伸量
 
-            // 計算剖面垂直半高度 (Half Height)，確保 BoundingBox 在 Y 軸方向完全對稱（Revit CropBox 強制對稱限制）
+            // 3. 建立 BoundingBoxXYZ (CropBox) - 這裡做為建立 Section 的預估定位值
             double halfHeightFeet = (heightFeet + topOffsetFeet + bottomOffsetFeet) / 2.0;
-            // 計算剖面原點的中心高程 Z (將基準樓層與頂底偏移合併計算)
             double centerElevationZ = data.LevelElevation + (heightFeet + topOffsetFeet - bottomOffsetFeet) / 2.0;
 
-            // 確保原點置於剖切範圍的幾何中心
             XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, centerElevationZ);
-            // 剖刀原點定位在往房間內偏移 offsetFeet 處
             t.Origin = midPointWithZ + roomSideDir * offsetFeet;
 
             // X 軸平行於牆面，Y 軸為 Z 正向 (朝上)
@@ -76,12 +73,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 t.BasisX = -t.BasisX;
             }
 
-            // 3. 建立 BoundingBoxXYZ (CropBox)
             var bbox = new BoundingBoxXYZ();
             bbox.Transform = t;
 
-            // 設定裁剪邊界，將 Max.Z 設為 150mm (原本是 0.1mm) 以避免切掉牆面往外貼磚的厚度
-            // Y 軸範圍設為完全對稱的 [-halfHeightFeet, halfHeightFeet]，符合 Revit 對剖面裁剪框的要求
             bbox.Min = new XYZ(-(lengthFeet / 2.0) - leftRightExtensionFeet, -halfHeightFeet, -depthFeet);
             bbox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, halfHeightFeet, 150.0 / 304.8);
 
@@ -92,9 +86,26 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 throw new InvalidOperationException("無法建立 Section 視圖。");
             }
 
-            // 強制啟用裁剪框，並重新賦值確保其強制套用 BoundingBoxXYZ 邊界限制
+            // 強制啟用裁剪框
             section.CropBoxActive = true;
-            section.CropBox = bbox;
+
+            // 讀取 Revit 自動對齊並鎖定後的實體 CropBox
+            BoundingBoxXYZ actualBox = section.CropBox;
+            XYZ actualOrigin = actualBox.Transform.Origin;
+
+            // 重新計算基於真實 Origin.Z 的垂直邊界，確保世界座標下的底頂高程為精確的 [zMin, zMax]
+            double zMin = data.LevelElevation - bottomOffsetFeet;
+            double zMax = data.LevelElevation + heightFeet + topOffsetFeet;
+
+            double localMinY = zMin - actualOrigin.Z;
+            double localMaxY = zMax - actualOrigin.Z;
+
+            // 保留 Revit 鎖定的 Transform，僅覆寫局部坐標邊界限制
+            actualBox.Min = new XYZ(-(lengthFeet / 2.0) - leftRightExtensionFeet, localMinY, -depthFeet);
+            actualBox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, localMaxY, 150.0 / 304.8);
+
+            // 重新套用
+            section.CropBox = actualBox;
 
             // 5. 設定視圖名稱
             section.Name = viewName;
