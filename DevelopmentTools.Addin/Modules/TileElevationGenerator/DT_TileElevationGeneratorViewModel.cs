@@ -1196,7 +1196,13 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             try
                             {
                                 BoundingBoxXYZ box = view.CropBox;
-                                double originZ = box.Transform.Origin.Z;
+                                WallElevationData data = null;
+                                GeneratorSettings tempSettings = null;
+                                _viewToDataMap.TryGetValue(view.Id, out data);
+                                _viewToSettingsMap.TryGetValue(view.Id, out tempSettings);
+                                double originZ = (data != null && tempSettings != null) ? 
+                                    (data.LevelElevation + (data.WallHeight + tempSettings.TopOffset / 304.8 - tempSettings.BottomOffset / 304.8) / 2.0) : 
+                                    view.Origin.Z;
                                 double minZ = (originZ + box.Min.Y) * 304.8;
                                 double maxZ = (originZ + box.Max.Y) * 304.8;
                                 double width = (box.Max.X - box.Min.X) * 304.8;
@@ -1225,8 +1231,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             foreach (var view in _tempCreatedViews)
                             {
                                 view.ViewTemplateId = templateId;
+                            }
+                            _doc.Regenerate(); // 必須在套用樣板後，強迫更新幾何狀態，防止 CropBox 被延遲更新覆蓋
 
-                                // 重新套用幾何高度與寬度裁剪，防止被樣板覆蓋
+                            foreach (var view in _tempCreatedViews)
+                            {
                                 WallElevationData data = null;
                                 GeneratorSettings tempSettings = null;
                                 _viewToDataMap.TryGetValue(view.Id, out data);
@@ -1299,8 +1308,12 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                                 double yFloorOffset = 0.0;
                                 if (data != null)
                                 {
-                                    double originZ = data.MidPoint.Z + data.WallHeight / 2.0;
-                                    yFloorOffset = (data.LevelElevation - originZ) / scale;
+                                    BoundingBoxXYZ box = view.CropBox;
+                                    double originZ = box.Transform.Origin.Z;
+                                    double basisYZ = box.Transform.BasisY.Z;
+                                    if (Math.Abs(basisYZ) < 0.001) basisYZ = 1.0;
+                                    double currentCenterZ = originZ + ((box.Min.Y + box.Max.Y) / 2.0) * basisYZ;
+                                    yFloorOffset = (data.LevelElevation - currentCenterZ) / scale;
                                 }
 
                                 // 4. 精確設定 Viewport BoxCenter
@@ -1391,9 +1404,15 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             try
                             {
                                 BoundingBoxXYZ box = view.CropBox;
+                                WallElevationData data = null;
+                                GeneratorSettings tempSettings = null;
+                                _viewToDataMap.TryGetValue(view.Id, out data);
+                                _viewToSettingsMap.TryGetValue(view.Id, out tempSettings);
                                 double originZ = box.Transform.Origin.Z;
-                                double minZ = (originZ + box.Min.Y) * 304.8;
-                                double maxZ = (originZ + box.Max.Y) * 304.8;
+                                double basisYZ = box.Transform.BasisY.Z;
+                                if (Math.Abs(basisYZ) < 0.001) basisYZ = 1.0;
+                                double minZ = (originZ + box.Min.Y * basisYZ) * 304.8;
+                                double maxZ = (originZ + box.Max.Y * basisYZ) * 304.8;
                                 double width = (box.Max.X - box.Min.X) * 304.8;
 
                                 reportLines.Add($"• {view.Name}:\n" +
@@ -1450,8 +1469,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         foreach (var view in _tempCreatedViews)
                         {
                             view.ViewTemplateId = templateId;
+                        }
+                        _doc.Regenerate(); // 必須在套用樣板後，強迫更新幾何狀態，防止 CropBox 被延遲更新覆蓋
 
-                            // 重新套用幾何高度與寬度裁剪，防止被樣板覆蓋
+                        foreach (var view in _tempCreatedViews)
+                        {
                             WallElevationData data = null;
                             GeneratorSettings tempSettings = null;
                             _viewToDataMap.TryGetValue(view.Id, out data);
@@ -1579,8 +1601,12 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                                 double yFloorOffset = 0.0;
                                 if (data != null)
                                 {
-                                    double originZ = data.MidPoint.Z + data.WallHeight / 2.0;
-                                    yFloorOffset = (data.LevelElevation - originZ) / scale;
+                                    BoundingBoxXYZ box = view.CropBox;
+                                    double originZ = box.Transform.Origin.Z;
+                                    double basisYZ = box.Transform.BasisY.Z;
+                                    if (Math.Abs(basisYZ) < 0.001) basisYZ = 1.0;
+                                    double currentCenterZ = originZ + ((box.Min.Y + box.Max.Y) / 2.0) * basisYZ;
+                                    yFloorOffset = (data.LevelElevation - currentCenterZ) / scale;
                                 }
 
                                 // 4. 精確設定 Viewport BoxCenter

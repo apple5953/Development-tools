@@ -96,6 +96,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             if (settings.SelectedViewTemplateId != ElementId.InvalidElementId)
             {
                 section.ViewTemplateId = settings.SelectedViewTemplateId;
+                doc.Regenerate(); // 必須在套用樣板後，強迫更新幾何狀態，防止 CropBox 被延遲更新覆蓋
             }
 
             // 7. 重新套用幾何高度與寬度裁剪 (在此時已套用樣板後，重新寫入 CropBox 即可防止被重置)
@@ -111,35 +112,46 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             // 強制啟用裁剪框
             section.CropBoxActive = true;
 
-            // 讀取 Revit 自動對齊並鎖定後的實體 CropBox
-            BoundingBoxXYZ actualBox = section.CropBox;
-            XYZ actualOrigin = actualBox.Transform.Origin;
-
             double bottomOffsetFeet = settings.BottomOffset / 304.8;            // 底部延伸量
             double topOffsetFeet = settings.TopOffset / 304.8;                        // 頂部延伸量
             double heightFeet = data.WallHeight;
 
-            // 重新計算基於真實 Origin.Z 的垂直邊界，確保世界座標下的底頂高程為精確的 [zMin, zMax]
+            // 1. 計算期望的世界高程邊界
             double zMin = data.LevelElevation - bottomOffsetFeet;
             double zMax = data.LevelElevation + heightFeet + topOffsetFeet;
 
-            // 使用 Revit 正統的逆矩陣變換，將世界座標點精確投影到剖面的局部座標系中，取得局部 Y 軸 (高度) 座標
-            XYZ wMin = new XYZ(actualOrigin.X, actualOrigin.Y, zMin);
-            XYZ wMax = new XYZ(actualOrigin.X, actualOrigin.Y, zMax);
+            // 2. 獲取當前 CropBox 及其 Transform
+            BoundingBoxXYZ actualBox = section.CropBox;
+            Transform transform = actualBox.Transform;
+            double originZ = transform.Origin.Z;
+            double basisYZ = transform.BasisY.Z;
 
-            XYZ localMinPt = actualBox.Transform.Inverse.OfPoint(wMin);
-            XYZ localMaxPt = actualBox.Transform.Inverse.OfPoint(wMax);
+            // 防止 basisYZ 為 0 的除以零異常（通常 Section 的 BasisY 永遠平行於 Z 軸，即 basisYZ 應該接近 1.0 或 -1.0）
+            if (Math.Abs(basisYZ) < 0.001)
+            {
+                basisYZ = 1.0;
+            }
 
-            double localMinY = localMinPt.Y;
-            double localMaxY = localMaxPt.Y;
+            // 3. 計算對應的局部 Y 座標
+            double localMinY = (zMin - originZ) / basisYZ;
+            double localMaxY = (zMax - originZ) / basisYZ;
+
+            // 確保 Min 真的小於 Max
+            if (localMinY > localMaxY)
+            {
+                double temp = localMinY;
+                localMinY = localMaxY;
+                localMaxY = temp;
+            }
 
             // 寫入詳細的除錯日誌，追蹤 Revit 實體高程偏移
             App.Log($"[TileElevation] ViewName: {section.Name}");
             App.Log($"[TileElevation] data.LevelElevation (Feet): {data.LevelElevation} ({data.LevelElevation * 304.8} mm)");
             App.Log($"[TileElevation] heightFeet (Feet): {heightFeet} ({heightFeet * 304.8} mm)");
             App.Log($"[TileElevation] bottomOffsetFeet: {bottomOffsetFeet}, topOffsetFeet: {topOffsetFeet}");
-            App.Log($"[TileElevation] Calculated Target World Range: [{zMin}, {zMax}] (Feet)");
-            App.Log($"[TileElevation] actualOrigin: ({actualOrigin.X}, {actualOrigin.Y}, {actualOrigin.Z}) (Feet)");
+            App.Log($"[TileElevation] Transform Origin.Z: {originZ} (Feet)");
+            App.Log($"[TileElevation] Transform BasisY.Z: {basisYZ}");
+            App.Log($"[TileElevation] Calculated Local Y: Min={localMinY}, Max={localMaxY}");
             
             // 僅覆寫局部 Y 座標 (高度)，其餘 X (寬度) 和 Z (深度) 完全繼承自 Revit 建立時的正確邊界，防堵寬度被改壞
             actualBox.Min = new XYZ(actualBox.Min.X, localMinY, actualBox.Min.Z);
@@ -153,12 +165,17 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             {
                 BoundingBoxXYZ afterBox = section.CropBox;
                 double finalOriginZ = afterBox.Transform.Origin.Z;
-                double finalMinZ = (finalOriginZ + afterBox.Min.Y) * 304.8;
-                double finalMaxZ = (finalOriginZ + afterBox.Max.Y) * 304.8;
+                double finalBasisYZ = afterBox.Transform.BasisY.Z;
+                if (Math.Abs(finalBasisYZ) < 0.001) finalBasisYZ = 1.0;
 
-                double targetMinZ = (data.LevelElevation - bottomOffsetFeet) * 304.8;
-                double targetMaxZ = (data.LevelElevation + heightFeet + topOffsetFeet) * 304.8;
+                // 實體高程即為投影 Origin.Z 加上局部 Y 座標乘以 BasisY.Z
+                double finalMinZ = (finalOriginZ + afterBox.Min.Y * finalBasisYZ) * 304.8;
+                double finalMaxZ = (finalOriginZ + afterBox.Max.Y * finalBasisYZ) * 304.8;
 
+                double targetMinZ = zMin * 304.8;
+                double targetMaxZ = zMax * 304.8;
+
+                App.Log($"[TileElevation] afterBox.Transform.Origin: ({finalOriginZ})");
                 App.Log($"[TileElevation] afterBox.Min: ({afterBox.Min.X}, {afterBox.Min.Y}, {afterBox.Min.Z})");
                 App.Log($"[TileElevation] afterBox.Max: ({afterBox.Max.X}, {afterBox.Max.Y}, {afterBox.Max.Z})");
 
@@ -174,7 +191,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                                       $"記憶體基準 LevelElevation：{data.LevelElevation * 304.8:F1} mm\n" +
                                       $"記憶體高度 WallHeight：{data.WallHeight * 304.8:F1} mm\n" +
                                       $"BottomOffset: {settings.BottomOffset:F1} mm\n" +
-                                      $"TopOffset: {settings.TopOffset:F1} mm";
+                                      $"TopOffset: {settings.TopOffset:F1} mm\n" +
+                                      $"實際 Origin.Z: {finalOriginZ * 304.8:F1} mm";
                     Autodesk.Revit.UI.TaskDialog.Show("幾何高度對齊診斷", debugMsg);
                 }
             }
