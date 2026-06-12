@@ -1,12 +1,12 @@
 ﻿{
-    "published_at":  "2026-06-12T11:34:57",
-    "release_url":  "https://github.com/apple5953/Development-tools/releases/download/v2.4.6/DevelopmentTools_v2.4.6.zip",
-    "release_note":  "Remote update release v2.4.6.",
+    "published_at":  "2026-06-12T11:48:41",
+    "release_url":  "https://github.com/apple5953/Development-tools/releases/download/v2.4.7/DevelopmentTools_v2.4.7.zip",
+    "release_note":  "Remote update release v2.4.7.",
     "product_name":  "Room Tile System v3",
     "minimum_supported_version":  "1.0.0",
     "app_id":  "development_tools",
-    "latest_version":  "2.4.6",
+    "latest_version":  "2.4.7",
     "channel":  "stable",
-    "sha256":  "e7f479c3ad8e7d0e19a7187663823b4de48a8a3146d54f656dcfbb6cbd187994",
+    "sha256":  "d3fda447a72878e9fb58b332a99129cac6f459827784398bbf4b8296f88a5088",
     "force_update":  false
 }
