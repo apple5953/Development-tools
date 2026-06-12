@@ -528,6 +528,24 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             }
         }
 
+        private double _zoomFactor = 1.0;
+        public double ZoomFactor
+        {
+            get => _zoomFactor;
+            set
+            {
+                double val = value;
+                if (val < 0.1) val = 0.1;
+                if (val > 5.0) val = 5.0;
+                _zoomFactor = val;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ZoomPercentText));
+                RaiseDrawingPropertiesChanged();
+            }
+        }
+
+        public string ZoomPercentText => $"縮放: {Math.Round(_zoomFactor * 100)}%";
+
         private double GetCanvasGeometryScale()
         {
             if (ElevationItems.Count == 0) return 1.0;
@@ -546,7 +564,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double h = maxY - minY;
             if (w < 0.001) w = 1.0;
             if (h < 0.001) h = 1.0;
-            return Math.Min(220.0 / w, 120.0 / h);
+            return Math.Min(220.0 / w, 120.0 / h) * _zoomFactor;
         }
 
         // 剖刀線 Y 坐標 (在牆面下方，亦即房間內)

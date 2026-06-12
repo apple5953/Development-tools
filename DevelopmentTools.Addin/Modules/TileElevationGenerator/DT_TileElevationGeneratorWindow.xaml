@@ -438,8 +438,17 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Text="平面俯視 (Plan View Preview - 藍虛線為視圖深度範圍)" Foreground="#A6E3A1" FontSize="9.5" Margin="4,0,0,2"/>
-                        <Canvas Grid.Row="1" Background="#11111B" ClipToBounds="True">
+                        <Grid Grid.Row="0" Margin="4,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="100"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="平面俯視 (滾輪或右側滑桿可縮放)" Foreground="#A6E3A1" FontSize="9.5" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{Binding ZoomPercentText}" Foreground="#FAB387" FontSize="9.5" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <Slider Grid.Column="2" Minimum="0.2" Maximum="3.0" Value="{Binding ZoomFactor, Mode=TwoWay}" SmallChange="0.1" LargeChange="0.5" VerticalAlignment="Center" Focusable="False" Cursor="SizeWE"/>
+                        </Grid>
+                        <Canvas Grid.Row="1" Background="#11111B" ClipToBounds="True" MouseWheel="Canvas_MouseWheel">
                             <TextBlock Text="{Binding SelectedSectionIndexText}" Foreground="#FAB387" FontSize="9" Canvas.Left="10" Canvas.Top="4"/>
                             
                             <!-- 1. 實際選取的樓板多邊形 -->

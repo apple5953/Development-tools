@@ -29,5 +29,15 @@ namespace DevelopmentTools.UI
                 this.Close();
             };
         }
+
+        private void Canvas_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (DataContext is Modules.TileElevationGenerator.DT_TileElevationGeneratorViewModel vm)
+            {
+                double delta = e.Delta > 0 ? 0.1 : -0.1;
+                vm.ZoomFactor += delta;
+                e.Handled = true;
+            }
+        }
     }
 }
