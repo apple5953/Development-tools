@@ -45,7 +45,8 @@ namespace DevelopmentTools.UI
             var translate = group.Children[1] as System.Windows.Media.TranslateTransform;
             if (translate == null) return;
 
-            _panStartPoint = e.GetPosition(canvas);
+            var parent = canvas.Parent as System.Windows.IInputElement ?? canvas;
+            _panStartPoint = e.GetPosition(parent);
             _originTranslateX = translate.X;
             _originTranslateY = translate.Y;
             _isPanning = true;
@@ -74,7 +75,8 @@ namespace DevelopmentTools.UI
             var translate = group.Children[1] as System.Windows.Media.TranslateTransform;
             if (translate == null) return;
 
-            Point currentPoint = e.GetPosition(canvas);
+            var parent = canvas.Parent as System.Windows.IInputElement ?? canvas;
+            Point currentPoint = e.GetPosition(parent);
             translate.X = _originTranslateX + (currentPoint.X - _panStartPoint.X);
             translate.Y = _originTranslateY + (currentPoint.Y - _panStartPoint.Y);
         }
@@ -96,15 +98,17 @@ namespace DevelopmentTools.UI
             double newScaleX = scale.ScaleX * zoom;
             if (newScaleX < 0.15 || newScaleX > 10.0) return;
 
-            // 取得滑鼠在 Canvas 上的相對位置
-            Point mousePos = e.GetPosition(canvas);
+            var parent = canvas.Parent as System.Windows.IInputElement ?? canvas;
+            // 取得滑鼠在父容器與 Canvas 上的相對位置
+            Point mousePosParent = e.GetPosition(parent);
+            Point mousePosCanvas = e.GetPosition(canvas);
 
-            // 更新平移以維持滑鼠處不動
-            translate.X = mousePos.X - (mousePos.X - translate.X) * zoom;
-            translate.Y = mousePos.Y - (mousePos.Y - translate.Y) * zoom;
-
+            // 更新平移以維持滑鼠所指之 Canvas 幾何點在父容器中的位置不變
             scale.ScaleX = newScaleX;
             scale.ScaleY = scale.ScaleY * zoom;
+
+            translate.X = mousePosParent.X - mousePosCanvas.X * scale.ScaleX;
+            translate.Y = mousePosParent.Y - mousePosCanvas.Y * scale.ScaleY;
 
             e.Handled = true;
             

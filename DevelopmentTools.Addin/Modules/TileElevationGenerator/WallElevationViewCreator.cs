@@ -54,8 +54,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double topOffsetFeet = settings.TopOffset / 304.8;                        // 頂部延伸量
             double leftRightExtensionFeet = settings.SideExtension / 304.8;             // 左右延伸量
 
-            // 使用樓層高程(LevelElevation)做為 Z 軸基準，確保底部切齊樓層線
-            XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.LevelElevation + (heightFeet / 2.0));
+            // 使用樓層高程(LevelElevation)做為 Z 軸基準，確保原點在樓層線上，避免被 Revit API 強制重設產生高度偏移
+            XYZ midPointWithZ = new XYZ(data.MidPoint.X, data.MidPoint.Y, data.LevelElevation);
             // 剖刀原點定位在往房間內偏移 offsetFeet 處
             t.Origin = midPointWithZ + roomSideDir * offsetFeet;
 
@@ -76,8 +76,8 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             bbox.Transform = t;
 
             // 設定裁剪邊界，將 Max.Z 設為 150mm (原本是 0.1mm) 以避免切掉牆面往外貼磚的厚度
-            bbox.Min = new XYZ(-(lengthFeet / 2.0) - leftRightExtensionFeet, -(heightFeet / 2.0) - bottomOffsetFeet, -depthFeet);
-            bbox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, (heightFeet / 2.0) + topOffsetFeet, 150.0 / 304.8);
+            bbox.Min = new XYZ(-(lengthFeet / 2.0) - leftRightExtensionFeet, -bottomOffsetFeet, -depthFeet);
+            bbox.Max = new XYZ((lengthFeet / 2.0) + leftRightExtensionFeet, heightFeet + topOffsetFeet, 150.0 / 304.8);
 
             // 4. 建立 Section View
             ViewSection section = ViewSection.CreateSection(doc, sectionTypeId, bbox);
@@ -85,6 +85,10 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             {
                 throw new InvalidOperationException("無法建立 Section 視圖。");
             }
+
+            // 強制啟用裁剪框，並重新賦值確保其強制套用 BoundingBoxXYZ 邊界限制
+            section.CropBoxActive = true;
+            section.CropBox = bbox;
 
             // 5. 設定視圖名稱
             section.Name = viewName;

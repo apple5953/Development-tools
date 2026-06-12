@@ -474,33 +474,35 @@
                             <TextBlock Grid.Column="1" Text="{Binding ZoomPercentText}" Foreground="#FAB387" FontSize="9.5" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <Button Grid.Column="2" Content=" 🔄 重置預覽 " Click="Button_ResetView_Click" Style="{StaticResource PrimaryBtn}" Height="18" Padding="6,0" FontSize="9"/>
                         </Grid>
-                        <Canvas x:Name="PlanCanvas" Grid.Row="1" Background="#11111B" ClipToBounds="True" 
-                                MouseWheel="Canvas_MouseWheel"
-                                MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
-                                MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
-                                MouseMove="Canvas_MouseMove">
-                            <Canvas.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
-                                    <TranslateTransform X="0" Y="0"/>
-                                </TransformGroup>
-                            </Canvas.RenderTransform>
-                            <TextBlock Text="{Binding SelectedSectionIndexText}" Foreground="#FAB387" FontSize="9" Canvas.Left="10" Canvas.Top="4"/>
-                            
-                            <!-- 1. 實際選取的樓板多邊形 -->
-                            <Polygon Points="{Binding FloorPolygonPoints}" Stroke="#585B70" StrokeThickness="3.5" Fill="#0A585B70"/>
-                            <TextBlock Text="選取樓板範圍" Foreground="#CDD6F4" FontSize="8.5" Canvas.Left="40" Canvas.Top="16"/>
+                        <Border Grid.Row="1" CornerRadius="4" ClipToBounds="True" Background="#11111B">
+                            <Canvas x:Name="PlanCanvas" Background="Transparent" 
+                                    MouseWheel="Canvas_MouseWheel"
+                                    MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                                    MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
+                                    MouseMove="Canvas_MouseMove">
+                                <Canvas.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                        <TranslateTransform X="0" Y="0"/>
+                                    </TransformGroup>
+                                </Canvas.RenderTransform>
+                                <TextBlock Text="{Binding SelectedSectionIndexText}" Foreground="#FAB387" FontSize="9" Canvas.Left="10" Canvas.Top="4"/>
+                                
+                                <!-- 1. 實際選取的樓板多邊形 -->
+                                <Polygon Points="{Binding FloorPolygonPoints}" Stroke="#585B70" StrokeThickness="3.5" Fill="#0A585B70"/>
+                                <TextBlock Text="選取樓板範圍" Foreground="#CDD6F4" FontSize="8.5" Canvas.Left="40" Canvas.Top="16"/>
 
-                            <!-- 2. 剖面視圖深度範圍半透明區域 -->
-                            <Polygon Points="{Binding SelectedDepthRangePoints}" Fill="#2289B4FA" Stroke="#89B4FA" StrokeThickness="1" StrokeDashArray="2,2"/>
-                            
-                            <!-- 3. 當前選中剖刀線 -->
-                            <Line X1="{Binding SelectedCutLineX1}" Y1="{Binding SelectedCutLineY1}" 
-                                  X2="{Binding SelectedCutLineX2}" Y2="{Binding SelectedCutLineY2}" 
-                                  Stroke="#F38BA8" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                            <TextBlock Text="✦ 剖刀切線" Foreground="#F38BA8" FontSize="8.5" FontWeight="Bold"
-                                       Canvas.Left="{Binding SelectedCutLineX1}" Canvas.Top="{Binding SelectedCutLineY1}"/>
-                        </Canvas>
+                                <!-- 2. 剖面視圖深度範圍半透明區域 -->
+                                <Polygon Points="{Binding SelectedDepthRangePoints}" Fill="#2289B4FA" Stroke="#89B4FA" StrokeThickness="1" StrokeDashArray="2,2"/>
+                                
+                                <!-- 3. 當前選中剖刀線 -->
+                                <Line X1="{Binding SelectedCutLineX1}" Y1="{Binding SelectedCutLineY1}" 
+                                      X2="{Binding SelectedCutLineX2}" Y2="{Binding SelectedCutLineY2}" 
+                                      Stroke="#F38BA8" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                <TextBlock Text="✦ 剖刀切線" Foreground="#F38BA8" FontSize="8.5" FontWeight="Bold"
+                                           Canvas.Left="{Binding SelectedCutLineX1}" Canvas.Top="{Binding SelectedCutLineY1}"/>
+                            </Canvas>
+                        </Border>
                     </Grid>
 
                     <!-- 2. 立面剖視圖 Section View Canvas -->
@@ -510,41 +512,43 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Text="立面剖視高度 (Section View Height Preview)" Foreground="#89B4FA" FontSize="9.5" Margin="4,0,0,2"/>
-                        <Canvas x:Name="SectionCanvas" Grid.Row="1" Background="#11111B" ClipToBounds="True" 
-                                MouseWheel="Canvas_MouseWheel"
-                                MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
-                                MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
-                                MouseMove="Canvas_MouseMove">
-                            <Canvas.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
-                                    <TranslateTransform X="0" Y="0"/>
-                                </TransformGroup>
-                            </Canvas.RenderTransform>
-                            <!-- 地板 -->
-                            <Line X1="10" Y1="{Binding DrawFloorY}" X2="270" Y2="{Binding DrawFloorY}" Stroke="#7F849C" StrokeThickness="1.5"/>
-                            <TextBlock Text="當前樓板面 (Level Floor)" Foreground="#7F849C" FontSize="8.5" Canvas.Left="15" Canvas.Top="88"/>
+                        <Border Grid.Row="1" CornerRadius="4" ClipToBounds="True" Background="#11111B">
+                            <Canvas x:Name="SectionCanvas" Background="Transparent" 
+                                    MouseWheel="Canvas_MouseWheel"
+                                    MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                                    MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
+                                    MouseMove="Canvas_MouseMove">
+                                <Canvas.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                        <TranslateTransform X="0" Y="0"/>
+                                    </TransformGroup>
+                                </Canvas.RenderTransform>
+                                <!-- 地板 -->
+                                <Line X1="10" Y1="{Binding DrawFloorY}" X2="270" Y2="{Binding DrawFloorY}" Stroke="#7F849C" StrokeThickness="1.5"/>
+                                <TextBlock Text="當前樓板面 (Level Floor)" Foreground="#7F849C" FontSize="8.5" Canvas.Left="15" Canvas.Top="88"/>
 
-                            <!-- 天花板 -->
-                            <Line X1="10" Y1="{Binding DrawCeilingY}" X2="270" Y2="{Binding DrawCeilingY}" Stroke="#7F849C" StrokeThickness="1" StrokeDashArray="2,2"/>
-                            <TextBlock Text="上層樓板面/天花高度 (Upper Level)" Foreground="#7F849C" FontSize="8.5" Canvas.Left="15" Canvas.Top="{Binding DrawCeilingTextTop}"/>
+                                <!-- 天花板 -->
+                                <Line X1="10" Y1="{Binding DrawCeilingY}" X2="270" Y2="{Binding DrawCeilingY}" Stroke="#7F849C" StrokeThickness="1" StrokeDashArray="2,2"/>
+                                <TextBlock Text="上層樓板面/天花高度 (Upper Level)" Foreground="#7F849C" FontSize="8.5" Canvas.Left="15" Canvas.Top="{Binding DrawCeilingTextTop}"/>
 
-                            <!-- 剖切範圍 -->
-                            <Rectangle Fill="#1A89B4FA" Stroke="#89B4FA" StrokeThickness="1.5" StrokeDashArray="2,2"
-                                       Canvas.Left="80" 
-                                       Canvas.Top="{Binding DrawSectionCropTop}" 
-                                       Width="120" 
-                                       Height="{Binding DrawSectionCropHeight}"/>
-                            
-                            <TextBlock Text="剖面裁剪高度範圍" Foreground="#89B4FA" FontSize="8.5" FontWeight="SemiBold"
-                                       Canvas.Left="95" Canvas.Top="45"/>
-                                       
-                            <!-- 顯示頂底偏移的文字標註 -->
-                            <TextBlock Text="{Binding SelectedElevationItem.TopOffset, StringFormat=頂部偏移: \{0\} mm}" Foreground="#F9E2AF" FontSize="8"
-                                       Canvas.Left="85" Canvas.Top="{Binding DrawCeilingY}"/>
-                            <TextBlock Text="{Binding SelectedElevationItem.BottomOffset, StringFormat=底部偏移: \{0\} mm}" Foreground="#F9E2AF" FontSize="8"
-                                       Canvas.Left="85" Canvas.Top="68"/>
-                        </Canvas>
+                                <!-- 剖切範圍 -->
+                                <Rectangle Fill="#1A89B4FA" Stroke="#89B4FA" StrokeThickness="1.5" StrokeDashArray="2,2"
+                                           Canvas.Left="80" 
+                                           Canvas.Top="{Binding DrawSectionCropTop}" 
+                                           Width="120" 
+                                           Height="{Binding DrawSectionCropHeight}"/>
+                                
+                                <TextBlock Text="剖面裁剪高度範圍" Foreground="#89B4FA" FontSize="8.5" FontWeight="SemiBold"
+                                           Canvas.Left="95" Canvas.Top="45"/>
+                                           
+                                <!-- 顯示頂底偏移的文字標註 -->
+                                <TextBlock Text="{Binding SelectedElevationItem.TopOffset, StringFormat=頂部偏移: \{0\} mm}" Foreground="#F9E2AF" FontSize="8"
+                                           Canvas.Left="85" Canvas.Top="{Binding DrawCeilingY}"/>
+                                <TextBlock Text="{Binding SelectedElevationItem.BottomOffset, StringFormat=底部偏移: \{0\} mm}" Foreground="#F9E2AF" FontSize="8"
+                                           Canvas.Left="85" Canvas.Top="68"/>
+                            </Canvas>
+                        </Border>
                     </Grid>
                 </Grid>
             </Border>
