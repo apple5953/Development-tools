@@ -468,13 +468,23 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="平面俯視 (滾輪或右側滑桿可縮放)" Foreground="#A6E3A1" FontSize="9.5" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="平面俯視 (滾輪縮放 / 按住左鍵拖移)" Foreground="#A6E3A1" FontSize="9.5" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1" Text="{Binding ZoomPercentText}" Foreground="#FAB387" FontSize="9.5" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <Slider Grid.Column="2" Minimum="0.2" Maximum="3.0" Value="{Binding ZoomFactor, Mode=TwoWay}" SmallChange="0.1" LargeChange="0.5" VerticalAlignment="Center" Focusable="False" Cursor="SizeWE"/>
+                            <Button Grid.Column="2" Content=" 🔄 重置預覽 " Click="Button_ResetView_Click" Style="{StaticResource PrimaryBtn}" Height="18" Padding="6,0" FontSize="9"/>
                         </Grid>
-                        <Canvas Grid.Row="1" Background="#11111B" ClipToBounds="True" MouseWheel="Canvas_MouseWheel">
+                        <Canvas x:Name="PlanCanvas" Grid.Row="1" Background="#11111B" ClipToBounds="True" 
+                                MouseWheel="Canvas_MouseWheel"
+                                MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                                MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
+                                MouseMove="Canvas_MouseMove">
+                            <Canvas.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                    <TranslateTransform X="0" Y="0"/>
+                                </TransformGroup>
+                            </Canvas.RenderTransform>
                             <TextBlock Text="{Binding SelectedSectionIndexText}" Foreground="#FAB387" FontSize="9" Canvas.Left="10" Canvas.Top="4"/>
                             
                             <!-- 1. 實際選取的樓板多邊形 -->
@@ -500,7 +510,17 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Text="立面剖視高度 (Section View Height Preview)" Foreground="#89B4FA" FontSize="9.5" Margin="4,0,0,2"/>
-                        <Canvas Grid.Row="1" Background="#11111B" ClipToBounds="True" MouseWheel="Canvas_MouseWheel">
+                        <Canvas x:Name="SectionCanvas" Grid.Row="1" Background="#11111B" ClipToBounds="True" 
+                                MouseWheel="Canvas_MouseWheel"
+                                MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                                MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
+                                MouseMove="Canvas_MouseMove">
+                            <Canvas.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                    <TranslateTransform X="0" Y="0"/>
+                                </TransformGroup>
+                            </Canvas.RenderTransform>
                             <!-- 地板 -->
                             <Line X1="10" Y1="{Binding DrawFloorY}" X2="270" Y2="{Binding DrawFloorY}" Stroke="#7F849C" StrokeThickness="1.5"/>
                             <TextBlock Text="當前樓板面 (Level Floor)" Foreground="#7F849C" FontSize="8.5" Canvas.Left="15" Canvas.Top="88"/>

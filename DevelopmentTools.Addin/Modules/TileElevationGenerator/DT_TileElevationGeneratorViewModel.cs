@@ -587,13 +587,9 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             get => _zoomFactor;
             set
             {
-                double val = value;
-                if (val < 0.1) val = 0.1;
-                if (val > 5.0) val = 5.0;
-                _zoomFactor = val;
+                _zoomFactor = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ZoomPercentText));
-                RaiseDrawingPropertiesChanged();
             }
         }
 
@@ -617,7 +613,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             double h = maxY - minY;
             if (w < 0.001) w = 1.0;
             if (h < 0.001) h = 1.0;
-            return Math.Min(220.0 / w, 120.0 / h) * _zoomFactor;
+            return Math.Min(220.0 / w, 120.0 / h);
         }
 
         // 剖刀線 Y 坐標 (在牆面下方，亦即房間內)
@@ -1124,7 +1120,6 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             if (baseLvl != null)
             {
                 _selectedBaseLevel = baseLvl;
-                OnPropertyChanged(nameof(SelectedBaseLevel));
                 
                 int idx = ProjectLevels.IndexOf(baseLvl);
                 if (idx >= 0 && idx < ProjectLevels.Count - 1)
@@ -1135,7 +1130,11 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 {
                     _selectedTopLevel = baseLvl;
                 }
+                OnPropertyChanged(nameof(SelectedBaseLevel));
                 OnPropertyChanged(nameof(SelectedTopLevel));
+                
+                // 確實更新清單中所有項目的高度與高程！
+                UpdateElevationItemsGeometry();
             }
         }
 
