@@ -9,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using DevelopmentTools.Core;
 
 namespace DevelopmentTools.Modules.SheetTools.BatchSheetRenamer
 {
@@ -163,6 +164,21 @@ namespace DevelopmentTools.Modules.SheetTools.BatchSheetRenamer
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand ToggleSelectAllCommand { get; }
+        public ICommand OpenHelpCommand { get; }
+
+        private void OnOpenHelp()
+        {
+            string title = LanguageManager.Instance["Tut_BatchRename_Title"];
+            string content = LanguageManager.Instance["Tut_BatchRename_Content"];
+            TaskDialog td = new TaskDialog(title)
+            {
+                TitleAutoPrefix = false,
+                MainInstruction = title,
+                MainContent = content,
+                CommonButtons = TaskDialogCommonButtons.Close
+            };
+            td.Show();
+        }
 
         private bool _allSelected;
         public bool AllSelected
@@ -203,6 +219,7 @@ namespace DevelopmentTools.Modules.SheetTools.BatchSheetRenamer
             SaveCommand = new RelayCommand(OnSave);
             CancelCommand = new RelayCommand(() => _window.Close());
             ToggleSelectAllCommand = new RelayCommand(() => AllSelected = !AllSelected);
+            OpenHelpCommand = new RelayCommand(OnOpenHelp);
 
             UpdateStatusText();
         }

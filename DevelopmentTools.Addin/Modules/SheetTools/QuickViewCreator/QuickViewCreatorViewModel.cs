@@ -189,6 +189,21 @@ namespace DevelopmentTools.Modules.SheetTools.QuickViewCreator
         public ICommand CreateViewsCommand { get; }
         public ICommand CancelCommand { get; }
         public ICommand ToggleSelectAllViewsCommand { get; }
+        public ICommand OpenHelpCommand { get; }
+
+        private void OnOpenHelp()
+        {
+            string title = DevelopmentTools.Core.LanguageManager.Instance["Tut_QuickView_Title"];
+            string content = DevelopmentTools.Core.LanguageManager.Instance["Tut_QuickView_Content"];
+            Autodesk.Revit.UI.TaskDialog td = new Autodesk.Revit.UI.TaskDialog(title)
+            {
+                TitleAutoPrefix = false,
+                MainInstruction = title,
+                MainContent = content,
+                CommonButtons = Autodesk.Revit.UI.TaskDialogCommonButtons.Close
+            };
+            td.Show();
+        }
 
         private bool _allViewsSelected;
         public bool AllViewsSelected
@@ -250,6 +265,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickViewCreator
             CreateViewsCommand = new RelayCommand(OnCreateViews);
             CancelCommand = new RelayCommand(() => _window.Close());
             ToggleSelectAllViewsCommand = new RelayCommand(() => AllViewsSelected = !AllViewsSelected);
+            OpenHelpCommand = new RelayCommand(OnOpenHelp);
 
             UpdateStatusText();
         }

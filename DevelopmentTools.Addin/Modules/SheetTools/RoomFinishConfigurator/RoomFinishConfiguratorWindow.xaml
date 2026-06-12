@@ -182,18 +182,30 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                 <TextBlock Text="{Binding [RoomFinish_Title_Full], Source={x:Static core:LanguageManager.Instance}}" FontSize="16" FontWeight="Bold" Foreground="#CBA6F7"/>
                 <TextBlock Text="{Binding [RoomFinish_Desc1], Source={x:Static core:LanguageManager.Instance}}" FontSize="10" Foreground="#89B4FA" Margin="0,2,0,0"/>
             </StackPanel>
             
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
                 <TextBlock Text="{Binding [RoomFinish_SearchLabel], Source={x:Static core:LanguageManager.Instance}}" Style="{StaticResource FieldLabel}" Margin="0,0,6,0"/>
                 <TextBox Width="220" Style="{StaticResource DarkTextBox}" 
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          ToolTip="{Binding [RoomFinish_SearchHint], Source={x:Static core:LanguageManager.Instance}}"/>
             </StackPanel>
+
+            <Button Grid.Column="2" 
+                    Content="{Binding [TileSys_Tutorial], Source={x:Static core:LanguageManager.Instance}}"
+                    Command="{Binding OpenHelpCommand}"
+                    Style="{StaticResource BaseBtn}"
+                    Background="#F9E2AF"
+                    Foreground="#1E1E2E"
+                    Height="24"
+                    Padding="10,0"
+                    VerticalAlignment="Center"
+                    ToolTip="{Binding [TileSys_TutorialDesc], Source={x:Static core:LanguageManager.Instance}}"/>
         </Grid>
 
         <!-- 2. 主要內容 -->

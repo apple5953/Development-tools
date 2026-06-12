@@ -56,6 +56,21 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
         public ICommand AnalyzeCommand { get; }
         public ICommand GenerateCommand { get; }
         public ICommand CloseCommand { get; }
+        public ICommand OpenHelpCommand { get; }
+
+        private void OnOpenHelp()
+        {
+            string title = LanguageManager.Instance["Tut_SheetDuplicator_Title"];
+            string content = LanguageManager.Instance["Tut_SheetDuplicator_Content"];
+            TaskDialog td = new TaskDialog(title)
+            {
+                TitleAutoPrefix = false,
+                MainInstruction = title,
+                MainContent = content,
+                CommonButtons = TaskDialogCommonButtons.Close
+            };
+            td.Show();
+        }
 
         public SheetDuplicatorViewModel(ExternalCommandData commandData)
         {
@@ -76,6 +91,7 @@ namespace DevelopmentTools.Modules.SheetTools.SheetDuplicator
             AnalyzeCommand = new RelayCommand(OnAnalyze);
             GenerateCommand = new RelayCommand(OnGenerate);
             CloseCommand = new RelayCommand(() => RequestClose?.Invoke());
+            OpenHelpCommand = new RelayCommand(OnOpenHelp);
         }
 
         private void OnAnalyze()

@@ -15,6 +15,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
 using Autodesk.Revit.UI;
 using Microsoft.Win32;
+using DevelopmentTools.Core;
 
 namespace DevelopmentTools.Modules.SheetTools.RoomFinishConfigurator
 {
@@ -371,6 +372,21 @@ namespace DevelopmentTools.Modules.SheetTools.RoomFinishConfigurator
         public ICommand DownloadTemplateCommand { get; }
         public ICommand NavigateToRoomCommand { get; }
         public ICommand RefreshDetectedMaterialsCommand { get; }
+        public ICommand OpenHelpCommand { get; }
+
+        private void OnOpenHelp()
+        {
+            string title = LanguageManager.Instance["Tut_RoomFinish_Title"];
+            string content = LanguageManager.Instance["Tut_RoomFinish_Content"];
+            TaskDialog td = new TaskDialog(title)
+            {
+                TitleAutoPrefix = false,
+                MainInstruction = title,
+                MainContent = content,
+                CommonButtons = TaskDialogCommonButtons.Close
+            };
+            td.Show();
+        }
 
         public RoomFinishConfiguratorViewModel(UIDocument uidoc, Window window)
         {
@@ -408,6 +424,7 @@ namespace DevelopmentTools.Modules.SheetTools.RoomFinishConfigurator
             DownloadTemplateCommand = new RelayCommand(OnDownloadTemplate);
             NavigateToRoomCommand = new RelayCommandParam(OnNavigateToRoom);
             RefreshDetectedMaterialsCommand = new RelayCommand(OnRefreshDetectedMaterials);
+            OpenHelpCommand = new RelayCommand(OnOpenHelp);
 
             NotifyConfigCodeLists();
             UpdateStatusText();

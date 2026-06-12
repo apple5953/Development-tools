@@ -82,6 +82,21 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
         // 命令
         public ICommand StartTaggingCommand { get; }
         public ICommand CloseCommand { get; }
+        public ICommand OpenHelpCommand { get; }
+
+        private void OnOpenHelp()
+        {
+            string title = DevelopmentTools.Core.LanguageManager.Instance["Tut_QuickDim_Title"];
+            string content = DevelopmentTools.Core.LanguageManager.Instance["Tut_QuickDim_Content"];
+            TaskDialog td = new TaskDialog(title)
+            {
+                TitleAutoPrefix = false,
+                MainInstruction = title,
+                MainContent = content,
+                CommonButtons = TaskDialogCommonButtons.Close
+            };
+            td.Show();
+        }
 
         public QuickDimensionViewModel(Document doc, Window window)
         {
@@ -105,6 +120,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             // 2. 初始化命令
             StartTaggingCommand = new RelayCommand(() => _externalEvent.Raise());
             CloseCommand = new RelayCommand(() => _window.Close());
+            OpenHelpCommand = new RelayCommand(OnOpenHelp);
 
             UpdateStatusText();
         }

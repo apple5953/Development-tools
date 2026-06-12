@@ -224,11 +224,25 @@
 
         <!-- 0. 標題與說明 -->
         <Grid Grid.Row="0" Margin="0,0,0,12">
-            <StackPanel>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
                 <TextBlock Text="{Binding [SheetPlacer_Title], Source={x:Static core:LanguageManager.Instance}}" FontSize="18" FontWeight="Bold" Foreground="#F5E0DC"/>
                 <TextBlock Text="{Binding [SheetPlacer_SubTitle], Source={x:Static core:LanguageManager.Instance}}" 
-                           FontSize="11" Foreground="#A6ADC8" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                            FontSize="11" Foreground="#A6ADC8" Margin="0,4,0,0" TextWrapping="Wrap"/>
             </StackPanel>
+            <Button Grid.Column="1" 
+                    Content="{Binding [TileSys_Tutorial], Source={x:Static core:LanguageManager.Instance}}"
+                    Command="{Binding OpenHelpCommand}"
+                    Style="{StaticResource BaseBtn}"
+                    Background="#F9E2AF"
+                    Foreground="#1E1E2E"
+                    Height="24"
+                    Padding="10,0"
+                    VerticalAlignment="Center"
+                    ToolTip="{Binding [TileSys_TutorialDesc], Source={x:Static core:LanguageManager.Instance}}"/>
         </Grid>
 
         <!-- 1. 搜尋過濾 -->

@@ -59,7 +59,23 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0" Text="{Binding [SheetDuplicator_Title], Source={x:Static core:LanguageManager.Instance}}" FontSize="18" FontWeight="Bold" Foreground="#CBA6F7" Margin="0,0,0,15"/>
+            <Grid Grid.Row="0" Margin="0,0,0,15">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding [SheetDuplicator_Title], Source={x:Static core:LanguageManager.Instance}}" FontSize="18" FontWeight="Bold" Foreground="#CBA6F7" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" 
+                        Content="{Binding [TileSys_Tutorial], Source={x:Static core:LanguageManager.Instance}}"
+                        Command="{Binding OpenHelpCommand}"
+                        Style="{StaticResource PrimaryBtn}"
+                        Background="#F9E2AF"
+                        Foreground="#1E1E2E"
+                        Height="26"
+                        Padding="10,0"
+                        VerticalAlignment="Center"
+                        ToolTip="{Binding [TileSys_TutorialDesc], Source={x:Static core:LanguageManager.Instance}}"/>
+            </Grid>
 
             <Grid Grid.Row="1" Margin="0,0,0,15">
                 <Grid.ColumnDefinitions>

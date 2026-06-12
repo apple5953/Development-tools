@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using Autodesk.Revit.DB;
+using DevelopmentTools.Core;
 
 namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
 {
@@ -172,6 +173,22 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
         public bool HasSelectedSheet => SelectedSheetNode != null;
         public bool ShowInstructions => SelectedSheetNode == null;
 
+        public ICommand OpenHelpCommand { get; }
+
+        private void OnOpenHelp()
+        {
+            string title = LanguageManager.Instance["Tut_SheetPlacer_Title"];
+            string content = LanguageManager.Instance["Tut_SheetPlacer_Content"];
+            Autodesk.Revit.UI.TaskDialog td = new Autodesk.Revit.UI.TaskDialog(title)
+            {
+                TitleAutoPrefix = false,
+                MainInstruction = title,
+                MainContent = content,
+                CommonButtons = Autodesk.Revit.UI.TaskDialogCommonButtons.Close
+            };
+            td.Show();
+        }
+
         // 快取未過濾的原始樹狀圖
         private TreeItemViewModel _rawSheetsGroup;
         private TreeItemViewModel _rawUnplacedGroup;
@@ -180,6 +197,8 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
         {
             _doc = doc;
             _window = window;
+
+            OpenHelpCommand = new RelayCommand(OnOpenHelp);
 
             LoadComboboxes();
             LoadData();
@@ -1207,5 +1226,26 @@ namespace DevelopmentTools.Modules.SheetTools.SheetViewPlacer
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    public class RelayCommand : ICommand
+    {
+        private readonly Action _execute;
+        private readonly Func<bool> _canExecute;
+
+        public RelayCommand(Action execute, Func<bool> canExecute = null)
+        {
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
+
+        public bool CanExecute(object parameter) => _canExecute?.Invoke() ?? true;
+        public void Execute(object parameter) => _execute();
+
+        public event EventHandler CanExecuteChanged
+        {
+            add => CommandManager.RequerySuggested += value;
+            remove => CommandManager.RequerySuggested -= value;
+        }
     }
 }

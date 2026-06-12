@@ -1,4 +1,4 @@
-﻿<Window x:Class="DevelopmentTools.Modules.SheetTools.QuickViewCreator.QuickViewCreatorWindow"
+<Window x:Class="DevelopmentTools.Modules.SheetTools.QuickViewCreator.QuickViewCreatorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:core="clr-namespace:DevelopmentTools.Core"
@@ -230,10 +230,25 @@
 
         <!-- 1. 標題 -->
         <Grid Grid.Row="0" Margin="0,0,0,12">
-            <StackPanel>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
                 <TextBlock Text="{Binding [QuickView_Title], Source={x:Static core:LanguageManager.Instance}}" FontSize="18" FontWeight="Bold" Foreground="#CBA6F7"/>
                 <TextBlock Text="{Binding [QuickView_SubTitle], Source={x:Static core:LanguageManager.Instance}}" FontSize="11" Foreground="#89B4FA" Margin="0,4,0,0"/>
             </StackPanel>
+
+            <Button Grid.Column="1" 
+                    Content="{Binding [TileSys_Tutorial], Source={x:Static core:LanguageManager.Instance}}"
+                    Command="{Binding OpenHelpCommand}"
+                    Style="{StaticResource BaseBtn}"
+                    Background="#F9E2AF"
+                    Foreground="#1E1E2E"
+                    Height="24"
+                    Padding="10,0"
+                    VerticalAlignment="Center"
+                    ToolTip="{Binding [TileSys_TutorialDesc], Source={x:Static core:LanguageManager.Instance}}"/>
         </Grid>
 
         <!-- 2. 三欄內容 -->

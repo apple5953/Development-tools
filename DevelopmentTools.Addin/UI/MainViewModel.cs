@@ -126,19 +126,13 @@ namespace DevelopmentTools.UI
 
         private void ShowHelpTaskDialog()
         {
-            TaskDialog td = new TaskDialog("RTS 新手快速上手指南")
+            string title = DevelopmentTools.Core.LanguageManager.Instance["Tut_TileSys_Title"];
+            string content = DevelopmentTools.Core.LanguageManager.Instance["Tut_TileSys_Content"];
+            TaskDialog td = new TaskDialog(title)
             {
                 TitleAutoPrefix = false,
-                MainInstruction = "RTS 磁磚鋪設系統 - 快速入門與按鈕說明",
-                MainContent = "【快捷排磚四部曲】\n" +
-                              "1. [點選面預覽] - 點擊「📌 手動點選面 → 生成磁磚填充線」，在視圖中點選你要鋪磁磚的牆面或地板面。\n" +
-                              "2. [確認鋪貼] - 點擊「✔️ 1. 確認鋪貼並改寫原材質圖案」，點選該面將排版填充線正式寫入材質中。\n" +
-                              "3. [生成3D實體] - 點擊「🧱 2-1. 建立 3D 牆面磁磚實體」或「🟫 2-2. 建立 3D 地坪磁磚實體」，選取面即可生成 3D 磁磚實體。\n" +
-                              "4. [人工修整收邊] - 點選需要修剪的磁磚，點擊「📐 轉換為可編輯磁磚」，即可雙擊或使用 Revit 的「編輯輪廓」按鈕手動裁剪不規則邊角。\n\n" +
-                              "【關鍵按鈕提示】\n" +
-                              "• [縫隙參數]：首次使用本外掛時，請點擊最下方的「🧱 裝修牆縫隙參數」與「🟫 裝修地板縫隙參數」，在專案中加入 Tile_Joint_Width 縫寬欄位。\n" +
-                              "• [局部變更]：使用「🎨 局部變更磁磚材質」可以多選磁磚進行局部更換材質球（如腰線）。\n" +
-                              "• [明細與導出]：使用「📄 建立 Revit 明細表」或「📥 匯出 Excel 統計表」可輕鬆統計工程量與出圖。",
+                MainInstruction = title,
+                MainContent = content,
                 CommonButtons = TaskDialogCommonButtons.Close
             };
             td.Show();

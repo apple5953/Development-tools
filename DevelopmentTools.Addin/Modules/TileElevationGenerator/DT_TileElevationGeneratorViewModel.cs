@@ -1403,22 +1403,17 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
             RequestClose?.Invoke();
         }
 
-        private void OnOpenHelp()
+                private void OnOpenHelp()
         {
-            TaskDialog td = new TaskDialog("展開圖生成器 - 使用指南");
-            td.MainInstruction = "磁磚展開圖生成器 新手快速入門";
-            td.MainContent = "本工具專為快速建立室內空間牆面之磁磚展開圖設計，提供以下操作說明：\n\n" +
-                             "1. 選擇來源模式：\n" +
-                             "   - 以樓板為界 (Floor Mode)：點擊「選取 Revit 目標物件」選取一個地板 (Floor)。系統會自動抓取相鄰牆面，並以地板中心進行順時針排序 (命名為 A, B, C, D)。\n" +
-                             "   - 以牆為界 (Wall Mode)：點擊「選取 Revit 目標物件」在 Revit 中多選幾面牆體，按右上角完成。系統會直接保留您「手動點選的順序」編號命名。\n\n" +
-                             "2. 微調清單與排序：\n" +
-                             "   - 點擊「1. 選擇空間」載入幾何剖面清單，點選特定剖面可用右上角「▲ 上移」或「▼ 下移」調整順序與視圖編號。\n" +
-                             "   - 可雙擊視圖名稱欄位直接更名，或取消勾選不需建立的剖刀。\n\n" +
-                             "3. 連動微調參數：\n" +
-                             "   - 選擇單一項目，修改前移距離(WallOffset)、剖面深度(ViewDepth)、兩側延伸(SideExtension)、頂底偏移，右側 Plan & Section Canvas 將即時繪製藍色區域(深度範圍)與紅色切線。\n" +
-                             "   - 點擊「套用此設定至所有剖刀 (設為預設)」可快速批次套用。\n\n" +
-                             "4. 建立與排版：\n" +
-                             "   - 設定完畢後點擊最下方「一鍵產生磁磚展開圖」，工具會自動依序建立視圖、套用樣板並置入圖紙水平線上。";
+            string title = DevelopmentTools.Core.LanguageManager.Instance["Tut_TileElev_Title"];
+            string content = DevelopmentTools.Core.LanguageManager.Instance["Tut_TileElev_Content"];
+            Autodesk.Revit.UI.TaskDialog td = new Autodesk.Revit.UI.TaskDialog(title)
+            {
+                TitleAutoPrefix = false,
+                MainInstruction = title,
+                MainContent = content,
+                CommonButtons = Autodesk.Revit.UI.TaskDialogCommonButtons.Close
+            };
             td.Show();
         }
 

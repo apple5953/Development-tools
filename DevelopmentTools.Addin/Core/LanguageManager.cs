@@ -374,20 +374,6 @@ namespace DevelopmentTools.Core
             AddTranslation("RoomFinish_WallFinish", "牆面裝修 (Wall Finish)", "Wall Finish", "壁仕上げ");
             AddTranslation("RoomFinish_CeilingFinish", "天花板裝修 (Ceiling Finish)", "Ceiling Finish", "天井仕上げ");
             AddTranslation("RoomFinish_InputHint", "填入要批次寫入的材質代號或名稱，例如: T-01", "Enter the material code or name to batch write, e.g., T-01", "一括で書き込むマテリアルコードまたは名前を入力します（例：T-01）");
-            AddTranslation("RoomFinish_ApplyHint", "將上面填寫的材質規格套用到勾選的房間。若無勾選，則會套用到目前列表中過濾顯示的所有房間。", "Apply the material specifications above to the checked rooms. If none are checked, it applies to all rooms currently filtered in the list.", "上記で入力したマテリアル仕様を選択した部屋に適用します。チェックされていない場合は、現在リストでフィルター処理されているすべての部屋に適用されます。");
-            AddTranslation("TileSys_Tutorial", "❓ 新手教學", "❓ Tutorial", "❓ チュートリアル");
-            AddTranslation("TileSys_TutorialDesc", "點擊開啟新手圖文快速入門與排障指南", "Click to open the beginner illustrated quick start and troubleshooting guide.", "クリックして初心者向けの図解入りクイックスタートとトラブルシューティングガイドを開きます。");
-            AddTranslation("TileSys_Mode1", "▍ 鋪設磁磚填充線（讀取現有材質描述）", "▍ Pave Tile Patterns (Read from material desc)", "▍ タイルパターンの敷設（既存のマテリアルの説明を読み取る）");
-            AddTranslation("TileSys_Mode1_Btn", "📌 手動點選面 → 生成磁磚填充線", "📌 Manually select faces → Generate Tile Patterns", "📌 面を手動で選択 → タイルパターンを生成");
-            AddTranslation("TileSys_Mode1_Desc1", "點選任意牆面或地板面，自動讀取描述欄位內的磁磚尺寸與縫隙，疊加填充線（不動原有材質）", "Select any face to auto-read tile dimensions and joints, overlaying a hatch pattern (non-destructive).", "任意の面を選択して、タイルの寸法と目地を自動的に読み取り、ハッチパターンをオーバーレイします（非破壊的）。");
-            AddTranslation("TileSys_Mode1_Confirm", "✔ 1. 確認鋪貼並改寫原材質圖案", "✔ 1. Confirm and Override Pattern", "✔ 1. 割り当てを確定し、パターンを上書き");
-            AddTranslation("TileSys_Mode1_ConfirmDesc", "選取已 Paint 暫時填充線的面，將其確認為正式貼面並修改原有裝修層材質的前景 .pat 填充線", "Confirm painted faces as final and override the foreground .pat of the original finish material.", "ペイントされた面を最終として確定し、元の仕上げ材のフォアグラウンド .pat を上書きします。");
-            AddTranslation("TileSys_Gen3DWall2", "🧱 2-1. 建立 3D 牆面磁磚實體", "🧱 2-1. Generate 3D Wall Tiles", "🧱 2-1. 3D壁タイルを生成");
-            AddTranslation("TileSys_Gen3DWall_Desc", "點選已改寫前景填充線的牆面，依結構厚度生成 3D 牆面磁磚實體", "Select overridden wall faces to generate 3D tile elements based on structural thickness.", "上書きされた壁面を選択し、構造の厚みに基づいて3Dタイル要素を生成します。");
-            AddTranslation("TileSys_Gen3DFloor2", "🟨 2-2. 建立 3D 地坪磁磚實體", "🟨 2-2. Generate 3D Floor Tiles", "🟨 2-2. 3D床タイルを生成");
-            AddTranslation("TileSys_Gen3DFloor_Desc", "點選已改寫前景填充線的地坪面，依結構厚度生成 3D 地坪磁磚實體", "Select overridden floor faces to generate 3D tile elements based on structural thickness.", "上書きされた床面を選択し、構造の厚みに基づいて3Dタイル要素を生成します。");
-            AddTranslation("TileSys_ChangeTileMaterial2", "🎨 局部變更磁磚材質", "🎨 Change Local Tile Material", "🎨 局所的なタイルマテリアルを変更");
-            AddTranslation("TileSys_ChangeTileMaterial_Desc", "選取多塊已生成的 3D 磁磚，批次變更其局部材質與樣式", "Select multiple generated 3D tiles to batch change their individual materials.", "生成された複数の3Dタイルを選択し、個々のマテリアルを一括で変更します。");
             AddTranslation("TileSys_ConvertToEditable2", "📐 轉換為可編輯磁磚", "📐 Convert to Editable Tiles", "📐 編集可能なタイルに変換");
             AddTranslation("TileSys_ConvertToEditable_Desc", "點選不可調整的 3D 磁磚，原地轉換為原生 Walls / Floors 元件，即可雙擊 Edit Profile 進行修改", "Select non-adjustable 3D tiles and convert them to native Walls/Floors for profile editing.", "調整不可能な3Dタイルを選択し、プロファイル編集用にネイティブな壁/床に変換します。");
             AddTranslation("TileSys_Stats2D2", "📊 3. 平面幾何統計", "📊 3. 2D Geometry Stats", "📊 3. 2D ジオメトリ統計");
@@ -460,6 +446,283 @@ namespace DevelopmentTools.Core
             AddTranslation("Common_Warning", "提示", "Warning", "警告");
             AddTranslation("Common_Error", "錯誤", "Error", "エラー");
             AddTranslation("Common_NoTemplate", "[不套用樣板]", "[No Template]", "[テンプレートなし]");
+
+            // ----------------------------------------------------------------
+            // 新手教學彙整多國語言
+            // ----------------------------------------------------------------
+            AddTranslation("TileSys_Tutorial", "新手說明", "Tutorial", "チュートリアル");
+            AddTranslation("TileSys_TutorialDesc", "開啟此工具的新手使用指南與操作步驟說明", "Open user guide and step-by-step instructions for this tool", "このツールのユーザーガイドとステップバイステップの手順を表示します");
+
+            // 1. 磁磚鋪設系統 (TileSys)
+            AddTranslation("Tut_TileSys_Title", "磁磚鋪設系統 - 新手指南", "Tile Layout System - Guide", "タイルレイアウトシステム - ガイド");
+            AddTranslation("Tut_TileSys_Content", "【快捷排磚四部曲】\n" +
+                                     "1. [點選面預覽] - 點擊「手動點選面 → 生成磁磚填充線」，在視圖中點選要鋪磁磚的牆面或地板面。\n" +
+                                     "2. [確認鋪貼] - 點擊「確認鋪貼並改寫原材質圖案」，點選該面將排版填充線正式寫入材質中。\n" +
+                                     "3. [生成3D實體] - 點擊「建立 3D 牆面磁磚實體」或「建立 3D 地坪磁磚實體」，選取面即可生成 3D 磁磚實體。\n" +
+                                     "4. [人工修整收邊] - 點選需要修剪的磁磚，點擊「轉換為可編輯磁磚」，即可雙擊或使用 Revit 的「編輯輪廓」按鈕手動裁剪不規則邊角。\n\n" +
+                                     "【關鍵提示】\n" +
+                                     "• [縫隙參數]：首次使用本外掛時，請點擊最下方的「裝修牆縫隙參數」與「裝修地板縫隙參數」，在專案中加入 Tile_Joint_Width 縫寬屬性。\n" +
+                                     "• [局部變更]：使用「局部變更磁磚材質」可以多選 3D 磁磚進行局部更換材質球（如腰線）。\n" +
+                                     "• [明細與導出]：使用「建立 Revit 明細表」或「匯出 Excel 統計表」可輕鬆統計工程量與出圖。", 
+                                     "【4-Step Quick Start】\n" +
+                                     "1. [Select Face & Preview] - Click 'Manually select faces -> Generate Tile Patterns' and select target wall/floor faces in your view.\n" +
+                                     "2. [Confirm Layout] - Click '1. Confirm and Override Pattern' and select the face to write the pattern to the material.\n" +
+                                     "3. [Generate 3D Tiles] - Click '2-1. Generate 3D Wall Tiles' or '2-2. Generate 3D Floor Tiles' and click the face.\n" +
+                                     "4. [Manual Edit] - Choose tiles, click 'Convert to Editable Tiles' to enable native profile editing.\n\n" +
+                                     "【Key Tips】\n" +
+                                     "• [Joint Parameter] - Run 'Wall Finish Joint Parameter' & 'Floor Finish Joint Parameter' on first use to inject joint width attributes.\n" +
+                                     "• [Local Change] - Use 'Change Local Tile Material' to batch change material types for specific tiles (e.g. border tiles).\n" +
+                                     "• [Export & Schedule] - Export to Excel or generate Revit schedule for quick estimates.",
+                                     "【タイル配置の4つの手順】\n" +
+                                     "1. [面を選択してプレビュー] - 「面を手動で選択 → タイルパターンを生成」をクリックし、ビュー内の壁面または床面を選択します。\n" +
+                                     "2. [配置を確定] - 「1. 割り当てを確定し、パターンを上書き」をクリックし、該当する面を選択してパターンを適用します。\n" +
+                                     "3. [3Dタイルの作成] - 「2-1. 3D壁タイルを生成」または「2-2. 3D床タイルを生成」をクリックして、該当面を選択します。\n" +
+                                     "4. [手動微調整] - 「編集可能なタイルに変換」をクリックして、Revit標準の「プロファイルを編集」で形状をトリミングします。\n\n" +
+                                     "【重要なヒント】\n" +
+                                     "• [目地パラメータ] - 初回使用時は、最下部の「壁仕上げ目地パラメータ」「床仕上げ目地パラメータ」をクリックし、プロジェクトに Tile_Joint_Width 属性を追加してください。\n" +
+                                     "• [部分変更] - 「局所的なタイルマテリアルを変更」を使用して、一部のタイルのマテリアルを変更できます。\n" +
+                                     "• [集計表と出力] - 「Revit 集計表を作成」または「Excel 統計をエクスポート」を使用して数量を集計します。");
+
+            // 2. 展開圖生成器 (TileElev)
+            AddTranslation("Tut_TileElev_Title", "展開圖生成器 - 新手指南", "Tile Elevation Generator - Guide", "タイル立面ジェネレーター - ガイド");
+            AddTranslation("Tut_TileElev_Content", "【快速入門三步驟】\n" +
+                                     "1. [選擇來源模式與物件]：\n" +
+                                     "   - 以樓板為界 (Floor Mode)：選取一個地板，系統會自動抓取相鄰牆面並以順時針方向排序 (命名為 A, B, C, D)。\n" +
+                                     "   - 以牆為界 (Wall Mode)：在 Revit 中多選多面牆體，系統會完全依據您「點選的先後順序」進行編號排序與命名。\n" +
+                                     "2. [微調清單與參數]：\n" +
+                                     "   - 點擊「1. 選擇空間」載入幾何剖面清單，可用「▲ 上移」或「▼ 下移」調整順序與編號。\n" +
+                                     "   - 點選特定項目，修改前移距離(WallOffset)、剖面深度(ViewDepth)、兩側延伸(SideExtension)、上下偏移，右側 Canvas 將即時繪製範圍示意圖。\n" +
+                                     "3. [一鍵建立與排版]：\n" +
+                                     "   - 設定完畢後，點擊「一鍵產生磁磚展開圖」，工具會自動建立剖面視圖、套用樣板並置入圖紙中對齊排列。",
+                                     "【Quick Start Guide】\n" +
+                                     "1. [Choose Mode & Elements]:\n" +
+                                     "   - By Floor Mode: Select a floor. Adjacent walls are auto-detected and sorted clockwise (A, B, C, D).\n" +
+                                     "   - By Wall Mode: Multi-select walls. Sorted and numbered exactly by your 'clicking order'.\n" +
+                                     "2. [Refine settings]:\n" +
+                                     "   - Click '1. Select Space' to load profiles. Reorder items using '▲ Move Up' and '▼ Move Down'.\n" +
+                                     "   - Select an item to tweak Wall Offset, View Depth, Side Extension, Top/Bottom Offsets. Preview changes instantly on the right Canvas.\n" +
+                                     "3. [Generate & Layout]:\n" +
+                                     "   - Click 'Generate Elevation' to automatically create section views, apply templates, and layout views onto a sheet aligned horizontally.",
+                                     "【操作の3ステップ】\n" +
+                                     "1. [選択モードとオブジェクト]：\n" +
+                                     "   - 床を基準 (Floor Mode)：床を選択すると、隣接する壁が時計回りに自動検出されます (A, B, C, D と命名)。\n" +
+                                     "   - 壁を基準 (Wall Mode)：複数の壁を選択します。選択された「クリック順」に番号付けと名前付けが行われます。\n" +
+                                     "2. [リストとパラメータの微調整]：\n" +
+                                     "   - 「1. 空間を選択」をクリックしてリストをロードし、「▲ 上へ」「▼ 下へ」で順序を調整できます。\n" +
+                                     "   - 壁オフセット、ビュー奥行き、左右延長、上下オフセットを微調整すると、右側のキャンバスにプレビューが即座に描画されます。\n" +
+                                     "3. [自動生成と配置]：\n" +
+                                     "   - 設定完了後、「立面を作成」をクリックすると、ビューの作成、テンプレートの適用、シートへの配置が一括で実行されます。");
+
+            // 3. 房間裝修配置工具 (RoomFinish)
+            AddTranslation("Tut_RoomFinish_Title", "房間裝修配置工具 - 新手指南", "Room Finish Configurator - Guide", "部屋仕上げ設定ツール - ガイド");
+            AddTranslation("Tut_RoomFinish_Content", "【快速入門說明】\n" +
+                                     "1. [房間篩選與載入]：\n" +
+                                     "   - 工具開啟後，左側會列出目前專案內所有房間。可依據樓層或房間名稱進行篩選過濾。\n" +
+                                     "2. [批量填入裝修屬性]：\n" +
+                                     "   - 在「批量填入裝修值」區塊，選擇目標欄位 (地板、牆面、天花板、踢腳板)，輸入材質代號/規格 (例如 F-01)，點擊「套用」即可將規格寫入所有已勾選的房間。\n" +
+                                     "   - 亦可直接在右側表格中，雙擊材質欄位以進行單個房間的獨立修改。\n" +
+                                     "3. [自動產生裝修實體模型]：\n" +
+                                     "   - 設定好材質參數後，在最下方選擇接合優先順序 (地坪優先或牆優先)，點擊「生成選中房間的裝修」，外掛會依據房間邊界自動生成實體牆面、地坪與天花板的細部粉刷層，並自動扣除門窗洞口！",
+                                     "【Introduction】\n" +
+                                     "1. [Filter & Load Rooms]:\n" +
+                                     "   - Centrally lists all rooms in the project on the right table. Filter by Level or Name on the top.\n" +
+                                     "2. [Batch Assign Finishes]:\n" +
+                                     "   - In 'Batch Fill Finishes', select a target field (Base, Wall, Ceiling, Baseboard), type a material spec (e.g. F-01), and click 'Apply to Selected'.\n" +
+                                     "   - You can also double-click cells in the table to edit room parameters individually.\n" +
+                                     "3. [Auto-Generate Geometry]:\n" +
+                                     "   - Tweak the 'Joint Relation' settings (Floor First or Wall First) and click 'Generate Room Finishes'. It will auto-create physical Revit walls/floors finish layers based on room bounds, cutting out doors/windows openings automatically!",
+                                     "【クイックユーザーガイド】\n" +
+                                     "1. [部屋のフィルタリングとロード]：\n" +
+                                     "   - ツール起動後、左側にプロジェクト内のすべての部屋が表示されます。レベルや部屋名でフィルタリングできます。\n" +
+                                     "2. [仕上げ属性の一括入力]：\n" +
+                                     "   - 「仕上げ値を一括入力」で対象フィールド (床、壁、天井、幅木) を選択し、コード（例：F-01）を入力して「適用」をクリックします。\n" +
+                                     "   - 右側の表でセルをダブルクリックして、個別の部屋のパラメータを直接編集することも可能です。\n" +
+                                     "3. [仕上げモデルの自動生成]：\n" +
+                                     "   - 設定完了後、接合優先順（床優先または壁優先）を選択し、「仕上げモデルを生成」をクリックすると、部屋の境界線に沿って自動的に壁・床・天井の仕上げモデルが生成され、開口部も自動で控除されます。");
+
+            // 4. 圖紙批次更名 (BatchRename)
+            AddTranslation("Tut_BatchRename_Title", "圖紙批次更名 - 新手指南", "Batch Sheet Renamer - Guide", "シート一括名前変更 - ガイド");
+            AddTranslation("Tut_BatchRename_Content", "【快捷更名三法寶】\n" +
+                                     "1. [尋找與取代]：\n" +
+                                     "   - 選擇目標欄位 (編號或名稱)，輸入尋找文字與取代文字，點擊「套用取代」，即可批次完成部分文字替換。\n" +
+                                     "2. [加入前綴與後綴]：\n" +
+                                     "   - 可為選取的圖紙編號或名稱前方/後方批次加上特定字元 (例如在編號前方加上 A-)。\n" +
+                                     "3. [自動流水號重排]：\n" +
+                                     "   - 輸入起始號碼 (如 A-101) 與增量 (如 1 或 2)，點擊「套用流水號」，系統會為選取的圖紙自動依序編號。\n\n" +
+                                     "★ [無衝突二階段寫入]：\n" +
+                                     "   - 填寫完新編號後，點擊「確認修改」，工具底層會以兩階段臨時編號法更新 Revit 圖紙編號，徹底避免 Revit 內建的「圖紙編號重複」衝突警告，讓您輕鬆重排圖紙順序！",
+                                     "【Quick Start Guide】\n" +
+                                     "1. [Find & Replace]:\n" +
+                                     "   - Select target field (Number or Name), input 'Find What' and 'Replace With', then click 'Apply Replace'.\n" +
+                                     "2. [Add Prefix / Suffix]:\n" +
+                                     "   - Add specific characters (e.g. 'A-') to the start or end of your sheets batch-wise.\n" +
+                                     "3. [Auto Numbering]:\n" +
+                                     "   - Set a start number (e.g. A-101) and an increment value. Click 'Apply Numbering' to re-sequence selected sheets.\n\n" +
+                                     "★ [Non-conflict 2-Step Writing]:\n" +
+                                     "   - When clicking 'Apply Changes', the backend uses a temporary naming strategy to safely swap sheet numbers, bypassing Revit's strict 'Sheet Number already in use' constraints.",
+                                     "【便利な一括リネーム機能】\n" +
+                                     "1. [検索と置換]：\n" +
+                                     "   - 対象フィールド (番号または名前) を選択し、検索文字列と置換文字列を入力して「置換を適用」をクリックします。\n" +
+                                     "2. [接頭辞 / 接尾辞の追加]：\n" +
+                                     "   - 選択したシートの番号または名前の前後に、特定の文字列 (例: 「A-」など) を一括追加します。\n" +
+                                     "3. [自動連番]：\n" +
+                                     "   - 開始番号（例：A-101）と増分を入力し、「連番を適用」をクリックして自動的に再採番します。\n\n" +
+                                     "★ [重複回避の2段階書き込み]：\n" +
+                                     "   - 「変更を適用」をクリックすると、ツールは自動的に一時的な番号を経由して更新を行うため、Revitの「シート番号の重複」エラーを回避してスムーズに並べ替えることができます。");
+
+            // 5. 快速尺寸標註 (QuickDim)
+            AddTranslation("Tut_QuickDim_Title", "快速尺寸標註 - 新手指南", "Quick Dimension - Guide", "クイック寸法 - ガイド");
+            AddTranslation("Tut_QuickDim_Content", "【快速標註操作法】\n" +
+                                     "1. [選擇標註模式]：\n" +
+                                     "   - 柱 - 柱 (Column to Column)：多選多個柱子，自動連貫標註各柱子中心至中心尺寸。\n" +
+                                     "   - 牆 - 牆 (Wall to Wall)：選取多面平行牆體，自動連貫標註各牆體中心至中心尺寸。\n" +
+                                     "   - 牆 - 邊界 (Wall to Edge)：選取多面平行牆體，自動標註牆面外側淨寬與牆厚度尺寸。\n" +
+                                     "   - 開口標註 (Opening)：選取單一牆體，自動偵測並標註該牆面上所有門、窗或洞口的寬度與定位。\n" +
+                                     "2. [設定參數與執行]：\n" +
+                                     "   - 在下拉選單選擇標註樣式，並設定標註線的偏移距離 (Offset Distance)。\n" +
+                                     "   - 點擊「開始標註」後，視窗會自動隱藏，請在 Revit 視圖中依據提示選擇對應的物件，即可秒級生成標註線！",
+                                     "【Introduction】\n" +
+                                     "1. [Choose Dimension Mode]:\n" +
+                                     "   - Column to Column: Select multiple columns to auto-create aligned dimension lines through column centers.\n" +
+                                     "   - Wall to Wall: Select parallel walls to dimension wall centerlines continuously.\n" +
+                                     "   - Wall to Edge: Select parallel walls to dimension net widths between faces and wall thicknesses.\n" +
+                                     "   - Opening: Select a single wall to automatically tag all windows, doors, and opening boundaries on that wall.\n" +
+                                     "2. [Parameter Settings]:\n" +
+                                     "   - Choose a Dimension Style, and adjust the 'Offset Distance' slider.\n" +
+                                     "   - Click 'Start Dimension'. The window will temporarily hide. Go ahead and select the elements in Revit to automatically generate the dimension strings!",
+                                     "【クイック寸法の操作方法】\n" +
+                                     "1. [寸法モードの選択]：\n" +
+                                     "   - 柱 - 柱：複数の柱を選択し、それぞれの中心から中心への連続寸法を自動作成します。\n" +
+                                     "   - 壁 - 壁：複数の平行な壁を選択し、それぞれの中心線間の連続寸法を作成します。\n" +
+                                     "   - 壁 - 境界：複数の平行な壁を選択し、壁の内法幅および壁厚寸法を自動作成します。\n" +
+                                     "   - 開口部：1つの壁を選択すると、その壁に配置されているすべての窓、ドア、開口部の幅と位置寸法を自動抽出します。\n" +
+                                     "2. [パラメータ設定と実行]：\n" +
+                                     "   - 寸法スタイルを選択し、寸法線の「オフセット距離」を設定します。\n" +
+                                     "   - 「寸法作成開始」をクリックするとウィンドウが非表示になるので、Revit上で要素を選択すると即座に寸法線が生成されます。");
+
+            // 6. 快速開圖套樣板 (QuickView)
+            AddTranslation("Tut_QuickView_Title", "快速建置視圖 - 新手指南", "Quick View Creator - Guide", "クイックビュー作成 - ガイド");
+            AddTranslation("Tut_QuickView_Content", "【快速開圖說明】\n" +
+                                     "1. [選擇來源視圖]：\n" +
+                                     "   - 左側列表會樹狀展開目前專案內的所有平面視圖，可使用關鍵字搜尋。勾選您想要複製或作為範本來源的視圖。\n" +
+                                     "2. [設定樣板與數量]：\n" +
+                                     "   - 在中間控制台，選擇複製後要自動套用的「視圖樣板」。\n" +
+                                     "   - 輸入要生成的數量 (例如為多個設計階段複製 3 份)，點擊「加入清單」。\n" +
+                                     "3. [確認並批量建立]：\n" +
+                                     "   - 右側清單會預覽即將產生的新視圖名稱與編號。可直接在表格中點擊修改目標名稱。\n" +
+                                     "   - 若勾選「建立圖紙」，外掛會同步建立空白圖紙並自動將生成的新視圖放置上去。\n" +
+                                     "   - 確認無誤後，點擊「開始建立」即可批量執行。",
+                                     "【Introduction】\n" +
+                                     "1. [Select Source Views]:\n" +
+                                     "   - The left panel displays all project plan views in a tree structure. Search using keywords. Check the views you want to duplicate.\n" +
+                                     "2. [Configure Templates & Count]:\n" +
+                                     "   - In the middle, select the 'View Template' to be applied to the duplicated views.\n" +
+                                     "   - Set the duplicate copy count (e.g. 3 copies), then click 'Add to List'.\n" +
+                                     "3. [Verify & Batch Create]:\n" +
+                                     "   - The right panel shows a preview of target view names and numbers. You can directly edit name cells.\n" +
+                                     "   - Toggle 'Create Sheet' if you want a blank sheet created with the view pre-placed on it.\n" +
+                                     "   - Click 'Start Creation' to run the batch process.",
+                                     "【操作手順の案内】\n" +
+                                     "1. [ソースビューの選択]：\n" +
+                                     "   - 左側のリストにプロジェクト内のすべての平面ビューがツリー形式で表示されます。複製元にしたいビューにチェックを入れます。\n" +
+                                     "2. [テンプレートと数量の設定]：\n" +
+                                     "   - 中央のパネルで、複製後に適用する「ビューテンプレート」を選択します。\n" +
+                                     "   - 作成するコピー数を入力し、「リストに追加」をクリックします。\n" +
+                                     "3. [確認と一括作成]：\n" +
+                                     "   - 右側のプレビューリストに作成される新しいビュー名が表示されます。セルを直接クリックして名前を修正できます。\n" +
+                                     "   - 「シート作成」を有効にすると、新規シートを作成して自動的にビューを配置します。\n" +
+                                     "   - 確認後、「作成開始」をクリックして実行します。");
+
+            // 7. 圖紙視圖排版 (SheetPlacer)
+            AddTranslation("Tut_SheetPlacer_Title", "圖紙視圖排版 - 新手指南", "Sheet View Placer - Guide", "シートビュー配置 - ガイド");
+            AddTranslation("Tut_SheetPlacer_Content", "【圖紙排版雙模式指南】\n" +
+                                     "1. [視覺排版模式] (拖曳放置)：\n" +
+                                     "   - 步驟 1：左側清單會列出專案中「尚未放置於圖紙」的視圖與明細表。\n" +
+                                     "   - 步驟 2：選中某個視圖後，在右側圖紙的灰色虛擬畫布區域點擊，即可預置視圖範圍框。\n" +
+                                     "   - 步驟 3：在畫布上直接拖曳視圖框可以微調排版位置，完成後會同步寫回 Revit。\n" +
+                                     "2. [數值排版模式] (精確對齊與網格)：\n" +
+                                     "   - 切換至「數值排版」頁籤，選取多個視圖後，點擊對齊工具 (如: 靠左對齊、垂直置中、對齊標題) 進行精準排版。\n" +
+                                     "   - 網格排版：設定網格列數、欄數、行間距(Gap X/Y)，點擊「套用網格」，系統會將視圖自動以矩陣網格方式整齊排列在圖紙中！\n\n" +
+                                     "★ [提示]：上方可設定預設圖框與視埠類型，下方可點擊「新增圖紙」即時建立新圖框圖紙。",
+                                     "【Layout Guide】\n" +
+                                     "1. [Visual Layout Mode] (Click & Drag):\n" +
+                                     "   - Step 1: Select an unplaced view or schedule from the left tree list.\n" +
+                                     "   - Step 2: Click inside the grey canvas on the right (representing the sheet) to place the viewport outline box.\n" +
+                                     "   - Step 3: Drag viewport outline boxes around the sheet canvas to layout views interactively.\n" +
+                                     "2. [Numeric Layout Mode] (Alignments & Grid):\n" +
+                                     "   - Switch to 'Numeric Layout' tab. Select multiple placed viewports, and click alignment buttons (e.g. Align Left, Align V-Center, Align Titles) to snap positions.\n" +
+                                     "   - Grid Layout: Input rows, columns, and grid spacing (Gap X/Y). Click 'Apply Grid' to arrange selected views in an organized grid automatically!\n\n" +
+                                     "★ [Tips]: Configure default title blocks or viewports at the top, and click 'New Sheet' to create sheets instantly.",
+                                     "【シートレイアウト機能の使い方】\n" +
+                                     "1. [ビジュアル配置モード] (ドラッグ＆ドロップ)：\n" +
+                                     "   - ステップ 1：左側のリストから、シートに未配置のビューまたは集計表を選択します。\n" +
+                                     "   - ステップ 2：右側のシートプレビュー領域（グレーのキャンバス）をクリックして、ビューを配置します。\n" +
+                                     "   - ステップ 3：配置されたビュー枠をドラッグして位置を微調整します。\n" +
+                                     "2. [数値配置モード] (整列とグリッド)：\n" +
+                                     "   - 「数値配置」タブに切り替えます。複数のビューを選択し、整列ツール（左揃え、垂直中央揃え、タイトル整列など）で位置を揃えます。\n" +
+                                     "   - グリッド配置：行数、列数、間隔を入力し、「グリッドを適用」をクリックすると、ビューがマトリクス状に整然と自動配置されます。\n\n" +
+                                     "★ [ヒント]：上部で既定のタイトルブロックとビューポートタイプを設定でき、下部で「新規シート」を追加できます。");
+
+            // 8. 圖紙逐層量化 (SheetDuplicator)
+            AddTranslation("Tut_SheetDuplicator_Title", "圖紙逐層量化 - 新手指南", "Sheet Duplicator - Guide", "シート複製ツール - ガイド");
+            AddTranslation("Tut_SheetDuplicator_Content", "【樓層量化開圖說明】\n" +
+                                     "1. [輸入標準圖紙前綴並分析]：\n" +
+                                     "   - 輸入標準範本圖紙的編號前綴 (例如以 1F 圖紙 A-10 開頭)，點擊「分析」。\n" +
+                                     "   - 系統會解析範本圖紙，樹狀顯示該圖紙上放置了哪些「視圖」及其相對座標、比例與視圖樣板。\n" +
+                                     "2. [選擇目標樓層]：\n" +
+                                     "   - 在下方目標樓層列表中，勾選您要複製量化出來的目標樓層 (例如 2F, 3F, 4F 等)。\n" +
+                                     "3. [執行量化複製]：\n" +
+                                     "   - 點擊「執行量化開圖」，外掛會針對每個勾選的樓層自動做以下事情：\n" +
+                                     "     a. 複製範本圖紙對應的新圖紙，並建立同類型圖框。\n" +
+                                     "     b. 依據目標樓層自動複製新的平面圖/天花板圖說，套用原視圖樣板，並將視圖範圍切換至目標高程。\n" +
+                                     "     c. 精確將新視圖放置於新圖紙的「同一個座標位置」，完美實現多樓層圖紙的逐層量化複製！",
+                                     "【Introduction】\n" +
+                                     "1. [Input Prefix & Analyze]:\n" +
+                                     "   - Enter the sheet number prefix of your template sheets (e.g. 'A-10' for 1F sheets) and click 'Analyze'.\n" +
+                                     "   - Displays a tree showing views placed on these sheets, along with their coordinates, scales and templates.\n" +
+                                     "2. [Select Target Levels]:\n" +
+                                     "   - Check target levels (e.g. 2F, 3F, 4F) in the bottom list to create duplicate sheets for.\n" +
+                                     "3. [Run Quantified Duplication]:\n" +
+                                     "   - Click 'Generate Sheets'. For each selected level, the tool will automatically:\n" +
+                                     "     a. Create new sheets matching the template layout and title block type.\n" +
+                                     "     b. Duplicate plan/ceiling views, assign original templates, and update view ranges to target levels.\n" +
+                                     "     c. Place duplicated views onto the new sheets at the exact coordinates as the template sheets, ensuring standard alignment across levels!",
+                                     "【フロア一括展開の使い方】\n" +
+                                     "1. [基準シート接頭辞の入力と分析]：\n" +
+                                     "   - 基準となるテンプレートシートの番号接頭辞 (例: 1F用の A-10 など) を入力し、「分析」をクリックします。\n" +
+                                     "   - 該当シート上の配置ビュー、その相対座標、尺度、テンプレート情報がツリー表示されます。\n" +
+                                     "2. [対象レベルの選択]：\n" +
+                                     "   - 下部の対象レベルリストで、シートを展開したいフロア（例：2F, 3F, 4Fなど）にチェックを入れます。\n" +
+                                     "3. [展開複製の実行]：\n" +
+                                     "   - 「シート作成実行」をクリックします。チェックされたフロアごとに、ツールが以下を自動実行します：\n" +
+                                     "     a. 同じタイトルブロックを使用して新しいシートを作成します。\n" +
+                                     "     b. ソースとなる平面図や天井伏図を複製し、元のテンプレートを適用して、ビュー範囲を対象レベルに自動変更します。\n" +
+                                     "     c. 新しいビューを新規シート上の「全く同じ相対座標」に配置し、複数フロアの図面レイアウトを完全一致で自動作成します。");
+
+            // 9. 跨專案圖紙轉移 (SheetTransfer)
+            AddTranslation("Tut_SheetTransfer_Title", "跨專案圖紙轉移 - 新手指南", "Sheet Transfer - Guide", "シート転送 - ガイド");
+            AddTranslation("Tut_SheetTransfer_Content", "【跨檔案轉移指南】\n" +
+                                     "1. [載入來源專案]：\n" +
+                                     "   - 在下拉選單中選擇其他已在 Revit 中開啟的專案檔案作為來源專案。\n" +
+                                     "2. [挑選轉移項目]：\n" +
+                                     "   - 列表中會載入該檔案內的所有圖紙、詳圖視圖、圖例 (Legend) 以及明細表 (Schedule)。\n" +
+                                     "   - 勾選您想要導入到當前專案的項目。\n" +
+                                     "3. [執行複製與置入]：\n" +
+                                     "   - 點擊「開始轉移」，工具將完美保留圖框尺寸與排版格式，將圖紙上的所有詳圖、明細表以及圖紙元件一同完整拷貝並置入當前專案中，免去手動匯出/匯入的繁瑣步驟！",
+                                     "【Introduction】\n" +
+                                     "1. [Select Source Project]:\n" +
+                                     "   - Select another currently opened Revit project from the dropdown menu.\n" +
+                                     "2. [Select Elements to Transfer]:\n" +
+                                     "   - Choose the sheets, drafting views, legends, and schedules you want to copy into your current file.\n" +
+                                     "3. [Execute Transfer]:\n" +
+                                     "   - Click 'Start Transfer'. The tool imports all checked title blocks, details, and schedules directly, placing them in current workspace at identical coordinates without manual export/import!",
+                                     "【別プロジェクトからのシート転送ガイド】\n" +
+                                     "1. [コピー元プロジェクトの選択]：\n" +
+                                     "   - プルダウンメニューから、現在Revitで開かれている別のプロジェクトファイルを選択します。\n" +
+                                     "2. [転送項目の選択]：\n" +
+                                     "   - 選択されたプロジェクト内のシート、製図ビュー、凡例、集計表がリストアップされます。現在のプロジェクトに読み込みたい項目にチェックを入れます。\n" +
+                                     "3. [転送の実行]：\n" +
+                                     "   - 「転送開始」をクリックすると、タイトルブロックのサイズやレイアウトを維持したまま、シート上の製図ビューや集計表などを現在のプロジェクトに一括コピーします。手動での書き出し・読み込みの手間を大幅に削減できます。");
         }
 
         private void AddTranslation(string key, string zh, string en, string ja)
