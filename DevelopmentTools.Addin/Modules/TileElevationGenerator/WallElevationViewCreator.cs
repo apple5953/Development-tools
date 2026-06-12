@@ -86,27 +86,6 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 throw new InvalidOperationException("無法建立 Section 視圖。");
             }
 
-            // 強制啟用裁剪框
-            section.CropBoxActive = true;
-
-            // 讀取 Revit 自動對齊並鎖定後的實體 CropBox
-            BoundingBoxXYZ actualBox = section.CropBox;
-            XYZ actualOrigin = actualBox.Transform.Origin;
-
-            // 重新計算基於真實 Origin.Z 的垂直邊界，確保世界座標下的底頂高程為精確的 [zMin, zMax]
-            double zMin = data.LevelElevation - bottomOffsetFeet;
-            double zMax = data.LevelElevation + heightFeet + topOffsetFeet;
-
-            double localMinY = zMin - actualOrigin.Z;
-            double localMaxY = zMax - actualOrigin.Z;
-
-            // 僅覆寫局部 Y 座標 (高度)，其餘 X (寬度) 和 Z (深度) 完全繼承自 Revit 建立時的正確邊界，防堵寬度被改壞
-            actualBox.Min = new XYZ(actualBox.Min.X, localMinY, actualBox.Min.Z);
-            actualBox.Max = new XYZ(actualBox.Max.X, localMaxY, actualBox.Max.Z);
-
-            // 重新套用
-            section.CropBox = actualBox;
-
             // 5. 設定視圖名稱
             section.Name = viewName;
 
@@ -116,7 +95,67 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                 section.ViewTemplateId = settings.SelectedViewTemplateId;
             }
 
+            // 7. 重新套用幾何高度與寬度裁剪 (在此時已套用樣板後，重新寫入 CropBox 即可防止被重置)
+            ReApplyCropBox(section, data, settings);
+
             return section;
+        }
+
+        public static void ReApplyCropBox(ViewSection section, WallElevationData data, GeneratorSettings settings)
+        {
+            if (section == null || data == null || settings == null) return;
+
+            // 強制啟用裁剪框
+            section.CropBoxActive = true;
+
+            // 讀取 Revit 自動對齊並鎖定後的實體 CropBox
+            BoundingBoxXYZ actualBox = section.CropBox;
+            XYZ actualOrigin = actualBox.Transform.Origin;
+
+            double bottomOffsetFeet = settings.BottomOffset / 304.8;            // 底部延伸量
+            double topOffsetFeet = settings.TopOffset / 304.8;                        // 頂部延伸量
+            double heightFeet = data.WallHeight;
+
+            // 重新計算基於真實 Origin.Z 的垂直邊界，確保世界座標下的底頂高程為精確的 [zMin, zMax]
+            double zMin = data.LevelElevation - bottomOffsetFeet;
+            double zMax = data.LevelElevation + heightFeet + topOffsetFeet;
+
+            // 使用 Revit 正統的逆矩陣變換，將世界座標點精確投影到剖面的局部座標系中，取得局部 Y 軸 (高度) 座標
+            XYZ wMin = new XYZ(actualOrigin.X, actualOrigin.Y, zMin);
+            XYZ wMax = new XYZ(actualOrigin.X, actualOrigin.Y, zMax);
+
+            XYZ localMinPt = actualBox.Transform.Inverse.OfPoint(wMin);
+            XYZ localMaxPt = actualBox.Transform.Inverse.OfPoint(wMax);
+
+            double localMinY = localMinPt.Y;
+            double localMaxY = localMaxPt.Y;
+
+            // 寫入詳細的除錯日誌，追蹤 Revit 實體高程偏移
+            App.Log($"[TileElevation] ViewName: {section.Name}");
+            App.Log($"[TileElevation] data.LevelElevation (Feet): {data.LevelElevation} ({data.LevelElevation * 304.8} mm)");
+            App.Log($"[TileElevation] heightFeet (Feet): {heightFeet} ({heightFeet * 304.8} mm)");
+            App.Log($"[TileElevation] bottomOffsetFeet: {bottomOffsetFeet}, topOffsetFeet: {topOffsetFeet}");
+            App.Log($"[TileElevation] Calculated Target World Range: [{zMin}, {zMax}] (Feet)");
+            App.Log($"[TileElevation] actualOrigin: ({actualOrigin.X}, {actualOrigin.Y}, {actualOrigin.Z}) (Feet)");
+            
+            // 僅覆寫局部 Y 座標 (高度)，其餘 X (寬度) 和 Z (深度) 完全繼承自 Revit 建立時的正確邊界，防堵寬度被改壞
+            actualBox.Min = new XYZ(actualBox.Min.X, localMinY, actualBox.Min.Z);
+            actualBox.Max = new XYZ(actualBox.Max.X, localMaxY, actualBox.Max.Z);
+
+            // 重新套用
+            section.CropBox = actualBox;
+
+            // 再次驗證寫入後的 CropBox 狀況
+            try
+            {
+                BoundingBoxXYZ afterBox = section.CropBox;
+                App.Log($"[TileElevation] afterBox.Min: ({afterBox.Min.X}, {afterBox.Min.Y}, {afterBox.Min.Z})");
+                App.Log($"[TileElevation] afterBox.Max: ({afterBox.Max.X}, {afterBox.Max.Y}, {afterBox.Max.Z})");
+            }
+            catch (Exception ex)
+            {
+                App.Log($"[TileElevation] Error checking CropBox after apply: {ex.Message}");
+            }
         }
 
         private static ElementId GetSectionViewFamilyTypeId(Document doc)

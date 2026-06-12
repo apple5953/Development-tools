@@ -805,6 +805,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
         private List<WallElevationData> _tempWallDataList = new List<WallElevationData>();
         private List<ViewSection> _tempCreatedViews = new List<ViewSection>();
         private System.Collections.Generic.Dictionary<ElementId, WallElevationData> _viewToDataMap = new System.Collections.Generic.Dictionary<ElementId, WallElevationData>();
+        private System.Collections.Generic.Dictionary<ElementId, GeneratorSettings> _viewToSettingsMap = new System.Collections.Generic.Dictionary<ElementId, GeneratorSettings>();
 
         // 步驟是否完成的狀態 flags
         private bool _isStep1Ok = false;
@@ -1163,6 +1164,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                     {
                         tx.Start();
                         _viewToDataMap.Clear();
+                        _viewToSettingsMap.Clear();
                         foreach (var item in selectedItems)
                         {
                             var tempSettings = new GeneratorSettings
@@ -1181,10 +1183,36 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             {
                                 _tempCreatedViews.Add(view);
                                 _viewToDataMap[view.Id] = item.GeometryData;
+                                _viewToSettingsMap[view.Id] = tempSettings;
                             }
                         }
                         tx.Commit();
                         _isStep2Ok = true;
+
+                        // 彙整剖面高度與寬度報告
+                        var reportLines = new List<string>();
+                        foreach (var view in _tempCreatedViews)
+                        {
+                            try
+                            {
+                                BoundingBoxXYZ box = view.CropBox;
+                                double originZ = box.Transform.Origin.Z;
+                                double minZ = (originZ + box.Min.Y) * 304.8;
+                                double maxZ = (originZ + box.Max.Y) * 304.8;
+                                double width = (box.Max.X - box.Min.X) * 304.8;
+
+                                reportLines.Add($"• {view.Name}:\n" +
+                                                $"  高程範圍: {minZ:F0} ~ {maxZ:F0} mm (高度: {maxZ - minZ:F0} mm)\n" +
+                                                $"  視圖寬度: {width:F0} mm");
+                            }
+                            catch {}
+                        }
+                        if (reportLines.Count > 0)
+                        {
+                            string summary = "已成功建立以下剖面視圖：\n\n" + string.Join("\n\n", reportLines) + 
+                                             "\n\n※ 請確認高程與寬度數值是否完全正確。";
+                            TaskDialog.Show("剖面建立成功報告", summary);
+                        }
                     }
 
                     // 2. 套用樣板
@@ -1197,6 +1225,16 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             foreach (var view in _tempCreatedViews)
                             {
                                 view.ViewTemplateId = templateId;
+
+                                // 重新套用幾何高度與寬度裁剪，防止被樣板覆蓋
+                                WallElevationData data = null;
+                                GeneratorSettings tempSettings = null;
+                                _viewToDataMap.TryGetValue(view.Id, out data);
+                                _viewToSettingsMap.TryGetValue(view.Id, out tempSettings);
+                                if (data != null && tempSettings != null)
+                                {
+                                    WallElevationViewCreator.ReApplyCropBox(view, data, tempSettings);
+                                }
                             }
                             tx.Commit();
                             _isStep3Ok = true;
@@ -1319,6 +1357,7 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         tx.Start();
                         _tempCreatedViews.Clear();
                         _viewToDataMap.Clear();
+                        _viewToSettingsMap.Clear();
 
                         foreach (var item in selectedItems)
                         {
@@ -1338,11 +1377,38 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                             {
                                 _tempCreatedViews.Add(view);
                                 _viewToDataMap[view.Id] = item.GeometryData;
+                                _viewToSettingsMap[view.Id] = tempSettings;
                             }
                         }
 
                         tx.Commit();
                         _isStep2Ok = true;
+
+                        // 彙整剖面高度與寬度報告
+                        var reportLines = new List<string>();
+                        foreach (var view in _tempCreatedViews)
+                        {
+                            try
+                            {
+                                BoundingBoxXYZ box = view.CropBox;
+                                double originZ = box.Transform.Origin.Z;
+                                double minZ = (originZ + box.Min.Y) * 304.8;
+                                double maxZ = (originZ + box.Max.Y) * 304.8;
+                                double width = (box.Max.X - box.Min.X) * 304.8;
+
+                                reportLines.Add($"• {view.Name}:\n" +
+                                                $"  高程範圍: {minZ:F0} ~ {maxZ:F0} mm (高度: {maxZ - minZ:F0} mm)\n" +
+                                                $"  視圖寬度: {width:F0} mm");
+                            }
+                            catch {}
+                        }
+                        if (reportLines.Count > 0)
+                        {
+                            string summary = "已成功建立以下剖面視圖：\n\n" + string.Join("\n\n", reportLines) + 
+                                             "\n\n※ 請確認高程與寬度數值是否完全正確。";
+                            TaskDialog.Show("剖面建立成功報告", summary);
+                        }
+
                         StatusText = $"[步驟 2 成功] 成功建立 {_tempCreatedViews.Count} 個剖面視圖。請執行 [步驟 3] 或 [步驟 5] 建立圖紙。";
                         RefreshStepButtons();
                     }
@@ -1384,6 +1450,17 @@ namespace DevelopmentTools.Modules.TileElevationGenerator
                         foreach (var view in _tempCreatedViews)
                         {
                             view.ViewTemplateId = templateId;
+
+                            // 重新套用幾何高度與寬度裁剪，防止被樣板覆蓋
+                            WallElevationData data = null;
+                            GeneratorSettings tempSettings = null;
+                            _viewToDataMap.TryGetValue(view.Id, out data);
+                            _viewToSettingsMap.TryGetValue(view.Id, out tempSettings);
+                            if (data != null && tempSettings != null)
+                            {
+                                WallElevationViewCreator.ReApplyCropBox(view, data, tempSettings);
+                            }
+
                             count++;
                         }
 
