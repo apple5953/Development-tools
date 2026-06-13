@@ -118,8 +118,9 @@
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
                                             <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                            <TextBlock Text="{Binding Number}" Foreground="{StaticResource TextSecondary}" Margin="0,0,8,0"/>
-                                            <TextBlock Text="{Binding Name}"/>
+                                            <TextBlock Text="{Binding Icon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Number, StringFormat='{}{0} '}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </HierarchicalDataTemplate.ItemTemplate>

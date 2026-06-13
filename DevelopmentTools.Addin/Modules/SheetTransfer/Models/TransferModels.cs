@@ -10,7 +10,10 @@ namespace DevelopmentTools.Modules.SheetTransfer.Models
         Sheet,
         DraftingView,
         Legend,
-        Schedule
+        Schedule,
+        ProjectParameter,
+        ViewTemplate,
+        ProjectInfoAndSymbol
     }
 
     public enum TransferStatus
@@ -29,6 +32,24 @@ namespace DevelopmentTools.Modules.SheetTransfer.Models
         public string UniqueId { get; set; }
         public string Name { get; set; }
         public string Number { get; set; } // For Sheets
+
+        public string Icon
+        {
+            get
+            {
+                switch (Type)
+                {
+                    case AssetType.Sheet: return "📄";
+                    case AssetType.DraftingView: return "✏️";
+                    case AssetType.Legend: return "🎨";
+                    case AssetType.Schedule: return "📊";
+                    case AssetType.ProjectParameter: return "⚙️";
+                    case AssetType.ViewTemplate: return "📋";
+                    case AssetType.ProjectInfoAndSymbol: return "🏢";
+                    default: return "📦";
+                }
+            }
+        }
 
         private bool _isSelected;
         public bool IsSelected

@@ -91,6 +91,78 @@ namespace DevelopmentTools.Modules.SheetTransfer.Services
                 });
             }
 
+            // 4. Project Parameters
+            var sharedParamElements = new FilteredElementCollector(_sourceDoc)
+                .OfClass(typeof(SharedParameterElement))
+                .Cast<SharedParameterElement>()
+                .ToDictionary(x => x.GuidValue, x => x);
+
+            BindingMap parameterBindings = _sourceDoc.ParameterBindings;
+            DefinitionBindingMapIterator bindingIt = parameterBindings.ForwardIterator();
+            while (bindingIt.MoveNext())
+            {
+                Definition def = bindingIt.Key;
+                string paramName = def.Name;
+                ElementId paramId = ElementId.InvalidElementId;
+                string uniqueId = "internal_param_" + paramName;
+
+                if (def is ExternalDefinition extDef)
+                {
+                    uniqueId = extDef.GUID.ToString();
+                    if (sharedParamElements.TryGetValue(extDef.GUID, out var spe))
+                    {
+                        paramId = spe.Id;
+                    }
+                }
+
+                assets.Add(new TransferAsset
+                {
+                    Type = AssetType.ProjectParameter,
+                    ElementId = paramId,
+                    UniqueId = uniqueId,
+                    Name = paramName,
+                    IsSelected = false
+                });
+            }
+
+            // 5. View Templates
+            var viewTemplates = new FilteredElementCollector(_sourceDoc)
+                .OfClass(typeof(View))
+                .Cast<View>()
+                .Where(x => x.IsTemplate)
+                .ToList();
+
+            foreach (var vt in viewTemplates)
+            {
+                assets.Add(new TransferAsset
+                {
+                    Type = AssetType.ViewTemplate,
+                    ElementId = vt.Id,
+                    UniqueId = vt.UniqueId,
+                    Name = vt.Name,
+                    IsSelected = false
+                });
+            }
+
+            // 6. Project Info & Symbol Sync
+            assets.Add(new TransferAsset
+            {
+                Type = AssetType.ProjectInfoAndSymbol,
+                ElementId = _sourceDoc.ProjectInformation.Id,
+                UniqueId = _sourceDoc.ProjectInformation.UniqueId,
+                Name = "專案基本資訊 (Project Information)",
+                IsSelected = false
+            });
+
+            assets.Add(new TransferAsset
+            {
+                Type = AssetType.ProjectInfoAndSymbol,
+                ElementId = ElementId.InvalidElementId,
+                UniqueId = "sync_family_symbols",
+                Name = "同步所有同名族群型別參數 (Family Symbols Sync)",
+                IsSelected = false
+            });
+
             return assets;
         }
     }

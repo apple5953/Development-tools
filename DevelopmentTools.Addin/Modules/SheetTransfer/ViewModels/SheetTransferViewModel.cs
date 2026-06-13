@@ -28,6 +28,9 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
             
             AssetGroups = new ObservableCollection<TransferAssetGroup>
             {
+                new TransferAssetGroup { GroupName = "Project Parameters" },
+                new TransferAssetGroup { GroupName = "View Templates" },
+                new TransferAssetGroup { GroupName = "Project Info & Symbols" },
                 new TransferAssetGroup { GroupName = "Sheets" },
                 new TransferAssetGroup { GroupName = "Drafting Views" },
                 new TransferAssetGroup { GroupName = "Legends" },
@@ -164,10 +167,13 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
                             }
                         };
 
-                        if (asset.Type == AssetType.Sheet) AssetGroups[0].Assets.Add(asset);
-                        else if (asset.Type == AssetType.DraftingView) AssetGroups[1].Assets.Add(asset);
-                        else if (asset.Type == AssetType.Legend) AssetGroups[2].Assets.Add(asset);
-                        else if (asset.Type == AssetType.Schedule) AssetGroups[3].Assets.Add(asset);
+                        if (asset.Type == AssetType.ProjectParameter) AssetGroups[0].Assets.Add(asset);
+                        else if (asset.Type == AssetType.ViewTemplate) AssetGroups[1].Assets.Add(asset);
+                        else if (asset.Type == AssetType.ProjectInfoAndSymbol) AssetGroups[2].Assets.Add(asset);
+                        else if (asset.Type == AssetType.Sheet) AssetGroups[3].Assets.Add(asset);
+                        else if (asset.Type == AssetType.DraftingView) AssetGroups[4].Assets.Add(asset);
+                        else if (asset.Type == AssetType.Legend) AssetGroups[5].Assets.Add(asset);
+                        else if (asset.Type == AssetType.Schedule) AssetGroups[6].Assets.Add(asset);
                     }
                 });
 
