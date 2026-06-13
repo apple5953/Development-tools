@@ -25,6 +25,48 @@ namespace DevelopmentTools.Modules.SheetTransfer.Models
         Skipped
     }
 
+    public enum AssetComparison
+    {
+        New,
+        Mismatch,
+        Identical
+    }
+
+    public class ParameterDiffItem : INotifyPropertyChanged
+    {
+        private string _paramName;
+        public string ParamName
+        {
+            get => _paramName;
+            set { _paramName = value; OnPropertyChanged(); }
+        }
+
+        private string _sourceValue;
+        public string SourceValue
+        {
+            get => _sourceValue;
+            set { _sourceValue = value; OnPropertyChanged(); }
+        }
+
+        private string _targetValue;
+        public string TargetValue
+        {
+            get => _targetValue;
+            set { _targetValue = value; OnPropertyChanged(); }
+        }
+
+        private bool _isDifferent;
+        public bool IsDifferent
+        {
+            get => _isDifferent;
+            set { _isDifferent = value; OnPropertyChanged(); }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
     public class TransferAsset : INotifyPropertyChanged
     {
         public AssetType Type { get; set; }
@@ -63,6 +105,29 @@ namespace DevelopmentTools.Modules.SheetTransfer.Models
         public string StatusMessage { get; set; }
 
         public List<string> Dependencies { get; set; } = new List<string>();
+
+        private AssetComparison _comparison = AssetComparison.New;
+        public AssetComparison Comparison
+        {
+            get => _comparison;
+            set { _comparison = value; OnPropertyChanged(); OnPropertyChanged(nameof(ComparisonText)); }
+        }
+
+        public string ComparisonText
+        {
+            get
+            {
+                switch (Comparison)
+                {
+                    case AssetComparison.New: return "[➕ 僅來源]";
+                    case AssetComparison.Mismatch: return "[⚠️ 差異]";
+                    case AssetComparison.Identical: return "[✅ 一致]";
+                    default: return "";
+                }
+            }
+        }
+
+        public ObservableCollection<ParameterDiffItem> DiffDetails { get; } = new ObservableCollection<ParameterDiffItem>();
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string name = null)

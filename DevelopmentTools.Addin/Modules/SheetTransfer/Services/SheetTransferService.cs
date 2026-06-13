@@ -153,6 +153,8 @@ namespace DevelopmentTools.Modules.SheetTransfer.Services
 
                     // 檢查目標專案是否已存在
                     BindingMap targetBindings = _targetDoc.ParameterBindings;
+                    Definition targetDef = null;
+                    Binding targetBinding = null;
                     bool exists = false;
                     DefinitionBindingMapIterator targetIt = targetBindings.ForwardIterator();
                     while (targetIt.MoveNext())
@@ -160,15 +162,71 @@ namespace DevelopmentTools.Modules.SheetTransfer.Services
                         if (targetIt.Key.Name == sourceDef.Name)
                         {
                             exists = true;
+                            targetDef = targetIt.Key;
+                            targetBinding = targetIt.Current as Binding;
                             break;
                         }
                     }
 
                     if (exists)
                     {
-                        asset.StatusMessage = "參數已存在於目標專案";
-                        asset.Status = TransferStatus.Skipped;
-                        success.Add(asset);
+                        CategorySet targetCats = null;
+                        if (targetBinding is InstanceBinding tgtInst) targetCats = tgtInst.Categories;
+                        else if (targetBinding is TypeBinding tgtType) targetCats = tgtType.Categories;
+
+                        CategorySet sourceCats = null;
+                        if (sourceBinding is InstanceBinding srcInst) sourceCats = srcInst.Categories;
+                        else if (sourceBinding is TypeBinding srcType) sourceCats = srcType.Categories;
+
+                        if (targetCats != null && sourceCats != null)
+                        {
+                            bool needUpdate = false;
+                            foreach (Category srcCat in sourceCats)
+                            {
+                                bool found = false;
+                                foreach (Category tgtCat in targetCats)
+                                {
+                                    if (tgtCat.BuiltInCategory == srcCat.BuiltInCategory)
+                                    {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if (!found)
+                                {
+                                    Category tgtCatToInsert = _targetDoc.Settings.Categories.get_Item(srcCat.BuiltInCategory);
+                                    if (tgtCatToInsert != null)
+                                    {
+                                        targetCats.Insert(tgtCatToInsert);
+                                        needUpdate = true;
+                                    }
+                                }
+                            }
+
+                            if (needUpdate)
+                            {
+                                using (Transaction t = new Transaction(_targetDoc, $"更新專案參數綁定品類: {targetDef.Name}"))
+                                {
+                                    t.Start();
+                                    _targetDoc.ParameterBindings.ReInsert(targetDef, targetBinding, targetDef.ParameterGroup);
+                                    t.Commit();
+                                }
+                                asset.StatusMessage = "參數已存在，已自動合併補全缺失的綁定品類";
+                                success.Add(asset);
+                            }
+                            else
+                            {
+                                asset.StatusMessage = "參數已存在，且品類綁定完全一致";
+                                asset.Status = TransferStatus.Skipped;
+                                success.Add(asset);
+                            }
+                        }
+                        else
+                        {
+                            asset.StatusMessage = "參數已存在 (無法取得品類)";
+                            asset.Status = TransferStatus.Skipped;
+                            success.Add(asset);
+                        }
                         continue;
                     }
 

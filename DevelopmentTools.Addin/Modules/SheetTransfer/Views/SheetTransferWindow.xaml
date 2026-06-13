@@ -120,7 +120,7 @@
 
                     <TextBlock Text="資產清單" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,16"/>
 
-                    <TreeView Grid.Row="1" ItemsSource="{Binding AssetGroups}" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}">
+                    <TreeView Grid.Row="1" ItemsSource="{Binding AssetGroups}" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}" SelectedItemChanged="TreeView_SelectedItemChanged">
                         <TreeView.ItemContainerStyle>
                             <Style TargetType="TreeViewItem">
                                 <Setter Property="IsExpanded" Value="True"/>
@@ -140,28 +140,79 @@
                                             <TextBlock Text="{Binding Icon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding Number, StringFormat='{}{0} '}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding ComparisonText}" Margin="8,0,0,0" Foreground="{Binding Comparison, Converter={x:Static local:ComparisonColorConverter.Instance}}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </HierarchicalDataTemplate.ItemTemplate>
                             </HierarchicalDataTemplate>
                         </TreeView.ItemTemplate>
                     </TreeView>
-
+ 
                     <Button Grid.Row="2" Command="{Binding TransferCommand}" Content="開始轉移" Style="{StaticResource BtnPrimary}" Margin="0,16,0,0" IsEnabled="{Binding CanTransfer}"/>
                 </Grid>
             </Border>
-
+ 
             <GridSplitter Grid.Column="3" HorizontalAlignment="Stretch" Background="{StaticResource BorderColor}"/>
-
-            <!-- Right: Report -->
+ 
+            <!-- Right: Report & Comparison Details -->
             <Border Grid.Column="4" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1,0,0,0" Padding="16">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="2*"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="轉移報告" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,16"/>
-                    <TextBox Grid.Row="1" Text="{Binding ReportText, Mode=OneWay}" Background="{StaticResource BgCard}" Foreground="{StaticResource TextPrimary}" BorderThickness="0" FontFamily="Consolas" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" Padding="8"/>
+                    
+                    <!-- 上半部：詳細差異比對表 -->
+                    <TextBlock Grid.Row="0" Text="🔍 參數差異比對 (選取清單項目檢視)" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding ActiveDiffDetails}" AutoGenerateColumns="False" IsReadOnly="True" Background="{StaticResource BgCard}" BorderThickness="0" GridLinesVisibility="None" RowHeaderWidth="0" Foreground="{StaticResource TextPrimary}">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#1C2128"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                                <Setter Property="Padding" Value="8,6"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="Padding" Value="8,6"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#2F363D"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDifferent}" Value="True">
+                                        <Setter Property="Foreground" Value="#F25C54"/> <!-- 差異欄位亮紅色 -->
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="參數/屬性名稱" Binding="{Binding ParamName}" Width="1.2*"/>
+                            <DataGridTextColumn Header="來源專案值" Binding="{Binding SourceValue}" Width="1.4*"/>
+                            <DataGridTextColumn Header="目標專案值" Binding="{Binding TargetValue}" Width="1.4*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- 分隔線 -->
+                    <GridSplitter Grid.Row="2" Height="1" HorizontalAlignment="Stretch" Background="{StaticResource BorderColor}" Margin="0,12"/>
+
+                    <!-- 下半部：原本的轉移報告 -->
+                    <Grid Grid.Row="3">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="📋 轉移執行報告" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <TextBox Grid.Row="1" Text="{Binding ReportText, Mode=OneWay}" Background="{StaticResource BgCard}" Foreground="{StaticResource TextPrimary}" BorderThickness="0" FontFamily="Consolas" IsReadOnly="True" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" Padding="8"/>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>

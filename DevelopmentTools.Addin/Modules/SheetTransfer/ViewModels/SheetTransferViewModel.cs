@@ -123,6 +123,21 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
 
         public bool IsSourceFromOpenedDoc { get; private set; } = false;
 
+        private TransferAsset _selectedAsset;
+        public TransferAsset SelectedAsset
+        {
+            get => _selectedAsset;
+            set
+            {
+                _selectedAsset = value;
+                OnPropertyChanged();
+                UpdateActiveDiffDetails();
+            }
+        }
+
+        private ObservableCollection<ParameterDiffItem> _activeDiffDetails = new ObservableCollection<ParameterDiffItem>();
+        public ObservableCollection<ParameterDiffItem> ActiveDiffDetails => _activeDiffDetails;
+
         public bool CanTransfer => !IsAnalyzing && !IsTransferring && _sourceDoc != null;
 
         // ── Commands ────────────────────────────────────────────────────────
@@ -165,7 +180,6 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
 
         private async void ExecuteBrowse()
         {
-            // 重設下拉專案選取狀態
             SelectedOpenProject = null;
             IsSourceFromOpenedDoc = false;
 
@@ -185,7 +199,7 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
         private async Task AnalyzeSourceProjectAsync(Document sourceDoc)
         {
             IsAnalyzing = true;
-            StatusMessage = "正在讀取專案資料...";
+            StatusMessage = "正在讀取專案資料與進行差異比對...";
 
             try
             {
@@ -193,9 +207,9 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
                 SourceProjectName = _sourceDoc.ProjectInformation.Name;
                 SourceRevitVersion = _sourceDoc.Application.VersionName;
 
-                StatusMessage = "正在掃描可轉移資產...";
+                StatusMessage = "正在比對分析兩邊專案資產差異...";
 
-                var analyzer = new SheetTransferAnalyzer(_sourceDoc);
+                var analyzer = new SheetTransferAnalyzer(_sourceDoc, _targetDoc);
                 var assets = await Task.Run(() => analyzer.AnalyzeAssets());
 
                 // Update UI
@@ -205,6 +219,9 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
 
                     foreach (var asset in assets)
                     {
+                        // 差異與新項目預設勾選，完全一致的項目預設不勾選
+                        asset.IsSelected = (asset.Comparison != AssetComparison.Identical);
+
                         asset.PropertyChanged += (s, e) => {
                             if (e.PropertyName == nameof(TransferAsset.IsSelected))
                             {
@@ -222,7 +239,7 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
                     }
                 });
 
-                StatusMessage = "掃描完成。請選擇要轉移的項目。";
+                StatusMessage = "分析比對完成。有差異與缺失項目已預設勾選。";
             }
             catch (Exception ex)
             {
@@ -305,6 +322,12 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
                 var report = await Task.Run(() => service.TransferAssets(selectedAssets));
                 ReportText = report;
                 StatusMessage = "轉移完成";
+
+                // 轉移完成後，自動重新比對以刷新介面狀態
+                if (_sourceDoc != null)
+                {
+                    await AnalyzeSourceProjectAsync(_sourceDoc);
+                }
             }
             catch (Exception ex)
             {
@@ -330,6 +353,18 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
                     _sourceDoc = null;
                 }
                 catch { }
+            }
+        }
+
+        private void UpdateActiveDiffDetails()
+        {
+            _activeDiffDetails.Clear();
+            if (_selectedAsset != null && _selectedAsset.DiffDetails != null)
+            {
+                foreach (var diff in _selectedAsset.DiffDetails)
+                {
+                    _activeDiffDetails.Add(diff);
+                }
             }
         }
 
