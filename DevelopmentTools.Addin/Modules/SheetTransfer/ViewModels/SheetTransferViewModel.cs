@@ -25,7 +25,7 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
 
             BrowseCommand = new RelayCommand(ExecuteBrowse);
             TransferCommand = new RelayCommand(ExecuteTransfer, CanExecuteTransfer);
-            
+
             AssetGroups = new ObservableCollection<TransferAssetGroup>
             {
                 new TransferAssetGroup { GroupName = "Project Parameters" },
@@ -37,13 +37,15 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
                 new TransferAssetGroup { GroupName = "Schedules" }
             };
 
-            foreach(var group in AssetGroups)
+            foreach (var group in AssetGroups)
             {
                 group.PropertyChanged += (s, e) => {
                     if (e.PropertyName == nameof(TransferAssetGroup.IsChecked))
                         OnPropertyChanged(nameof(CanTransfer));
                 };
             }
+
+            LoadOpenProjects();
         }
 
         // ── Properties ──────────────────────────────────────────────────────
@@ -98,14 +100,75 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
 
         public ObservableCollection<TransferAssetGroup> AssetGroups { get; }
 
+        private ObservableCollection<string> _openProjects = new ObservableCollection<string>();
+        public ObservableCollection<string> OpenProjects => _openProjects;
+
+        private string _selectedOpenProject;
+        public string SelectedOpenProject
+        {
+            get => _selectedOpenProject;
+            set
+            {
+                if (_selectedOpenProject != value)
+                {
+                    _selectedOpenProject = value;
+                    OnPropertyChanged();
+                    if (!string.IsNullOrEmpty(_selectedOpenProject))
+                    {
+                        OnOpenProjectSelected(_selectedOpenProject);
+                    }
+                }
+            }
+        }
+
+        public bool IsSourceFromOpenedDoc { get; private set; } = false;
+
         public bool CanTransfer => !IsAnalyzing && !IsTransferring && _sourceDoc != null;
 
         // ── Commands ────────────────────────────────────────────────────────
         public ICommand BrowseCommand { get; }
         public ICommand TransferCommand { get; }
 
+        private void LoadOpenProjects()
+        {
+            _openProjects.Clear();
+            foreach (Document doc in _uiapp.Application.Documents)
+            {
+                if (doc.IsFamilyDocument) continue;
+                if (doc.PathName == _targetDoc.PathName) continue;
+
+                string name = string.IsNullOrEmpty(doc.PathName) ? doc.Title : doc.PathName;
+                _openProjects.Add(name);
+            }
+        }
+
+        private async void OnOpenProjectSelected(string projectNameOrPath)
+        {
+            Document foundDoc = null;
+            foreach (Document doc in _uiapp.Application.Documents)
+            {
+                string name = string.IsNullOrEmpty(doc.PathName) ? doc.Title : doc.PathName;
+                if (name == projectNameOrPath)
+                {
+                    foundDoc = doc;
+                    break;
+                }
+            }
+
+            if (foundDoc != null)
+            {
+                IsSourceFromOpenedDoc = true;
+                SourceFilePath = string.IsNullOrEmpty(foundDoc.PathName) ? foundDoc.Title : foundDoc.PathName;
+                await AnalyzeSourceProjectAsync(foundDoc);
+            }
+        }
+
         private async void ExecuteBrowse()
         {
+            // 重設下拉專案選取狀態
+            SelectedOpenProject = null;
+            IsSourceFromOpenedDoc = false;
+
             System.Windows.Forms.OpenFileDialog ofd = new System.Windows.Forms.OpenFileDialog
             {
                 Filter = "Revit Project Files (*.rvt)|*.rvt",
@@ -119,32 +182,14 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
             }
         }
 
-        private async Task AnalyzeSourceProjectAsync(string filePath)
+        private async Task AnalyzeSourceProjectAsync(Document sourceDoc)
         {
             IsAnalyzing = true;
-            StatusMessage = "正在背景開啟來源專案 (這可能需要幾分鐘的時間)...";
+            StatusMessage = "正在讀取專案資料...";
 
             try
             {
-                await Task.Run(() =>
-                {
-                    if (_sourceDoc != null)
-                    {
-                        try { _sourceDoc.Close(false); } catch { }
-                    }
-
-                    ModelPath modelPath = ModelPathUtils.ConvertUserVisiblePathToModelPath(filePath);
-                    OpenOptions options = new OpenOptions { DetachFromCentralOption = DetachFromCentralOption.DetachAndPreserveWorksets };
-                    _sourceDoc = _uiapp.Application.OpenDocumentFile(modelPath, options);
-                });
-
-                if (_sourceDoc == null)
-                {
-                    StatusMessage = "無法開啟來源檔案";
-                    IsAnalyzing = false;
-                    return;
-                }
-
+                _sourceDoc = sourceDoc;
                 SourceProjectName = _sourceDoc.ProjectInformation.Name;
                 SourceRevitVersion = _sourceDoc.Application.VersionName;
 
@@ -187,6 +232,43 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
             {
                 IsAnalyzing = false;
                 CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        private async Task AnalyzeSourceProjectAsync(string filePath)
+        {
+            IsAnalyzing = true;
+            StatusMessage = "正在背景開啟來源專案 (這可能需要幾分鐘的時間)...";
+            IsSourceFromOpenedDoc = false;
+
+            try
+            {
+                Document openedDoc = null;
+                await Task.Run(() =>
+                {
+                    if (_sourceDoc != null && !IsSourceFromOpenedDoc)
+                    {
+                        try { _sourceDoc.Close(false); } catch { }
+                    }
+
+                    ModelPath modelPath = ModelPathUtils.ConvertUserVisiblePathToModelPath(filePath);
+                    OpenOptions options = new OpenOptions { DetachFromCentralOption = DetachFromCentralOption.DetachAndPreserveWorksets };
+                    openedDoc = _uiapp.Application.OpenDocumentFile(modelPath, options);
+                });
+
+                if (openedDoc == null)
+                {
+                    StatusMessage = "無法開啟來源檔案";
+                    IsAnalyzing = false;
+                    return;
+                }
+
+                await AnalyzeSourceProjectAsync(openedDoc);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"開啟分析失敗: {ex.Message}";
+                IsAnalyzing = false;
             }
         }
 
@@ -241,7 +323,10 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
             {
                 try
                 {
-                    _sourceDoc.Close(false);
+                    if (!IsSourceFromOpenedDoc)
+                    {
+                        _sourceDoc.Close(false);
+                    }
                     _sourceDoc = null;
                 }
                 catch { }

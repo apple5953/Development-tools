@@ -50,20 +50,39 @@
         <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,0,0,1" Padding="20">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="1.5*"/>
                 </Grid.ColumnDefinitions>
                 
-                <StackPanel>
+                <!-- 左側：已選取來源的資訊 -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="來源專案" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0,0,0,4"/>
-                    <TextBlock Text="{Binding SourceFilePath, TargetNullValue='尚未選擇檔案'}" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding SourceFilePath, TargetNullValue='尚未選擇來源 (請從右側選單選取已開啟專案或瀏覽本地檔案)'}" Foreground="{StaticResource TextPrimary}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <TextBlock Text="{Binding SourceProjectName, StringFormat='專案名稱: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0,0,16,0"/>
-                        <TextBlock Text="{Binding SourceRevitVersion, StringFormat='Revit 版本: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                        <TextBlock Text="{Binding SourceProjectName, StringFormat='專案名稱: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0,0,16,0"/>
+                        <TextBlock Text="{Binding SourceRevitVersion, StringFormat='Revit 版本: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
                     </StackPanel>
                 </StackPanel>
 
-                <Button Grid.Column="1" Command="{Binding BrowseCommand}" Content="瀏覽來源檔案..." Style="{StaticResource BtnPrimary}" VerticalAlignment="Center" IsEnabled="{Binding IsAnalyzing, Converter={x:Static local:BoolToInvertConverter.Instance}}"/>
+                <GridSplitter Grid.Column="1" Width="1" HorizontalAlignment="Center" Background="{StaticResource BorderColor}" Margin="20,0"/>
+
+                <!-- 右側：選擇管道 -->
+                <Grid Grid.Column="2" VerticalAlignment="Center">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="💡 提示：若要同步 ACC 雲端模型，請先在 Revit 中開啟它，並在此選取" Foreground="#85EA2D" FontSize="11" Margin="0,0,0,6"/>
+
+                    <ComboBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding OpenProjects}" SelectedItem="{Binding SelectedOpenProject}" Height="34" VerticalContentAlignment="Center" Background="#1C2128" Foreground="White" BorderBrush="{StaticResource BorderColor}" Margin="0,0,10,0" IsEnabled="{Binding IsAnalyzing, Converter={x:Static local:BoolToInvertConverter.Instance}}"/>
+                    <Button Grid.Row="1" Grid.Column="1" Command="{Binding BrowseCommand}" Content="瀏覽本地檔案..." Style="{StaticResource BtnPrimary}" Height="34" Padding="12,0" VerticalAlignment="Center" IsEnabled="{Binding IsAnalyzing, Converter={x:Static local:BoolToInvertConverter.Instance}}"/>
+                </Grid>
             </Grid>
         </Border>
 
