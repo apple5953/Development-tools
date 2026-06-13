@@ -13,6 +13,17 @@ using Autodesk.Revit.UI;
 
 namespace DevelopmentTools.Modules.AIAssistant
 {
+    public class QCIssue
+    {
+        public string LevelName { get; set; }
+        public string ElementType { get; set; }
+        public string ElementName { get; set; }
+        public string IssueType { get; set; }
+        public string Description { get; set; }
+        public long ElementId { get; set; }
+        public string ElementIdText => ElementId.ToString();
+    }
+
     public class ChatMessage : INotifyPropertyChanged
     {
         public string Role { get; set; }   // "user" | "assistant" | "system"
@@ -97,6 +108,27 @@ namespace DevelopmentTools.Modules.AIAssistant
             set { _selectedCount = value; OnPropertyChanged(); }
         }
 
+        public ObservableCollection<QCIssue> QCIssues { get; } = new ObservableCollection<QCIssue>();
+
+        public bool HasQCIssues => QCIssues.Count > 0;
+        public bool HasNoQCIssues => QCIssues.Count == 0;
+
+        private QCIssue _selectedIssue;
+        public QCIssue SelectedIssue
+        {
+            get => _selectedIssue;
+            set
+            {
+                _selectedIssue = value;
+                OnPropertyChanged();
+                if (_selectedIssue != null && _commandEvent != null && _commandHandler != null)
+                {
+                    _commandHandler.CommandJson = $"{{\"action\":\"select_elements\",\"element_ids\":[{_selectedIssue.ElementId}]}}";
+                    _commandEvent.Raise();
+                }
+            }
+        }
+
         public ObservableCollection<ChatMessage> Messages { get; } = new ObservableCollection<ChatMessage>();
 
         private string _userInput = "";
@@ -123,6 +155,12 @@ namespace DevelopmentTools.Modules.AIAssistant
 
         public AIAssistantViewModel()
         {
+            QCIssues.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(HasQCIssues));
+                OnPropertyChanged(nameof(HasNoQCIssues));
+            };
+
             // 載入本地設定
             _settings = AIApiSettings.Load();
             IsApiReady = _settings.IsApiReady;
@@ -138,7 +176,18 @@ namespace DevelopmentTools.Modules.AIAssistant
             Messages.Add(new ChatMessage
             {
                 Role = "system",
-                Content = "👋  歡迎使用 AI 模型分析助手！\n\n1. 請在右上角「⚙ API 設定」中，輸入自訂 API Key 與端點後進行確認連線。\n2. 在 Revit 中選取元件，點擊左下方「取得 Revit 選取元件」取得模型 Context。\n3. 您可透過「送出分析」或直接以自然語言詢問 AI 元件的屬性狀況，甚至發送指令讓 AI 自動執行參數修改！",
+                Content = "👋 歡迎使用 AI 模型分析與 ISO 19650 QC 審查助手！\n\n" +
+                          "本工具能透過 AI 協助您快速審查並完善符合 ISO 19650 標準的 BIM 模型，以下為使用步驟：\n\n" +
+                          "1️⃣ **【API 連線設定】**\n" +
+                          "點擊右上角「⚙ API 設定」，輸入您的 API 金鑰、端點與模型（相容 OpenAI API，支援本地離線 Ollama、GPT 等）並連線。\n\n" +
+                          "2️⃣ **【讀取 Revit 數據 Context】**\n" +
+                          "點擊左下角「⬇ 讀取 Revit 資料 (選取/全專案掃描)」：\n" +
+                          "   - **手動選取元件**：在 Revit 中選取特定元件後點擊，可針對選中物件進行局部審查與參數優化。\n" +
+                          "   - **無選取元件 (全域掃描)**：直接點擊，將自動對全專案各樓層的房間裝修填寫率、未設定裝修空間、以及 Uniclass / OmniClass 分類編碼 (Assembly Code) 進行全域 QC 掃描。\n\n" +
+                          "3️⃣ **【對話與自動化優化】**\n" +
+                          "您可以發送「幫我檢查各樓層裝修建置好了沒」或「2F 還有哪幾個房間沒有建好裝修」等指令，AI 診斷出缺失後會生成修改建議。\n\n" +
+                          "4️⃣ **【雙重安全確認機制 (防改壞)】**\n" +
+                          "當 AI 建議修改時，對話框會出現「⚡ 立即在 Revit 中執行 AI 修改」按鈕，點擊後會彈出 Revit 原生 `TaskDialog` 顯示新舊值對照表（長度已自動換算為 mm），您點選同意後才會執行寫入，安全無虞！",
                 Timestamp = DateTime.Now
             });
         }
@@ -272,10 +321,12 @@ namespace DevelopmentTools.Modules.AIAssistant
             }
 
             // 建立 System Prompt
-            string systemPrompt = "你是一個專業的 BIM 專家與 Revit 二次開發助手。\n" +
-                                 "現在使用者選取了 Revit 專案中的一些元件，元件屬性資料會以「Context (元件資料)」格式提供。\n" +
-                                 "你可以協助使用者進行統計、裝修衝突檢查、幾何排磚起點建議。\n" +
-                                 "如果你認為需要修改 Revit 中的元件參數、選取元件或刪除元件，請務必在你的回覆末尾，以下列 JSON 格式包含一條或多條指令（以 [REVIT_COMMAND] 與 [/REVIT_COMMAND] 括起來）：\n" +
+            string systemPrompt = "你是一個專業的 BIM 專家與 Revit 二次開發助手，並專精於 ISO 19650 資訊管理標準與模型品質稽核 (QC)。\n" +
+                                 "現在使用者提供了 Revit 專案的資料 Context。Context 可能是使用者手動選取的元件資料，也可能是全專案各樓層的裝修、命名與編碼(Assembly Code / Uniclass) 進度統計報告。\n" +
+                                 "請協助使用者分析專案：\n" +
+                                 "1. 檢查各樓層元件或房間的命名規範與資訊完整性是否符合 ISO 19650 標準（例如是否缺漏 Assembly Code / Uniclass 分類代碼、房名房號是否異常、空間裝修參數是否漏填）。\n" +
+                                 "2. 評估幾何排磚、衝突檢查、參數合理性並提出優化建議。\n\n" +
+                                 "如果你認為需要修改 Revit 中的元件參數（例如補齊 Uniclass/OmniClass 代碼、修正命名、補全 Base Finish 裝修材質等）、選取元件或刪除元件，請務必在你的回覆中，以下列 JSON 格式包含一條或多條指令（以 [REVIT_COMMAND] 與 [/REVIT_COMMAND] 括起來，本外掛已實作二次確認彈窗，請放心建議修改）：\n" +
                                  "[REVIT_COMMAND]\n" +
                                  "{\n" +
                                  "  \"action\": \"set_parameter\",\n" +
@@ -285,10 +336,10 @@ namespace DevelopmentTools.Modules.AIAssistant
                                  "}\n" +
                                  "[/REVIT_COMMAND]\n\n" +
                                  "支援的 action 種類：\n" +
-                                 "1. \"set_parameter\"：修改元件參數。必須提供 parameter_name (如 \"Comments\", \"Base Finish\", \"Tile_Joint_Width\" 等) 與 value (新值)。若為長度參數（例如縫隙、高度、寬度），請務必以 mm 為單位填寫純數字，外掛會自動轉換為 Revit 的內部英呎單位。\n" +
-                                 "2. \"select_elements\"：在 Revit 視圖中選取這些元件。必須提供 element_ids。\n" +
-                                 "3. \"delete_elements\"：在 Revit 中刪除這些元件。必須提供 element_ids。\n\n" +
-                                 "請提供專業、清晰的中文分析。";
+                                 "1. \"set_parameter\"：修改元件參數（如 \"Assembly Code\", \"Comments\", \"Base Finish\", \"Tile_Joint_Width\" 等）。若為長度參數，請以 mm 為單位填寫純數字。\n" +
+                                 "2. \"select_elements\"：在 Revit 中選取元件。必須提供 element_ids。\n" +
+                                 "3. \"delete_elements\"：在 Revit 中刪除元件。必須提供 element_ids。\n\n" +
+                                 "請提供專業、簡明扼要且清晰的繁體中文分析，指出不符合規範的缺失並直接給出優化動作建議。";
 
             // 收集近 10 條對話歷史
             var apiMessages = new List<object>();

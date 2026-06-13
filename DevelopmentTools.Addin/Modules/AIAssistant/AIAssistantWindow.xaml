@@ -267,43 +267,147 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- 元件資料顯示 -->
-                    <ScrollViewer Grid.Row="1"
-                                  VerticalScrollBarVisibility="Auto"
-                                  Padding="14,10">
-                        <Grid>
-                            <!-- 無資料時的提示 -->
-                            <StackPanel HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Margin="0,40,0,0"
-                                        Visibility="{Binding HasElementContext, Converter={x:Static local:BoolToVisibility.InvertedInstance}}">
-                                <TextBlock Text="📭" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                <TextBlock Text="尚未選取任何元件"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           FontSize="13"
-                                           HorizontalAlignment="Center"/>
-                                <TextBlock Text="請先在 Revit 中選取元件&#10;再點擊下方按鈕取得資料"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           FontSize="11"
-                                           HorizontalAlignment="Center"
-                                           TextAlignment="Center"
-                                           Margin="0,6,0,0"/>
-                            </StackPanel>
+                    <!-- 元件資料顯示 TabControl -->
+                    <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="4">
+                        <TabControl.Resources>
+                            <!-- TabItem 樣式 -->
+                            <Style TargetType="TabItem">
+                                <Setter Property="HeaderTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <ContentPresenter Content="{TemplateBinding Content}" Margin="4,2"/>
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="Background" Value="#161B22"/>
+                                <Setter Property="Foreground" Value="#7D8590"/>
+                                <Setter Property="BorderBrush" Value="#30363D"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TabItem">
+                                            <Border Name="Border" BorderThickness="1,1,1,0" BorderBrush="{TemplateBinding BorderBrush}" Background="{TemplateBinding Background}" CornerRadius="4,4,0,0" Margin="2,0" Padding="10,6">
+                                                <ContentPresenter x:Name="ContentSite" VerticalAlignment="Center" HorizontalAlignment="Center" ContentSource="Header" RecognizesAccessKey="True"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Border" Property="Background" Value="#1C2128"/>
+                                                    <Setter Property="Foreground" Value="#E6EDF3"/>
+                                                    <Setter TargetName="Border" Property="BorderBrush" Value="#30363D"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TabControl.Resources>
 
-                            <!-- 元件資料 -->
-                            <TextBox Text="{Binding ElementContext, Mode=OneWay}"
-                                     IsReadOnly="True"
-                                     Style="{StaticResource DarkTextBox}"
-                                     Background="Transparent"
-                                     BorderThickness="0"
-                                     TextWrapping="Wrap"
-                                     FontSize="12"
-                                     FontFamily="Consolas, Microsoft JhengHei UI"
-                                     Foreground="#A8C4E0"
-                                     Padding="0"
-                                     Visibility="{Binding HasElementContext, Converter={x:Static local:BoolToVisibility.Instance}}"/>
-                        </Grid>
-                    </ScrollViewer>
+                        <!-- Tab 1: 📊 項目診斷 -->
+                        <TabItem Header="📊 項目診斷">
+                            <Grid Background="#1C2128" Margin="0,4,0,0">
+                                <!-- 無缺失時的提示 -->
+                                <StackPanel HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Margin="0,40,0,0"
+                                            Visibility="{Binding HasNoQCIssues, Converter={x:Static local:BoolToVisibility.Instance}}">
+                                    <TextBlock Text="🎉" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                    <TextBlock Text="BIM 模型狀態良好"
+                                               Foreground="{StaticResource AccentGreen}"
+                                               FontWeight="SemiBold"
+                                               FontSize="13"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock Text="目前無發現任何裝修或&#10;Uniclass 分類代碼缺失！"
+                                               Foreground="{StaticResource TextSecondary}"
+                                               FontSize="11"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center"
+                                               Margin="0,6,0,0"/>
+                                </StackPanel>
+
+                                <!-- 缺失 DataGrid -->
+                                <DataGrid ItemsSource="{Binding QCIssues}"
+                                          SelectedItem="{Binding SelectedIssue, Mode=TwoWay}"
+                                          AutoGenerateColumns="False"
+                                          IsReadOnly="True"
+                                          HeadersVisibility="Column"
+                                          Background="Transparent"
+                                          RowBackground="#1C2128"
+                                          AlternatingRowBackground="#161B22"
+                                          BorderThickness="0"
+                                          GridLinesVisibility="Horizontal"
+                                          HorizontalGridLinesBrush="#30363D"
+                                          Foreground="{StaticResource TextPrimary}"
+                                          SelectionMode="Single"
+                                          Visibility="{Binding HasQCIssues, Converter={x:Static local:BoolToVisibility.Instance}}">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="#161B22"/>
+                                            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+                                            <Setter Property="Padding" Value="6,4"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                            <Setter Property="BorderBrush" Value="#30363D"/>
+                                        </Style>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Padding" Value="6,4"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter Property="Background" Value="#263E5E"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.Resources>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="樓層" Binding="{Binding LevelName}" Width="Auto"/>
+                                        <DataGridTextColumn Header="類型" Binding="{Binding ElementType}" Width="Auto"/>
+                                        <DataGridTextColumn Header="名稱/房號" Binding="{Binding ElementName}" Width="*"/>
+                                        <DataGridTextColumn Header="問題" Binding="{Binding IssueType}" Width="Auto"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- Tab 2: 📝 原始 Context -->
+                        <TabItem Header="📝 原始資料">
+                            <Grid Background="#1C2128" Margin="0,4,0,0">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">
+                                    <TextBox Text="{Binding ElementContext, Mode=OneWay}"
+                                             IsReadOnly="True"
+                                             Style="{StaticResource DarkTextBox}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             TextWrapping="Wrap"
+                                             FontSize="11"
+                                             FontFamily="Consolas, Microsoft JhengHei UI"
+                                             Foreground="#A8C4E0"/>
+                                </ScrollViewer>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- Tab 3: 📖 使用說明 -->
+                        <TabItem Header="📖 使用說明">
+                            <Grid Background="#1C2128" Margin="0,4,0,0">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10">
+                                    <StackPanel>
+                                        <TextBlock Text="🤖 AI 助手與 ISO 19650 QC 指南" FontWeight="Bold" FontSize="13" Foreground="{StaticResource AccentBlue}" Margin="0,0,0,8"/>
+                                        
+                                        <TextBlock Text="1. API 連線設定" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimary}" Margin="0,6,0,2"/>
+                                        <TextBlock Text="點選右上角「⚙ API 設定」，輸入金鑰、端點（相容 OpenAI 格式，或本地離線 Ollama）並進行確認連線。" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="4,0,0,6"/>
+
+                                        <TextBlock Text="2. 數據 Context 讀取 (雙模式)" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimary}" Margin="0,6,0,2"/>
+                                        <TextBlock Text="• 手動選取：選取 Revit 物件後點選「⬇ 讀取 Revit 資料」進行局部優化與審查。&#x0a;• 免選取全域掃描：未選取物件時點選，自動檢驗各樓層牆體/地板 Uniclass 編碼與空間裝修參數缺漏。" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="4,0,0,6"/>
+
+                                        <TextBlock Text="3. 對話與一鍵寫回優化" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimary}" Margin="0,6,0,2"/>
+                                        <TextBlock Text="可詢問 AI「幫我檢查各樓層裝修」或「2F 還有哪些房間沒建好」。對話中若出現「⚡ 執行 AI 修改」按鈕，點擊後會彈出 Revit 原生 TaskDialog 二次確認並顯示新舊值對照表（長度自動換算 mm），按下 Yes 才會 commit 寫入，保證安全！" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="4,0,0,6"/>
+                                        
+                                        <TextBlock Text="4. Revit 雙向連動高亮" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimary}" Margin="0,6,0,2"/>
+                                        <TextBlock Text="在「📊 項目診斷」列表中，直接滑鼠點擊任意一列缺失問題，Revit 視圖中會同步高亮選取該物件，方便立即核對。" Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="4,0,0,6"/>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
 
                     <!-- 取得元件按鈕 -->
                     <Border Grid.Row="2"
@@ -313,7 +417,7 @@
                         <StackPanel>
                             <Button x:Name="BtnGetSelection"
                                     Style="{StaticResource BtnSuccess}"
-                                    Content="⬇  取得 Revit 選取元件"
+                                    Content="⬇  讀取 Revit 資料 (選取/全專案掃描)"
                                     Click="BtnGetSelection_Click"
                                     HorizontalAlignment="Stretch"
                                     Margin="0,0,0,8"/>
