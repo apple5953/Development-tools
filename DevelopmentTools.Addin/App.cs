@@ -26,6 +26,8 @@ namespace DevelopmentTools
         private static AIAssistantWindow _aiWindow;
         private static AISelectionHandler _aiSelectionHandler;
         private static ExternalEvent _aiSelectionEvent;
+        private static AICommandHandler _aiCommandHandler;
+        private static ExternalEvent _aiCommandEvent;
 
         private static readonly System.Collections.Generic.HashSet<string> _activeDocs = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -216,7 +218,7 @@ namespace DevelopmentTools
                 return;
             }
 
-            _aiWindow = new AIAssistantWindow(_aiSelectionEvent, _aiSelectionHandler);
+            _aiWindow = new AIAssistantWindow(_aiSelectionEvent, _aiSelectionHandler, _aiCommandEvent, _aiCommandHandler);
             var helper = new System.Windows.Interop.WindowInteropHelper(_aiWindow);
             helper.Owner = commandData.Application.MainWindowHandle;
             _aiWindow.Closed += (s, e) => { _aiWindow = null; };
@@ -302,6 +304,8 @@ namespace DevelopmentTools
                 // AI 助手 ExternalEvent
                 _aiSelectionHandler = new AISelectionHandler();
                 _aiSelectionEvent = ExternalEvent.Create(_aiSelectionHandler);
+                _aiCommandHandler = new AICommandHandler();
+                _aiCommandEvent = ExternalEvent.Create(_aiCommandHandler);
 
                 // 2. 建立 Ribbon 頁籤
                 string tabName = "Development tools";

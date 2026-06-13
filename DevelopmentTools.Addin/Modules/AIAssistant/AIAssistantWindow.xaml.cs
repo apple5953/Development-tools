@@ -14,14 +14,19 @@ namespace DevelopmentTools.Modules.AIAssistant
         private readonly AIAssistantViewModel _vm;
         private ExternalEvent _selectionEvent;
         private AISelectionHandler _selectionHandler;
+        private ExternalEvent _commandEvent;
+        private AICommandHandler _commandHandler;
 
-        public AIAssistantWindow(ExternalEvent selectionEvent, AISelectionHandler handler)
+        public AIAssistantWindow(ExternalEvent selectionEvent, AISelectionHandler handler, ExternalEvent commandEvent, AICommandHandler commandHandler)
         {
             InitializeComponent();
             _selectionEvent = selectionEvent;
             _selectionHandler = handler;
+            _commandEvent = commandEvent;
+            _commandHandler = commandHandler;
 
             _vm = new AIAssistantViewModel();
+            _vm.InjectRevitCommand(commandEvent, commandHandler);
             DataContext = _vm;
 
             // 每次有新訊息就自動滾到底部
@@ -91,7 +96,11 @@ namespace DevelopmentTools.Modules.AIAssistant
                     count++;
                     sb.AppendLine($"── 元件 #{count} ──────────────");
                     sb.AppendLine($"類型：{elem.GetType().Name}");
+#if REVIT2024 || REVIT2025 || REVIT2026
+                    sb.AppendLine($"Id  ：{elem.Id.Value}");
+#else
                     sb.AppendLine($"Id  ：{elem.Id.IntegerValue}");
+#endif
 
                     if (elem.Category != null)
                         sb.AppendLine($"類別：{elem.Category.Name}");
@@ -109,6 +118,7 @@ namespace DevelopmentTools.Modules.AIAssistant
                     TryAppendParam(sb, elem, "Base Finish", "地板裝修");
                     TryAppendParam(sb, elem, "Wall Finish", "牆面裝修");
                     TryAppendParam(sb, elem, "Ceiling Finish", "天花板裝修");
+                    TryAppendParam(sb, elem, "Tile_Joint_Width", "磁磚縫寬");
                     TryAppendParam(sb, elem, "Number",      "編號");
                     TryAppendParam(sb, elem, "Comments",    "備註");
 
