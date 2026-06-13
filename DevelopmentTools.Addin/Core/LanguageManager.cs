@@ -393,7 +393,7 @@ namespace DevelopmentTools.Core
             AddTranslation("TileSys_ResetOrigin_Desc", "只移除本外掛疊加的磁磚填充線 Paint，不會修改或刪除 any 原有材質設定", "Only removes the tile paint applied by this plugin. Does not alter original materials.", "このプラグインで適用されたタイルペイントのみを削除します。元のマテリアルは変更しません。");
             AddTranslation("TileSys_Feedback2", "💬 問題與意見反饋", "💬 Feedback & Support", "💬 フィードバックとサポート");
             AddTranslation("TileSys_Feedback_Desc", "向作者提交功能優化反饋或錯誤回報", "Submit feature requests or bug reports to the author.", "作成者に機能リクエストやバグ報告を送信します。");
-                        AddTranslation("RoomFinish_Title_Full", "🏠 房間裝修材質配置工具", "🏠 Room Finish Configurator", "🏠 部屋仕上げ設定ツール");
+            AddTranslation("RoomFinish_Title_Full", "🏠 房間裝修材質配置工具", "🏠 Room Finish Configurator", "🏠 部屋仕上げ設定ツール");
             AddTranslation("TileSys_Mode1_Btn_Alt", "📌  手動點選面 → 生成磁磚填充線", "📌  Manually select faces → Generate Tile Patterns", "📌  面を手動で選択 → タイルパターンを生成");
             AddTranslation("TileSys_Mode1_Confirm_Alt", "✔️  1. 確認鋪貼並改寫原材質圖案", "✔️  1. Confirm and Override Pattern", "✔️  1. 割り当てを確定し、パターンを上書き");
             AddTranslation("TileSys_Gen3DWall2_Alt", "🧱  2-1. 建立 3D 牆面磁磚實體", "🧱  2-1. Generate 3D Wall Tiles", "🧱  2-1. 3D壁タイルを生成");
@@ -401,7 +401,7 @@ namespace DevelopmentTools.Core
             AddTranslation("TileSys_ChangeTileMaterial2_Alt", "🎨  局部變更磁磚材質", "🎨  Change Local Tile Material", "🎨  局所的なタイルマテリアルを変更");
             AddTranslation("TileSys_ConvertToEditable2_Alt", "📐  轉換為可編輯磁磚", "📐  Convert to Editable Tiles", "📐  編集可能なタイルに変換");
             AddTranslation("TileSys_FloorJointParam2_Alt", "🟨 裝修地坪縫隙參數", "🟨 Floor Finish Joint Parameter", "🟨 床仕上げ目地パラメーター");
-                        AddTranslation("RoomFinish_SearchLabel", "🔍 房間搜尋：", "🔍 Room Search:", "🔍 部屋検索：");
+            AddTranslation("RoomFinish_SearchLabel", "🔍 房間搜尋：", "🔍 Room Search:", "🔍 部屋検索：");
             AddTranslation("RoomFinish_BatchFillTitle", "⚡ 批量填入裝修值", "⚡ Batch Fill Finishes", "⚡ 仕上げ値を一括入力");
             AddTranslation("RoomFinish_TargetField", "目標欄位", "Target Field", "対象フィールド");
             AddTranslation("RoomFinish_MaterialSpec", "材質規格", "Material Spec", "マテリアル仕様");
@@ -459,11 +459,12 @@ namespace DevelopmentTools.Core
                                      "1. [點選面預覽] - 點擊「手動點選面 → 生成磁磚填充線」，在視圖中點選要鋪磁磚的牆面或地板面。\n" +
                                      "2. [確認鋪貼] - 點擊「確認鋪貼並改寫原材質圖案」，點選該面將排版填充線正式寫入材質中。\n" +
                                      "3. [生成3D實體] - 點擊「建立 3D 牆面磁磚實體」或「建立 3D 地坪磁磚實體」，選取面即可生成 3D 磁磚實體。\n" +
-                                     "4. [人工修整收邊] - 點選需要修剪的磁磚，點擊「轉換為可編輯磁磚」，即可雙擊或使用 Revit 的「編輯輪廓」按鈕手動裁剪不規則邊角。\n\n" +
+                                     "4. [人工修整收邊] - 點選需要修剪的磁磚，點擊「轉換為可編輯磁磚」，即可雙擊或使用 Revit 的「編輯輪廓」手動裁剪不規則邊角。\n\n" +
                                      "【關鍵提示】\n" +
-                                     "• [縫隙參數]：首次使用本外掛時，請點擊最下方的「裝修牆縫隙參數」與「裝修地板縫隙參數」，在專案中加入 Tile_Joint_Width 縫寬屬性。\n" +
+                                     "• [縫隙參數]：首次使用時，請點擊下方的「裝修牆/地板縫隙參數」，在專案中加入 Tile_Joint_Width 縫寬屬性。\n" +
                                      "• [局部變更]：使用「局部變更磁磚材質」可以多選 3D 磁磚進行局部更換材質球（如腰線）。\n" +
-                                     "• [明細與導出]：使用「建立 Revit 明細表」或「匯出 Excel 統計表」可輕鬆統計工程量與出圖。", 
+                                     "• [重設與刪除]：使用「重設磁磚起點」可重新定位排磚原點；使用「刪除現有排版」可清除外掛疊加的填充線。\n" +
+                                     "• [明細與導出]：使用「建立 Revit 明細表」或「匯出 Excel 統計表」可輕鬆統計工程量與損耗率。",
                                      "【4-Step Quick Start】\n" +
                                      "1. [Select Face & Preview] - Click 'Manually select faces -> Generate Tile Patterns' and select target wall/floor faces in your view.\n" +
                                      "2. [Confirm Layout] - Click '1. Confirm and Override Pattern' and select the face to write the pattern to the material.\n" +
@@ -472,73 +473,78 @@ namespace DevelopmentTools.Core
                                      "【Key Tips】\n" +
                                      "• [Joint Parameter] - Run 'Wall Finish Joint Parameter' & 'Floor Finish Joint Parameter' on first use to inject joint width attributes.\n" +
                                      "• [Local Change] - Use 'Change Local Tile Material' to batch change material types for specific tiles (e.g. border tiles).\n" +
-                                     "• [Export & Schedule] - Export to Excel or generate Revit schedule for quick estimates.",
+                                     "• [Reset & Delete] - Use 'Reset Origin' to reposition the tile start point; use 'Delete Layout' to remove overlaid patterns.\n" +
+                                     "• [Export & Schedule] - Export to Excel or generate Revit schedule for quick estimates and waste calculations.",
                                      "【タイル配置の4つの手順】\n" +
                                      "1. [面を選択してプレビュー] - 「面を手動で選択 → タイルパターンを生成」をクリックし、ビュー内の壁面または床面を選択します。\n" +
                                      "2. [配置を確定] - 「1. 割り当てを確定し、パターンを上書き」をクリックし、該当する面を選択してパターンを適用します。\n" +
                                      "3. [3Dタイルの作成] - 「2-1. 3D壁タイルを生成」または「2-2. 3D床タイルを生成」をクリックして、該当面を選択します。\n" +
                                      "4. [手動微調整] - 「編集可能なタイルに変換」をクリックして、Revit標準の「プロファイルを編集」で形状をトリミングします。\n\n" +
                                      "【重要なヒント】\n" +
-                                     "• [目地パラメータ] - 初回使用時は、最下部の「壁仕上げ目地パラメータ」「床仕上げ目地パラメータ」をクリックし、プロジェクトに Tile_Joint_Width 属性を追加してください。\n" +
-                                     "• [部分変更] - 「局所的なタイルマテリアルを変更」を使用して、一部のタイルのマテリアルを変更できます。\n" +
-                                     "• [集計表と出力] - 「Revit 集計表を作成」または「Excel 統計をエクスポート」を使用して数量を集計します。");
+                                     "• [目地パラメータ] - 初回使用時は、最下部の「壁/床仕上げ目地パラメータ」をクリックし、プロジェクトに Tile_Joint_Width 属性を追加してください。\n" +
+                                     "• [部分変更] - 「局所的なタイルマテリアルを変更」を使用して、一部 of タイルのマテリアルを変更できます。\n" +
+                                     "• [リセットと削除] - 「タイル起点をリセット」で起点を再設定し、「レイアウトを削除」でオーバーレイされたパターンのみを削除できます。\n" +
+                                     "• [集計表と出力] - 「Revit 集計表を作成」または「Excel 統計をエクスポート」を使用して数量とロス率を集計します。");
 
             // 2. 展開圖生成器 (TileElev)
             AddTranslation("Tut_TileElev_Title", "展開圖生成器 - 新手指南", "Tile Elevation Generator - Guide", "タイル立面ジェネレーター - ガイド");
             AddTranslation("Tut_TileElev_Content", "【快速入門三步驟】\n" +
                                      "1. [選擇來源模式與物件]：\n" +
-                                     "   - 以樓板為界 (Floor Mode)：選取一個地板，系統會自動抓取相鄰牆面並以順時針方向排序 (命名為 A, B, C, D)。\n" +
-                                     "   - 以牆為界 (Wall Mode)：在 Revit 中多選多面牆體，系統會完全依據您「點選的先後順序」進行編號排序與命名。\n" +
+                                     "   - 樓板模式 (Floor Mode)：選取一個樓板，系統會自動抓取相鄰牆面並以「順時針幾何方向」進行排序與編號（預設為 A, B, C, D）。\n" +
+                                     "   - 牆體模式 (Wall Mode)：在 Revit 中多選多面牆體，系統亦會「自動依順時針幾何方向」進行排序與編號（預設為 A, B, C, D）。\n" +
                                      "2. [微調清單與參數]：\n" +
-                                     "   - 點擊「1. 選擇空間」載入幾何剖面清單，可用「▲ 上移」或「▼ 下移」調整順序與編號。\n" +
-                                     "   - 點選特定項目，修改前移距離(WallOffset)、剖面深度(ViewDepth)、兩側延伸(SideExtension)、上下偏移，右側 Canvas 將即時繪製範圍示意圖。\n" +
+                                     "   - 載入剖面清單後，點選特定項目可修改 WallOffset（前移距離）、ViewDepth（剖面深度）、SideExtension（兩側延伸，預設 150mm 以呈現轉角裝修）以及上下偏移（預設頂部 -100mm、底部 100mm）。右側 Canvas 將即時繪製範圍示意圖。\n" +
+                                     "   - [指定起點]：可點選任一剖面並點擊「將選中項目設為起始位置 (順時針排列)」，清單將自動循環移位重新指派 A, B, C, D 的順序，圖紙排版順序亦會同步更新。\n" +
+                                     "   - [方向反轉]：若剖面方向相反，可勾選「相反方向 (反轉)」一鍵旋轉 180 度，右側示意圖會即時連動。\n" +
                                      "3. [一鍵建立與排版]：\n" +
-                                     "   - 設定完畢後，點擊「一鍵產生磁磚展開圖」，工具會自動建立剖面視圖、套用樣板並置入圖紙中對齊排列。",
+                                     "   - 設定完畢後，點擊「一鍵產生磁磚展開圖」，工具會自動建立剖面視圖、套用樣板並置入圖紙中由左至右對齊排列，防止重疊。",
                                      "【Quick Start Guide】\n" +
                                      "1. [Choose Mode & Elements]:\n" +
-                                     "   - By Floor Mode: Select a floor. Adjacent walls are auto-detected and sorted clockwise (A, B, C, D).\n" +
-                                     "   - By Wall Mode: Multi-select walls. Sorted and numbered exactly by your 'clicking order'.\n" +
-                                     "2. [Refine settings]:\n" +
-                                     "   - Click '1. Select Space' to load profiles. Reorder items using '▲ Move Up' and '▼ Move Down'.\n" +
-                                     "   - Select an item to tweak Wall Offset, View Depth, Side Extension, Top/Bottom Offsets. Preview changes instantly on the right Canvas.\n" +
+                                     "   - Floor Mode: Select a floor. Adjacent walls are auto-detected and sorted \"clockwise\" geometrically (named A, B, C, D by default).\n" +
+                                     "   - Wall Mode: Select multiple walls. They will also be sorted \"clockwise\" geometrically (named A, B, C, D by default).\n" +
+                                     "2. [Refine Settings]:\n" +
+                                     "   - Load profiles to tweak Wall Offset, View Depth, Side Extension (default 150mm for corners), and Top/Bottom Offset (default top: -100mm, bottom: 100mm). Preview changes instantly on the right Canvas.\n" +
+                                     "   - [Set Start Point]: Select an item and click 'Set Selected as Start (Clockwise)' to rotate the sequence. Sheet layout order will sync automatically.\n" +
+                                     "   - [Flip Direction]: Check 'Flip Direction' to rotate the section view 180 degrees. The right Canvas will update instantly.\n" +
                                      "3. [Generate & Layout]:\n" +
-                                     "   - Click 'Generate Elevation' to automatically create section views, apply templates, and layout views onto a sheet aligned horizontally.",
+                                     "   - Click 'Generate Elevation' to automatically create section views, apply templates, and layout views onto a sheet aligned horizontally to prevent overlap.",
                                      "【操作の3ステップ】\n" +
                                      "1. [選択モードとオブジェクト]：\n" +
-                                     "   - 床を基準 (Floor Mode)：床を選択すると、隣接する壁が時計回りに自動検出されます (A, B, C, D と命名)。\n" +
-                                     "   - 壁を基準 (Wall Mode)：複数の壁を選択します。選択された「クリック順」に番号付けと名前付けが行われます。\n" +
+                                     "   - 床を基準 (Floor Mode)：床を選択すると、隣接する壁が「時計回り」に自動検出・ソートされます (A, B, C, D と命名)。\n" +
+                                     "   - 壁を基準 (Wall Mode)：複数の壁を選択すると、同様に「時計回り」に自動検出・ソートされます (A, B, C, D と命名)。\n" +
                                      "2. [リストとパラメータの微調整]：\n" +
-                                     "   - 「1. 空間を選択」をクリックしてリストをロードし、「▲ 上へ」「▼ 下へ」で順序を調整できます。\n" +
-                                     "   - 壁オフセット、ビュー奥行き、左右延長、上下オフセットを微調整すると、右側のキャンバスにプレビューが即座に描画されます。\n" +
+                                     "   - 壁オフセット、ビュー奥行き、左右延長（角の仕上げ用にデフォルト 150mm）、上下オフセット（デフォルト上: -100mm、下: 100mm）を微調整すると、右側のキャンバスにプレビューが即座に描画されます。\n" +
+                                     "   - [起点を設定]：アイテムを選択し、「選択項目を起点に設定 (時計回り)」をクリックすると、ソート順がローテーションし、シート配置順も自動同期されます。\n" +
+                                     "   - [方向反転]：断面方向が逆の場合は、「反対方向 (反転)」にチェックを入れて180度回転でき、プレビューも即座に連動します。\n" +
                                      "3. [自動生成と配置]：\n" +
-                                     "   - 設定完了後、「立面を作成」をクリックすると、ビューの作成、テンプレートの適用、シートへの配置が一括で実行されます。");
+                                     "   - 設定完了後、「立面を作成」をクリックすると、ビューの作成、テンプレートの適用、シートへの重なり防止水平配置が一括で実行されます。");
 
             // 3. 房間裝修配置工具 (RoomFinish)
             AddTranslation("Tut_RoomFinish_Title", "房間裝修配置工具 - 新手指南", "Room Finish Configurator - Guide", "部屋仕上げ設定ツール - ガイド");
             AddTranslation("Tut_RoomFinish_Content", "【快速入門說明】\n" +
                                      "1. [房間篩選與載入]：\n" +
                                      "   - 工具開啟後，左側會列出目前專案內所有房間。可依據樓層或房間名稱進行篩選過濾。\n" +
-                                     "2. [批量填入裝修屬性]：\n" +
-                                     "   - 在「批量填入裝修值」區塊，選擇目標欄位 (地板、牆面、天花板、踢腳板)，輸入材質代號/規格 (例如 F-01)，點擊「套用」即可將規格寫入所有已勾選的房間。\n" +
-                                     "   - 亦可直接在右側表格中，雙擊材質欄位以進行單個房間的獨立修改。\n" +
+                                     "2. [批量填入與雲端同步]：\n" +
+                                     "   - [批次填入]：在「批量填入裝修值」區塊，選擇目標欄位 (地板、牆面、天花板、踢腳板)，輸入材質規格，點擊「套用」即可寫入所有已勾選的房間。亦可於右側表格雙擊進行個別修改。\n" +
+                                     "   - [雲端 Excel 同步]：您可以點擊「下載 Excel 範本」，或在 CSV URL 輸入框中輸入雲端 CSV 連結，點擊「同步雲端設定」直接批次載入材質配置。\n" +
                                      "3. [自動產生裝修實體模型]：\n" +
                                      "   - 設定好材質參數後，在最下方選擇接合優先順序 (地坪優先或牆優先)，點擊「生成選中房間的裝修」，外掛會依據房間邊界自動生成實體牆面、地坪與天花板的細部粉刷層，並自動扣除門窗洞口！",
                                      "【Introduction】\n" +
                                      "1. [Filter & Load Rooms]:\n" +
-                                     "   - Centrally lists all rooms in the project on the right table. Filter by Level or Name on the top.\n" +
-                                     "2. [Batch Assign Finishes]:\n" +
-                                     "   - In 'Batch Fill Finishes', select a target field (Base, Wall, Ceiling, Baseboard), type a material spec (e.g. F-01), and click 'Apply to Selected'.\n" +
-                                     "   - You can also double-click cells in the table to edit room parameters individually.\n" +
+                                     "   - Lists all rooms in the project on the right table. Filter by Level or Name on the top.\n" +
+                                     "2. [Batch Assign & Cloud Sync]:\n" +
+                                     "   - [Batch Assign]: In 'Batch Fill Finishes', select a target field (Base, Wall, Ceiling, Baseboard), type a material spec, and click 'Apply'. You can also double-click cells to edit parameters individually.\n" +
+                                     "   - [Cloud Sync]: Click 'Download Excel Template' or enter a cloud CSV URL in the input box, then click 'Sync Cloud Config' to import material settings directly.\n" +
                                      "3. [Auto-Generate Geometry]:\n" +
                                      "   - Tweak the 'Joint Relation' settings (Floor First or Wall First) and click 'Generate Room Finishes'. It will auto-create physical Revit walls/floors finish layers based on room bounds, cutting out doors/windows openings automatically!",
                                      "【クイックユーザーガイド】\n" +
                                      "1. [部屋のフィルタリングとロード]：\n" +
                                      "   - ツール起動後、左側にプロジェクト内のすべての部屋が表示されます。レベルや部屋名でフィルタリングできます。\n" +
-                                     "2. [仕上げ属性の一括入力]：\n" +
-                                     "   - 「仕上げ値を一括入力」で対象フィールド (床、壁、天井、幅木) を選択し、コード（例：F-01）を入力して「適用」をクリックします。\n" +
-                                     "   - 右側の表でセルをダブルクリックして、個別の部屋のパラメータを直接編集することも可能です。\n" +
+                                     "2. [一括入力とクラウド同期]：\n" +
+                                     "   - [一括入力]：対象フィールド (床、壁、天井、幅木) を選択し、仕上げ値（例：F-01）を入力して「適用」をクリックします。右側の表のセルをダブルクリックして個別編集も可能です。\n" +
+                                     "   - [クラウド同期]：「Excelテンプレートのダウンロード」をクリックするか、CSVのURLを入力して「クラウド設定と同期」をクリックし、直接仕上げ仕様をインポートできます。\n" +
                                      "3. [仕上げモデルの自動生成]：\n" +
-                                     "   - 設定完了後、接合優先順（床優先または壁優先）を選択し、「仕上げモデルを生成」をクリックすると、部屋の境界線に沿って自動的に壁・床・天井の仕上げモデルが生成され、開口部も自動で控除されます。");
+                                     "   - 接合優先順（床優先または壁優先）を選択し、「仕上げモデルを生成」をクリックすると、部屋の境界線に沿って自動的に壁・床・天井の仕上げモデルが生成され、開口部も自動で控除されます。");
 
             // 4. 圖紙批次更名 (BatchRename)
             AddTranslation("Tut_BatchRename_Title", "圖紙批次更名 - 新手指南", "Batch Sheet Renamer - Guide", "シート一括名前変更 - ガイド");
