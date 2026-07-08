@@ -208,7 +208,8 @@ namespace DevelopmentTools.Modules.SheetTransfer.Services
                                 using (Transaction t = new Transaction(_targetDoc, $"更新專案參數綁定品類: {targetDef.Name}"))
                                 {
                                     t.Start();
-                                    _targetDoc.ParameterBindings.ReInsert(targetDef, targetBinding, targetDef.ParameterGroup);
+                                    object groupObj = GetParameterGroup(targetDef);
+                                    SafeReInsert(_targetDoc.ParameterBindings, targetDef, targetBinding, groupObj);
                                     t.Commit();
                                 }
                                 asset.StatusMessage = "參數已存在，已自動合併補全缺失的綁定品類";
@@ -287,7 +288,8 @@ namespace DevelopmentTools.Modules.SheetTransfer.Services
                                     ? (Binding)_targetDoc.Application.Create.NewInstanceBinding(targetCategories)
                                     : (Binding)_targetDoc.Application.Create.NewTypeBinding(targetCategories);
 
-                                targetBindings.Insert(defToBind, binding, sourceDef.ParameterGroup);
+                                object groupObj = GetParameterGroup(sourceDef);
+                                SafeInsert(targetBindings, defToBind, binding, groupObj);
                             }
                             finally
                             {
@@ -324,7 +326,8 @@ namespace DevelopmentTools.Modules.SheetTransfer.Services
                                     ? (Binding)_targetDoc.Application.Create.NewInstanceBinding(targetCategories)
                                     : (Binding)_targetDoc.Application.Create.NewTypeBinding(targetCategories);
 
-                                targetBindings.Insert(defToBind, binding, sourceDef.ParameterGroup);
+                                object groupObj = GetParameterGroup(sourceDef);
+                                SafeInsert(targetBindings, defToBind, binding, groupObj);
                                 asset.StatusMessage = "非共享普通專案參數，已自動提升為共享專案參數建立";
                             }
                             finally
@@ -803,6 +806,64 @@ namespace DevelopmentTools.Modules.SheetTransfer.Services
 
                 counter++;
             }
+        }
+
+        private static object GetParameterGroup(Definition def)
+        {
+            var getGroupTypeIdMethod = def.GetType().GetMethod("GetGroupTypeId");
+            if (getGroupTypeIdMethod != null)
+            {
+                object groupObj = getGroupTypeIdMethod.Invoke(def, null);
+                if (groupObj != null) return groupObj;
+            }
+
+            var parameterGroupProp = def.GetType().GetProperty("ParameterGroup");
+            if (parameterGroupProp != null)
+            {
+                return parameterGroupProp.GetValue(def);
+            }
+
+            return BuiltInParameterGroup.PG_DATA;
+        }
+
+        private static bool SafeInsert(BindingMap bindingMap, Definition def, Binding binding, object groupObj)
+        {
+            if (groupObj == null) groupObj = BuiltInParameterGroup.PG_DATA;
+
+            var insertMethod = bindingMap.GetType().GetMethod("Insert", new Type[] { typeof(Definition), typeof(Binding), groupObj.GetType() });
+            if (insertMethod != null)
+            {
+                return (bool)insertMethod.Invoke(bindingMap, new object[] { def, binding, groupObj });
+            }
+
+            var oldInsert = bindingMap.GetType().GetMethod("Insert", new Type[] { typeof(Definition), typeof(Binding), typeof(BuiltInParameterGroup) });
+            if (oldInsert != null)
+            {
+                var oldGroup = (groupObj is BuiltInParameterGroup) ? (BuiltInParameterGroup)groupObj : BuiltInParameterGroup.PG_DATA;
+                return (bool)oldInsert.Invoke(bindingMap, new object[] { def, binding, oldGroup });
+            }
+
+            throw new InvalidOperationException("找不到適合的 BindingMap.Insert 方法");
+        }
+
+        private static bool SafeReInsert(BindingMap bindingMap, Definition def, Binding binding, object groupObj)
+        {
+            if (groupObj == null) groupObj = BuiltInParameterGroup.PG_DATA;
+
+            var reInsertMethod = bindingMap.GetType().GetMethod("ReInsert", new Type[] { typeof(Definition), typeof(Binding), groupObj.GetType() });
+            if (reInsertMethod != null)
+            {
+                return (bool)reInsertMethod.Invoke(bindingMap, new object[] { def, binding, groupObj });
+            }
+
+            var oldReInsert = bindingMap.GetType().GetMethod("ReInsert", new Type[] { typeof(Definition), typeof(Binding), typeof(BuiltInParameterGroup) });
+            if (oldReInsert != null)
+            {
+                var oldGroup = (groupObj is BuiltInParameterGroup) ? (BuiltInParameterGroup)groupObj : BuiltInParameterGroup.PG_DATA;
+                return (bool)oldReInsert.Invoke(bindingMap, new object[] { def, binding, oldGroup });
+            }
+
+            throw new InvalidOperationException("找不到適合的 BindingMap.ReInsert 方法");
         }
     }
 
