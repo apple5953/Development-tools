@@ -8,12 +8,12 @@ namespace DevelopmentTools.Modules.FloorTools.FloorSnapToRoom
         /// <summary>
         /// 最大吸附距離 (mm)
         /// </summary>
-        public double MaxSnapDistanceMm { get; set; } = 300;
+        public double MaxSnapDistanceMm { get; set; } = 3000;
 
         /// <summary>
         /// 平行容許角度 (度)
         /// </summary>
-        public double ParallelToleranceDegree { get; set; } = 5;
+        public double ParallelToleranceDegree { get; set; } = 10;
 
         /// <summary>
         /// 最小重疊長度 (mm)

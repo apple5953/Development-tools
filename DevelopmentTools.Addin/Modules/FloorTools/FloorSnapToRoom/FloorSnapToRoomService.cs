@@ -34,7 +34,7 @@ namespace DevelopmentTools.Modules.FloorTools.FloorSnapToRoom
         /// <summary>
         /// 執行樓板貼房間對齊
         /// </summary>
-        public FloorSnapToRoomResult ExecuteFloorSnap(Document doc, IList<Floor> floors, FloorSnapToRoomSettings settings = null)
+        public FloorSnapToRoomResult ExecuteFloorSnap(Document doc, IList<Floor> floors, Room targetRoom, List<Room> allRoomsInDoc, FloorSnapToRoomSettings settings = null)
         {
             // TODO: 使用現有 Settings 系統讀取設定
             // var existingSettings = ExistingSettingsService.Load<FloorSnapToRoomSettings>("DT_FloorSnapToRoom");
@@ -64,8 +64,11 @@ namespace DevelopmentTools.Modules.FloorTools.FloorSnapToRoom
                     try
                     {
                         // 1. 偵測樓板對應的房間
-                        double distanceFeet = 0.0;
-                        Room room = RoomDetectionUtils.FindAssociatedRoom(doc, floor, maxSnapFeet, out distanceFeet);
+                        Room room = targetRoom;
+                        if (room == null)
+                        {
+                            room = RoomDetectionUtils.FindClosestRoom(floor, allRoomsInDoc);
+                        }
 
                         if (room == null)
                         {
@@ -80,7 +83,7 @@ namespace DevelopmentTools.Modules.FloorTools.FloorSnapToRoom
                                     FloorId = floor.Id,
                                     ErrorCode = "ROOM_NOT_FOUND",
                                     Message = "找不到對應的房間。",
-                                    Suggestion = "請調整 MaxSnapDistance 設定，或確認該樓板中心點同樓層附近是否有房間。"
+                                    Suggestion = "請確認該樓板同樓層附近是否有房間。"
                                 });
 
                                 txGroup.RollBack();
@@ -176,6 +179,17 @@ namespace DevelopmentTools.Modules.FloorTools.FloorSnapToRoom
 
                                 if (success)
                                 {
+                                    if (floorResult.UpdatedLines == 0)
+                                    {
+                                        editScope.Cancel();
+                                        totalResult.SkippedFloors++;
+                                        totalResult.Warnings.Add($"樓板 ID: {floor.Id} 附近雖然有配對到房間，但沒有符合吸附條件的平行邊線 (垂直距離超過 {settings.MaxSnapDistanceMm}mm)。");
+                                        DevelopmentTools.App.Log($"[DT_FloorSnapToRoom] 樓板 ID: {floor.Id} 沒有任何邊線符合吸附條件，已取消編輯並略過。");
+                                        success = false;
+                                        txGroup.RollBack();
+                                        continue;
+                                    }
+
                                     editScope.Commit(new SketchEditScopeFailuresPreprocessor());
                                     totalResult.SuccessFloors++;
                                     totalResult.UpdatedLines += floorResult.UpdatedLines;
@@ -189,6 +203,10 @@ namespace DevelopmentTools.Modules.FloorTools.FloorSnapToRoom
                                     if (floorResult != null)
                                     {
                                         totalResult.Errors.AddRange(floorResult.Errors);
+                                        foreach (var err in floorResult.Errors)
+                                        {
+                                            DevelopmentTools.App.Log($"[DT_FloorSnapToRoom] 樓板 ID: {floor.Id} 錯誤: {err.Message} | 建議: {err.Suggestion}");
+                                        }
                                     }
                                     DevelopmentTools.App.Log($"[DT_FloorSnapToRoom] 樓板 ID: {floor.Id} 處理失敗，已 Rollback 該樓板。");
                                 }

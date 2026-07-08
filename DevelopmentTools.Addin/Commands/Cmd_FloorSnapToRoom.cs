@@ -7,6 +7,7 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
 using DevelopmentTools.Core;
 using DevelopmentTools.Modules.FloorTools.FloorSnapToRoom;
+using Autodesk.Revit.DB.Architecture;
 
 namespace DevelopmentTools.Commands
 {
@@ -27,6 +28,24 @@ namespace DevelopmentTools.Commands
     }
 
     /// <summary>
+    /// 樓板貼房間指令過濾器，僅允許選取房間 (Room)
+    /// </summary>
+    public class RoomSelectionFilter : ISelectionFilter
+    {
+        public bool AllowElement(Element elem)
+        {
+            if (elem is Room) return true;
+            if (elem.Category != null && elem.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Rooms) return true;
+            return false;
+        }
+
+        public bool AllowReference(Reference reference, XYZ position)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// 樓板貼房間 (Floor Snap To Room) 外部指令
     /// </summary>
     [Transaction(TransactionMode.Manual)]
@@ -38,6 +57,10 @@ namespace DevelopmentTools.Commands
             ref string message,
             ElementSet elements)
         {
+            System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            int selectedFloorCount = 0;
+            FloorSnapToRoomResult result = new FloorSnapToRoomResult();
+
             try
             {
                 // 1. 檢查既有授權系統
@@ -61,15 +84,28 @@ namespace DevelopmentTools.Commands
                     return Result.Failed;
                 }
 
-                // 2. 取得選取的樓板
+                // 2. 取得選取的樓板與房間
                 List<Floor> targetFloors = new List<Floor>();
+                List<Room> targetRooms = new List<Room>();
                 ICollection<ElementId> selectedIds = uidoc.Selection.GetElementIds();
                 
                 foreach (ElementId id in selectedIds)
                 {
-                    if (doc.GetElement(id) is Floor floor)
+                    Element elem = doc.GetElement(id);
+                    if (elem is Floor floor)
                     {
                         targetFloors.Add(floor);
+                    }
+                    else if (elem is Room room)
+                    {
+                        targetRooms.Add(room);
+                    }
+                    else if (elem != null && elem.Category != null && elem.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Rooms)
+                    {
+                        if (elem is Room r)
+                        {
+                            targetRooms.Add(r);
+                        }
                     }
                 }
 
@@ -81,7 +117,7 @@ namespace DevelopmentTools.Commands
                         IList<Reference> pickedRefs = uidoc.Selection.PickObjects(
                             ObjectType.Element,
                             new FloorSelectionFilter(),
-                            "請選取一塊或多塊要貼齊房間的樓板："
+                            "請選取要吸附的樓板 (選完請按 Enter 或右鍵完成)："
                         );
 
                         foreach (Reference r in pickedRefs)
@@ -99,10 +135,51 @@ namespace DevelopmentTools.Commands
                     }
                 }
 
+                selectedFloorCount = targetFloors.Count;
                 if (targetFloors.Count == 0)
                 {
                     TaskDialog.Show("提示", "未選取任何樓板。");
                     return Result.Cancelled;
+                }
+
+                // 處理目標房間
+                Room targetRoom = null;
+                List<Room> allRoomsInDoc = new List<Room>();
+                
+                if (targetRooms.Count > 0)
+                {
+                    targetRoom = targetRooms[0];
+                }
+                else
+                {
+                    FilteredElementCollector col = new FilteredElementCollector(doc)
+                        .OfCategory(BuiltInCategory.OST_Rooms)
+                        .WhereElementIsNotElementType();
+                    
+                    foreach (Element e in col)
+                    {
+                        if (e is Room r && r.Location != null && r.Area > 0)
+                        {
+                            allRoomsInDoc.Add(r);
+                        }
+                    }
+
+                    if (allRoomsInDoc.Count == 0)
+                    {
+                        try
+                        {
+                            Reference refRoom = uidoc.Selection.PickObject(
+                                ObjectType.Element,
+                                new RoomSelectionFilter(),
+                                "專案中無已放置房間，請手動點選對齊的目標房間："
+                            );
+                            targetRoom = doc.GetElement(refRoom) as Room;
+                        }
+                        catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+                        {
+                            return Result.Cancelled;
+                        }
+                    }
                 }
 
                 // 4. 讀取設定與執行吸附服務
@@ -112,7 +189,7 @@ namespace DevelopmentTools.Commands
                 // settings = ExistingSettingsService.Load<FloorSnapToRoomSettings>("DT_FloorSnapToRoom") ?? settings;
 
                 FloorSnapToRoomService service = new FloorSnapToRoomService();
-                FloorSnapToRoomResult result = service.ExecuteFloorSnap(doc, targetFloors, settings);
+                result = service.ExecuteFloorSnap(doc, targetFloors, targetRoom, allRoomsInDoc, settings);
 
                 // 5. 顯示總結報告
                 if (settings.EnableDetailedReport)
@@ -127,6 +204,16 @@ namespace DevelopmentTools.Commands
                 message = ex.Message;
                 DevelopmentTools.App.Log($"[DT_FloorSnapToRoom] 指令執行異常: {ex.Message}\n{ex.StackTrace}");
                 return Result.Failed;
+            }
+            finally
+            {
+                stopwatch.Stop();
+                string userId = GoogleAuthManager.CurrentUserEmail ?? "UnknownUser";
+                string projectName = commandData.Application.ActiveUIDocument?.Document?.Title ?? "UnknownProject";
+                string docPath = commandData.Application.ActiveUIDocument?.Document?.PathName ?? "UnknownPath";
+                long runTime = stopwatch.ElapsedMilliseconds;
+
+                DevelopmentTools.App.Log($"[UsageStats] ToolName=DT_FloorSnapToRoom; UserId={userId}; ProjectName={projectName}; DocumentPath={docPath}; RunTime={runTime}ms; SelectedFloorCount={selectedFloorCount}; SuccessFloorCount={result.SuccessFloors}; UpdatedCurveCount={result.UpdatedLines}; ErrorCount={result.Errors.Count}");
             }
         }
 

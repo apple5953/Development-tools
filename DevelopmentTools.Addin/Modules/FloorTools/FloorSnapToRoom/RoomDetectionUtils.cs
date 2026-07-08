@@ -115,6 +115,62 @@ namespace DevelopmentTools.Modules.FloorTools.FloorSnapToRoom
         }
 
         /// <summary>
+        /// 自動搜尋與樓板在同樓層且距離最近的房間 (對應原 Python 邏輯)
+        /// </summary>
+        public static Room FindClosestRoom(Floor floor, List<Room> allRooms)
+        {
+            ElementId floorLevelId = floor.LevelId;
+            BoundingBoxXYZ bbox = floor.get_BoundingBox(null);
+            if (bbox == null) return null;
+            XYZ floorCenter = 0.5 * (bbox.Min + bbox.Max);
+
+            // 1. 優先判定：點是否在房間內部 (將 Z 軸略微抬高 1.0 呎，避免剛好在底部平面上判定失敗)
+            XYZ checkPt = new XYZ(floorCenter.X, floorCenter.Y, floorCenter.Z + 1.0);
+            foreach (Room room in allRooms)
+            {
+                ElementId roomLevelId = room.Level != null ? room.Level.Id : room.LevelId;
+                if (roomLevelId != floorLevelId) continue;
+                if (room.Location == null) continue;
+
+                try
+                {
+                    if (room.IsPointInRoom(checkPt))
+                    {
+                        return room;
+                    }
+                }
+                catch
+                {
+                    // 忽略個別房間的幾何異常
+                }
+            }
+
+            // 2. Fallback 備用判定：距離最近判定
+            Room closestRoom = null;
+            double minDist = double.MaxValue;
+
+            foreach (Room room in allRooms)
+            {
+                ElementId roomLevelId = room.Level != null ? room.Level.Id : room.LevelId;
+                if (roomLevelId != floorLevelId) continue;
+                if (room.Location == null) continue;
+
+                LocationPoint lp = room.Location as LocationPoint;
+                if (lp == null) continue;
+                XYZ roomPt = lp.Point;
+
+                // 計算 2D 水平距離
+                double dist = new XYZ(floorCenter.X, floorCenter.Y, 0.0).DistanceTo(new XYZ(roomPt.X, roomPt.Y, 0.0));
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    closestRoom = room;
+                }
+            }
+            return closestRoom;
+        }
+
+        /// <summary>
         /// 計算中心點到房間邊界線段的最短距離 (2D XY平面)
         /// </summary>
         private static double CalculateDistanceToRoom(Document doc, XYZ point, Room room)

@@ -6,33 +6,54 @@ using Autodesk.Revit.DB.Architecture;
 namespace DevelopmentTools.Modules.FloorTools.FloorSnapToRoom
 {
     /// <summary>
-    /// 草圖編輯節點，記錄 ModelCurve、幾何曲線以及拓撲方向
-    /// </summary>
-    public class LoopNode
-    {
-        /// <summary>
-        /// 草圖中的 ModelCurve 實體
-        /// </summary>
-        public ModelCurve ModelCurve { get; set; }
-
-        /// <summary>
-        /// 運算中的 2D 投影幾何曲線 (Z=0)
-        /// </summary>
-        public Curve CurrentCurve2D { get; set; }
-
-        /// <summary>
-        /// 指示此 ModelCurve 相對於順序方向是否被反向
-        /// </summary>
-        public bool IsReversed { get; set; }
-    }
-
-    /// <summary>
     /// 樓板草圖編輯與拓撲重建引擎
     /// </summary>
     public static class FloorSketchEditor
     {
+        private struct ShiftedLineInfo
+        {
+            public XYZ Pt;
+            public XYZ Dir;
+            public XYZ OrigPt1;
+        }
+
         /// <summary>
-        /// 處理單一樓板的草圖對齊與重建
+        /// 計算兩條 2D 無限延伸直線的交點，若平行則投影 (對應原 Python 邏輯)
+        /// </summary>
+        private static XYZ GetShiftedIntersection(ShiftedLineInfo L1, ShiftedLineInfo L2)
+        {
+            XYZ pt1 = L1.Pt;
+            XYZ dir1 = L1.Dir;
+            XYZ origPt = L1.OrigPt1;
+
+            XYZ pt2 = L2.Pt;
+            XYZ dir2 = L2.Dir;
+
+            double det = dir1.X * dir2.Y - dir1.Y * dir2.X;
+            if (Math.Abs(det) < 1e-6)
+            {
+                XYZ v = origPt - pt1;
+                double t = v.X * dir1.X + v.Y * dir1.Y;
+                return new XYZ(pt1.X + dir1.X * t, pt1.Y + dir1.Y * t, origPt.Z);
+            }
+
+            double dx = pt2.X - pt1.X;
+            double dy = pt2.Y - pt1.Y;
+            double t1 = (dx * dir2.Y - dy * dir2.X) / det;
+            return new XYZ(pt1.X + t1 * dir1.X, pt1.Y + t1 * dir1.Y, origPt.Z);
+        }
+
+        /// <summary>
+        /// 投影點到平面
+        /// </summary>
+        private static XYZ ProjectToPlane(XYZ pt, Plane plane)
+        {
+            double dist = plane.Normal.DotProduct(pt.Subtract(plane.Origin));
+            return pt.Subtract(plane.Normal.Multiply(dist));
+        }
+
+        /// <summary>
+        /// 處理單一樓板的草圖對齊與重建 (100% 複刻原 Python 核心邏輯，並使用 2D 投影進行匹配比對)
         /// </summary>
         public static FloorSnapToRoomResult ProcessFloorSketch(
             Document doc,
@@ -59,282 +80,316 @@ namespace DevelopmentTools.Modules.FloorTools.FloorSnapToRoom
                 return result;
             }
 
-            // 2. 獲取 Sketch 中的所有 ModelCurve
-            List<ModelCurve> modelCurves = new List<ModelCurve>();
-            foreach (ElementId id in sketch.GetAllElements())
-            {
-                if (doc.GetElement(id) is ModelCurve mc)
-                {
-                    modelCurves.Add(mc);
-                }
-            }
-
-            if (modelCurves.Count == 0)
+            // 獲取房間邊界
+            List<Curve> roomCurves = RoomDetectionUtils.GetRoomBoundaryCurves(doc, room, settings.UseFinishBoundary);
+            if (roomCurves == null || roomCurves.Count == 0)
             {
                 result.Errors.Add(new FloorSnapToRoomError
                 {
                     FloorId = floor.Id,
                     RoomId = room?.Id ?? ElementId.InvalidElementId,
                     RoomName = room?.Name,
-                    ErrorCode = "FLOOR_NO_SKETCH",
-                    Message = "樓板草圖中不包含任何曲線元素。",
-                    Suggestion = "請檢查樓板是否有繪製邊界。"
+                    ErrorCode = "ROOM_BOUNDARY_EMPTY",
+                    Message = "房間邊界為空，無法執行吸附。",
+                    Suggestion = "請確認房間是否是閉合的。"
                 });
                 return result;
             }
 
-            // 3. 將曲線拓撲排序成多個閉合環 (Loop)
-            List<List<LoopNode>> loops = SortCurvesIntoLoops(modelCurves);
-            List<Curve> roomCurves = RoomDetectionUtils.GetRoomBoundaryCurves(doc, room, settings.UseFinishBoundary);
-
-            // 將所有 Room 邊界投影至 Z = 0 的平面
-            List<Curve> projectedRoomCurves = new List<Curve>();
-            foreach (Curve rc in roomCurves)
-            {
-                Curve pc = FloorSnapGeometryUtils.ProjectCurveToPlane(rc, 0.0);
-                if (pc != null)
-                {
-                    projectedRoomCurves.Add(pc);
-                }
-            }
-
             double maxSnapFeet = FloorSnapGeometryUtils.MmToFeet(settings.MaxSnapDistanceMm);
-            double minOverlapFeet = FloorSnapGeometryUtils.MmToFeet(settings.MinOverlapMm);
+            int matchedLinesTotal = 0;
 
-            int updatedLinesCount = 0;
-            int ignoredCurvesCount = 0;
-
-            // 4. 對每個閉合環進行獨立的吸附與重建
-            foreach (List<LoopNode> loop in loops)
+            try
             {
-                // A. 針對 Loop 中的每一條線，尋找最佳配對房間邊界，並進行平移吸附
-                foreach (LoopNode node in loop)
-                {
-                    Curve orig2D = node.CurrentCurve2D;
+                Plane spPlane = sketch.SketchPlane.GetPlane();
+                List<List<Tuple<Curve, Curve>>> finalLoops = new List<List<Tuple<Curve, Curve>>>();
 
-                    // 若限制只處理直線且其不是直線
-                    if (settings.ProcessOnlyLines && !(orig2D is Line))
+                // 2. 遍歷 sketch.Profile (CurveArrArray) 中的每一個 Loop (CurveArray)
+                foreach (CurveArray profile in sketch.Profile)
+                {
+                    List<Curve> curves = new List<Curve>();
+                    foreach (Curve c in profile)
                     {
-                        ignoredCurvesCount++;
-                        continue;
+                        if (c != null)
+                        {
+                            curves.Add(c);
+                        }
                     }
 
-                    if (orig2D is Line origLine)
-                    {
-                        Curve bestMatchRoomCurve = null;
-                        double bestDistance = double.MaxValue;
-                        XYZ bestTranslation = XYZ.Zero;
+                    int N = curves.Count;
+                    if (N == 0) continue;
 
-                        foreach (Curve roomCurve in projectedRoomCurves)
+                    List<ShiftedLineInfo> shiftedLines = new List<ShiftedLineInfo>();
+
+                    for (int i = 0; i < N; i++)
+                    {
+                        Curve c = curves[i];
+                        if (c is Line line)
                         {
-                            if (roomCurve is Line roomLine)
+                            XYZ pt3D = line.GetEndPoint(0);
+                            XYZ origPt1_3D = line.GetEndPoint(1);
+
+                            // 投影至 Z=0 進行 2D 幾何運算，消除高度差
+                            XYZ pt = new XYZ(pt3D.X, pt3D.Y, 0.0);
+                            XYZ origPt1 = new XYZ(origPt1_3D.X, origPt1_3D.Y, 0.0);
+
+                            if (pt.DistanceTo(origPt1) < 1e-4)
                             {
-                                // 檢查平行度
-                                double angleDiff = FloorSnapGeometryUtils.GetAngleBetweenLines(origLine, roomLine);
-                                if (angleDiff <= settings.ParallelToleranceDegree)
+                                shiftedLines.Add(new ShiftedLineInfo
                                 {
-                                    // 檢查距離
-                                    double dist = FloorSnapGeometryUtils.DistanceToUnboundedLine(origLine.GetEndPoint(0), roomLine);
-                                    if (dist <= maxSnapFeet && dist < bestDistance)
+                                    Pt = pt3D,
+                                    Dir = line.Direction,
+                                    OrigPt1 = origPt1_3D
+                                });
+                                continue;
+                            }
+
+                            XYZ dirV = (origPt1 - pt).Normalize();
+
+                            double bestDist = maxSnapFeet;
+                            XYZ bestTranslation = XYZ.Zero;
+                            bool hasMatch = false;
+
+                            foreach (Curve rc in roomCurves)
+                            {
+                                if (rc is Line rcLine)
+                                {
+                                    XYZ rcStart3D = rcLine.GetEndPoint(0);
+                                    XYZ rcEnd3D = rcLine.GetEndPoint(1);
+
+                                    // 房間邊線亦投影至 Z=0
+                                    XYZ rcStart = new XYZ(rcStart3D.X, rcStart3D.Y, 0.0);
+                                    XYZ rcEnd = new XYZ(rcEnd3D.X, rcEnd3D.Y, 0.0);
+
+                                    if (rcStart.DistanceTo(rcEnd) < 1e-4) continue;
+                                    XYZ rcDir = (rcEnd - rcStart).Normalize();
+
+                                    double dotProd = dirV.DotProduct(rcDir);
+
+                                    // A. 平行度檢查：夾角小於約 5 度 (abs(abs(dotProd) - 1.0) < 0.004)
+                                    if (Math.Abs(Math.Abs(dotProd) - 1.0) < 0.004)
                                     {
-                                        // 檢查重疊長度
-                                        double overlap = FloorSnapGeometryUtils.GetOverlapLength(origLine, roomLine);
-                                        if (overlap >= minOverlapFeet)
+                                        // B. 垂直距離計算 (全部使用投影後的 2D 坐標)
+                                        XYZ projPt = rcStart + rcDir.Multiply((pt - rcStart).DotProduct(rcDir));
+                                        XYZ translationVec = projPt - pt;
+                                        double dist = translationVec.GetLength();
+
+                                        if (dist < bestDist)
                                         {
-                                            bestDistance = dist;
-                                            bestMatchRoomCurve = roomLine;
-                                            bestTranslation = FloorSnapGeometryUtils.GetTranslationToLine(origLine, roomLine);
+                                            // C. 物理長度重疊度檢查 (Overlap Check)
+                                            double rcLen = rcStart.DistanceTo(rcEnd);
+                                            double projS = (pt - rcStart).DotProduct(rcDir);
+                                            double projE = (origPt1 - rcStart).DotProduct(rcDir);
+
+                                            double minF = Math.Min(projS, projE);
+                                            double maxF = Math.Max(projS, projE);
+
+                                            double overlapStart = Math.Max(0.0, minF);
+                                            double overlapEnd = Math.Min(rcLen, maxF);
+                                            double overlapLen = overlapEnd - overlapStart;
+
+                                            bool hasOverlap = overlapLen > 0.01;
+
+                                            // Fallback: 如果物理上無直接重疊，但樓板線與房間線相距不遠 (端點外 5.0 呎以內)
+                                            if (!hasOverlap)
+                                            {
+                                                if ((minF < 0.0 && maxF > -5.0) || (minF < rcLen + 5.0 && maxF > rcLen))
+                                                {
+                                                    hasOverlap = true;
+                                                }
+                                            }
+
+                                            if (hasOverlap)
+                                            {
+                                                bestDist = dist;
+                                                bestTranslation = translationVec; // 這是 Z 軸為 0.0 的水平平移向量
+                                                hasMatch = true;
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        if (bestMatchRoomCurve != null)
-                        {
-                            // 進行平行平移，直接將整條線移過去
-                            XYZ p0 = origLine.GetEndPoint(0) + bestTranslation;
-                            XYZ p1 = origLine.GetEndPoint(1) + bestTranslation;
-                            node.CurrentCurve2D = Line.CreateBound(p0, p1);
-                            updatedLinesCount++;
-                        }
-                    }
-                    else if (orig2D is Arc && settings.KeepArcUnchanged)
-                    {
-                        // 保留圓弧幾何，不進行平移，但後續會重新計算與相鄰線的交點
-                        ignoredCurvesCount++;
-                    }
-                    else
-                    {
-                        ignoredCurvesCount++;
-                    }
-                }
-
-                // B. 拓撲端點重建：重新計算相鄰曲線的交點並對齊端點
-                int nodeCount = loop.Count;
-                XYZ[] newIntersections = new XYZ[nodeCount];
-
-                for (int i = 0; i < nodeCount; i++)
-                {
-                    LoopNode current = loop[i];
-                    LoopNode next = loop[(i + 1) % nodeCount];
-
-                    // 重新求 2D 平面交點
-                    XYZ intersect = FloorSnapGeometryUtils.GetIntersection2D(current.CurrentCurve2D, next.CurrentCurve2D);
-                    newIntersections[i] = intersect;
-                }
-
-                // C. 重新以交點為端點重建每一條曲線幾何
-                for (int i = 0; i < nodeCount; i++)
-                {
-                    LoopNode current = loop[i];
-                    
-                    // 該曲線的起點交點 (i - 1) 與終點交點 (i)
-                    XYZ startInt = newIntersections[(i - 1 + nodeCount) % nodeCount];
-                    XYZ endInt = newIntersections[i];
-
-                    // 如果 Loop 節點被反向了，則其開始和結束端點需對調
-                    XYZ curveStart = current.IsReversed ? endInt : startInt;
-                    XYZ curveEnd = current.IsReversed ? startInt : endInt;
-
-                    if (current.CurrentCurve2D is Line)
-                    {
-                        current.CurrentCurve2D = Line.CreateBound(curveStart, curveEnd);
-                    }
-                    else if (current.CurrentCurve2D is Arc arc)
-                    {
-                        // 圓弧保持原來的圓周形狀：使用新端點和原本的圓弧中點重建
-                        XYZ pm = arc.Evaluate(0.5, true);
-                        try
-                        {
-                            current.CurrentCurve2D = Arc.Create(curveStart, curveEnd, pm);
-                        }
-                        catch
-                        {
-                            // 萬一三點共線導致 Arc 失敗，降級為 Line 處理以防崩潰
-                            current.CurrentCurve2D = Line.CreateBound(curveStart, curveEnd);
-                        }
-                    }
-                    else
-                    {
-                        // 其他曲線
-                        try
-                        {
-                            current.CurrentCurve2D = Line.CreateBound(curveStart, curveEnd);
-                        }
-                        catch { }
-                    }
-                }
-
-                // D. 將計算好的 2D 幾何轉回原高度，並寫回 Revit ModelCurve
-                foreach (LoopNode node in loop)
-                {
-                    Curve updated3D = FloorSnapGeometryUtils.ProjectCurveToPlane(node.CurrentCurve2D, originalZ);
-                    if (updated3D != null)
-                    {
-                        node.ModelCurve.GeometryCurve = updated3D;
-                    }
-                }
-            }
-
-            result.UpdatedLines = updatedLinesCount;
-            result.IgnoredCurves = ignoredCurvesCount;
-            return result;
-        }
-
-        /// <summary>
-        /// 鄰近尋找法：將草圖的模型線段重新排序為閉合迴圈
-        /// </summary>
-        private static List<List<LoopNode>> SortCurvesIntoLoops(List<ModelCurve> modelCurves, double tolerance = 0.005)
-        {
-            List<List<LoopNode>> loops = new List<List<LoopNode>>();
-            List<ModelCurve> remaining = new List<ModelCurve>(modelCurves);
-
-            while (remaining.Count > 0)
-            {
-                List<LoopNode> currentLoop = new List<LoopNode>();
-                ModelCurve firstMc = remaining[0];
-                remaining.RemoveAt(0);
-
-                // 投影至 Z=0 平面進行排序
-                Curve firstCurve = FloorSnapGeometryUtils.ProjectCurveToPlane(firstMc.GeometryCurve, 0.0);
-                XYZ startPoint = firstCurve.GetEndPoint(0);
-                XYZ endPoint = firstCurve.GetEndPoint(1);
-
-                currentLoop.Add(new LoopNode
-                {
-                    ModelCurve = firstMc,
-                    CurrentCurve2D = firstCurve,
-                    IsReversed = false
-                });
-
-                XYZ activeEnd = endPoint;
-                bool closed = false;
-
-                while (!closed)
-                {
-                    bool foundNext = false;
-                    for (int i = 0; i < remaining.Count; i++)
-                    {
-                        ModelCurve candidateMc = remaining[i];
-                        Curve candCurve = FloorSnapGeometryUtils.ProjectCurveToPlane(candidateMc.GeometryCurve, 0.0);
-                        XYZ p0 = candCurve.GetEndPoint(0);
-                        XYZ p1 = candCurve.GetEndPoint(1);
-
-                        if (p0.DistanceTo(activeEnd) < tolerance)
-                        {
-                            currentLoop.Add(new LoopNode
+                            if (hasMatch)
                             {
-                                ModelCurve = candidateMc,
-                                CurrentCurve2D = candCurve,
-                                IsReversed = false
-                            });
-                            activeEnd = p1;
-                            remaining.RemoveAt(i);
-                            foundNext = true;
-                            break;
-                        }
-                        else if (p1.DistanceTo(activeEnd) < tolerance)
-                        {
-                            currentLoop.Add(new LoopNode
-                            {
-                                ModelCurve = candidateMc,
-                                CurrentCurve2D = candCurve,
-                                IsReversed = true
-                            });
-                            activeEnd = p0;
-                            remaining.RemoveAt(i);
-                            foundNext = true;
-                            break;
-                        }
-                    }
+                                // 加上平移向量，Z 坐標完全不變，維持工作平面
+                                XYZ shiftedPt = pt3D + bestTranslation;
+                                XYZ shiftedOrigPt1 = origPt1_3D + bestTranslation;
+                                XYZ newDirV = shiftedPt.DistanceTo(shiftedOrigPt1) > 1e-4 
+                                    ? (shiftedOrigPt1 - shiftedPt).Normalize() 
+                                    : line.Direction;
 
-                    if (!foundNext)
-                    {
-                        // 若搜尋不到相鄰線，但在容許度內起點和目前終點重合，則直接視為閉合
-                        if (activeEnd.DistanceTo(startPoint) < tolerance)
-                        {
-                            closed = true;
+                                shiftedLines.Add(new ShiftedLineInfo
+                                {
+                                    Pt = shiftedPt,
+                                    Dir = newDirV,
+                                    OrigPt1 = shiftedOrigPt1
+                                });
+                                matchedLinesTotal++;
+                            }
+                            else
+                            {
+                                shiftedLines.Add(new ShiftedLineInfo
+                                {
+                                    Pt = pt3D,
+                                    Dir = line.Direction,
+                                    OrigPt1 = origPt1_3D
+                                });
+                            }
                         }
                         else
                         {
-                            // 草圖有瑕疵，強制閉合以跳出迴圈
-                            closed = true;
+                            XYZ pt3D = c.GetEndPoint(0);
+                            XYZ origPt1_3D = c.GetEndPoint(1);
+                            XYZ dirV = pt3D.DistanceTo(origPt1_3D) > 1e-4 
+                                ? (origPt1_3D - pt3D).Normalize() 
+                                : XYZ.BasisX;
+
+                            shiftedLines.Add(new ShiftedLineInfo
+                            {
+                                Pt = pt3D,
+                                Dir = dirV,
+                                OrigPt1 = origPt1_3D
+                            });
                         }
                     }
-                    else
+
+                    // 重新計算頂點 (與 Python 一致)
+                    List<XYZ> newVertices = new List<XYZ>();
+                    for (int i = 0; i < N; i++)
                     {
-                        if (activeEnd.DistanceTo(startPoint) < tolerance)
+                        ShiftedLineInfo L1 = shiftedLines[(i - 1 + N) % N];
+                        ShiftedLineInfo L2 = shiftedLines[i];
+                        newVertices.Add(GetShiftedIntersection(L1, L2));
+                    }
+
+                    // 重建並安全擴展極短線段
+                    List<Tuple<Curve, Curve>> newLoopMapping = new List<Tuple<Curve, Curve>>();
+                    for (int i = 0; i < N; i++)
+                    {
+                        Curve oldC = curves[i];
+                        XYZ startP = ProjectToPlane(newVertices[i], spPlane);
+                        XYZ endP = ProjectToPlane(newVertices[(i + 1) % N], spPlane);
+
+                        if (startP.DistanceTo(endP) > 0.003)
                         {
-                            closed = true;
+                            Curve newC = Line.CreateBound(startP, endP);
+                            newLoopMapping.Add(new Tuple<Curve, Curve>(oldC, newC));
+                        }
+                        else
+                        {
+                            XYZ midP = 0.5 * (startP + endP);
+                            XYZ dV;
+                            if (startP.DistanceTo(endP) > 1e-5)
+                            {
+                                dV = (endP - startP).Normalize();
+                            }
+                            else
+                            {
+                                dV = (oldC is Line oldLine) ? oldLine.Direction : XYZ.BasisX;
+                            }
+
+                            XYZ safeStart = midP - dV.Multiply(0.0016);
+                            XYZ safeEnd = midP + dV.Multiply(0.0016);
+                            Curve newC = Line.CreateBound(safeStart, safeEnd);
+                            newLoopMapping.Add(new Tuple<Curve, Curve>(oldC, newC));
+                        }
+                    }
+
+                    if (newLoopMapping.Count > 0)
+                    {
+                        finalLoops.Add(newLoopMapping);
+                    }
+                }
+
+                if (finalLoops.Count == 0)
+                {
+                    throw new Exception("無法運算出新邊界");
+                }
+
+                // 3. 套用幾何修改到草圖中的 ModelCurve
+                List<CurveElement> existingCes = new List<CurveElement>();
+                foreach (ElementId oid in sketch.GetAllElements())
+                {
+                    Element el = doc.GetElement(oid);
+                    if (el is CurveElement ce)
+                    {
+                        existingCes.Add(ce);
+                    }
+                }
+
+                int linesCreated = 0;
+                // 只有在真正有線段被成功匹配平移時，才寫入 Revit 草圖模型
+                if (matchedLinesTotal > 0)
+                {
+                    foreach (var loopMapping in finalLoops)
+                    {
+                        foreach (var mapping in loopMapping)
+                        {
+                            Curve oldC = mapping.Item1;
+                            Curve newC = mapping.Item2;
+
+                            CurveElement ceToModify = null;
+                            XYZ mpOld = oldC.Evaluate(0.5, true);
+                            XYZ mpOld2D = new XYZ(mpOld.X, mpOld.Y, 0.0);
+
+                            foreach (CurveElement ce in existingCes)
+                            {
+                                if (ce.GeometryCurve != null)
+                                {
+                                    XYZ mpCe = ce.GeometryCurve.Evaluate(0.5, true);
+                                    XYZ mpCe2D = new XYZ(mpCe.X, mpCe.Y, 0.0);
+                                    if (mpCe2D.DistanceTo(mpOld2D) < 0.05)
+                                    {
+                                        ceToModify = ce;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (ceToModify != null)
+                            {
+                                try
+                                {
+                                    ceToModify.SetGeometryCurve(newC, true);
+                                    linesCreated++;
+                                }
+                                catch
+                                {
+                                    try
+                                    {
+                                        doc.Delete(ceToModify.Id);
+                                        doc.Create.NewModelCurve(newC, sketch.SketchPlane);
+                                        linesCreated++;
+                                    }
+                                    catch
+                                    {
+                                        throw new Exception("無法修改線段。");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                throw new Exception("草圖配對失敗。");
+                            }
                         }
                     }
                 }
 
-                loops.Add(currentLoop);
+                result.UpdatedLines = matchedLinesTotal; // 返回真正有變動吸附的線段數
+            }
+            catch (Exception ex)
+            {
+                result.Errors.Add(new FloorSnapToRoomError
+                {
+                    FloorId = floor.Id,
+                    ErrorCode = "GEOMETRY_ERROR",
+                    Message = ex.Message,
+                    Suggestion = "請確認草圖邊界幾何形狀是否正常。"
+                });
             }
 
-            return loops;
+            return result;
         }
     }
 }

@@ -15,7 +15,7 @@ namespace DevelopmentTools.Core
         public bool Enabled { get; set; } = true;
         public string ClientId { get; set; } = "";
         public string GoogleSheetApiUrl { get; set; } = "";
-        public string RedirectUri { get; set; } = "http://localhost:5000/";
+        public string RedirectUri { get; set; } = "http://localhost:15324/";
     }
 
     public static class GoogleAuthManager
@@ -239,8 +239,37 @@ namespace DevelopmentTools.Core
 
             using (HttpListener listener = new HttpListener())
             {
-                listener.Prefixes.Add(_config.RedirectUri);
-                listener.Start();
+                bool started = false;
+                Exception lastEx = null;
+                for (int i = 0; i < 3; i++)
+                {
+                    try
+                    {
+                        listener.Prefixes.Clear();
+                        listener.Prefixes.Add(_config.RedirectUri);
+                        listener.Start();
+                        started = true;
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        lastEx = ex;
+                        if (i < 2)
+                        {
+                            await Task.Delay(500).ConfigureAwait(false);
+                        }
+                    }
+                }
+
+                if (!started)
+                {
+                    AuthResult errRes = new AuthResult 
+                    { 
+                        IsSuccess = false, 
+                        ErrorMessage = $"Google 本地登入伺服器啟動失敗：\n{lastEx?.Message}\n\n說明：這通常是由於 Port 15324 被其他程序（例如另一個已開啟的 Revit、開發偵錯伺服器等）佔用，或是前次登入後端釋放延遲。請關閉其他 Revit 視窗或佔用 15324 連接埠的程式，然後再試一次。" 
+                    };
+                    return errRes;
+                }
 
                 string state = Guid.NewGuid().ToString("N");
                 string authUrl = $"https://accounts.google.com/o/oauth2/v2/auth" +

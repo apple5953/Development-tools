@@ -2,5 +2,5 @@
   "Enabled": true,
   "ClientId": "977521528046-eg5gbcb55p970jovudtldpt8l0quujhn.apps.googleusercontent.com",
   "GoogleSheetApiUrl": "https://script.google.com/macros/s/AKfycbzGyeWzn6l1finZRoMG-DiThmWwI4NYP6kvHXtqobreKLYU4ut7CJGuvjMyzm7USIJz/exec",
-  "RedirectUri": "http://localhost:5000/"
+  "RedirectUri": "http://localhost:15324/"
 }
