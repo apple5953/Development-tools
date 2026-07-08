@@ -28,6 +28,7 @@ Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\*.dll"; DestDir: "{app}\
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\appsettings.json"; DestDir: "{app}\Config"; Flags: onlyifdoesntexist
 ; 複製 Resources 資料夾
 Source: "..\..\DevelopmentTools.Addin\Resources\*"; DestDir: "{app}\App\Resources"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\DevelopmentTools.Addin\Rules\*"; DestDir: "{app}\App\Rules"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; 複製 Updater 與其所需的依賴 DLL
 Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\DevelopmentTools.Updater.exe"; DestDir: "{app}\Updater"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\*.dll"; DestDir: "{app}\Updater"; Flags: ignoreversion

@@ -1,0 +1,1378 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:vm="clr-namespace:DevelopmentTools.Modules.DesignReview.ViewModels"
+                    xmlns:models="clr-namespace:DevelopmentTools.Modules.DesignReview.Models">
+
+    <!-- 共有樣式複寫，確保深色感一致 -->
+    <SolidColorBrush x:Key="BgPrimary" Color="#07090E"/>
+    <SolidColorBrush x:Key="BgPanel" Color="#0F141C"/>
+    <SolidColorBrush x:Key="BgCard" Color="#161D26"/>
+    <SolidColorBrush x:Key="AccentBlue" Color="#388BFD"/>
+    <SolidColorBrush x:Key="TextPrimary" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="#BAC5D5"/>
+    <SolidColorBrush x:Key="BorderColor" Color="#30363D"/>
+
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+    <Style x:Key="SubViewGrid" TargetType="Grid">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+    <Style x:Key="DataGridStyle" TargetType="DataGrid">
+        <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="Background" Value="{StaticResource BgCard}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="GridLinesVisibility" Value="None"/>
+        <Setter Property="RowHeaderWidth" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+
+    <Style x:Key="HeaderStyle" TargetType="DataGridColumnHeader">
+        <Setter Property="Background" Value="#1C2128"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    </Style>
+
+    <Style x:Key="CellStyle" TargetType="DataGridCell">
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="#2F363D"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- WPF 隱藏 TabHeader 的 TabControl Style -->
+    <Style x:Key="HiddenTabControlStyle" TargetType="TabControl">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ContentPresenter x:Name="PART_SelectedContentHost"
+                                          ContentSource="SelectedContent"
+                                          Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="BtnPrimary" TargetType="Button">
+        <Setter Property="Background" Value="#238636"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#2ea043"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="#21262D"/>
+                <Setter Property="Foreground" Value="#8B949E"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="BtnSecondary" TargetType="Button">
+        <Setter Property="Background" Value="#21262D"/>
+        <Setter Property="Foreground" Value="#C9D1D9"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#30363D"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.5"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="BtnSuccess" TargetType="Button">
+        <Setter Property="Background" Value="#238636"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#2ea043"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- 📊 0. 總體檢討報告 Overview View Template -->
+    <DataTemplate DataType="{x:Type vm:OverviewReviewViewModel}">
+        <Grid Style="{StaticResource SubViewGrid}" Background="{StaticResource BgPrimary}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 頂部標題與整理按鈕 -->
+            <Border Grid.Row="0" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,0,0,1" Padding="20">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="{Binding RegRuleName}" Foreground="{StaticResource TextPrimary}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding RegRuleDescription}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="18"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Command="{Binding RunCheckCommand}" Content="⚡ 重新整理全專案健康度" Style="{StaticResource BtnPrimary}" Height="36" Padding="16,0" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <!-- 卡片 Grid 清單 -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="12">
+                <ItemsControl ItemsSource="{Binding Cards}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="2"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Margin="8" Padding="16">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/> <!-- 標題與簡介 -->
+                                        <RowDefinition Height="Auto"/> <!-- 進度條 -->
+                                        <RowDefinition Height="*"/>    <!-- 偵測與標準 -->
+                                        <RowDefinition Height="Auto"/> <!-- 按鈕列 -->
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 圖示 -->
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Icon}" FontSize="28" Margin="0,0,12,0" VerticalAlignment="Top"/>
+                                    
+                                    <!-- 標題與簡介與狀態 -->
+                                    <StackPanel Grid.Row="0" Grid.Column="1">
+                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Description}" Foreground="{StaticResource TextSecondary}" FontSize="12.5" TextWrapping="Wrap" Margin="0,4,0,8" Height="34" LineHeight="16"/>
+                                        
+                                        <!-- 狀態指示 -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Border Background="#1F242C" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding HealthStatus}" Foreground="#58A6FF" FontSize="11.5" FontWeight="SemiBold"/>
+                                            </Border>
+                                            <Border Background="#1F242C" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="{Binding CheckStatus}" Foreground="#FF7B72" FontSize="11.5" FontWeight="SemiBold"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- 執行中進度條 -->
+                                    <ProgressBar Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" IsIndeterminate="True" Height="3" Margin="0,4,0,8" Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}"/>
+
+                                    <!-- 偵測與標準 -->
+                                    <Border Grid.Row="2" Grid.Column="1" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,8" Margin="0,0,0,12">
+                                        <StackPanel>
+                                            <TextBlock Foreground="{StaticResource TextSecondary}" FontSize="11.5" Margin="0,0,0,4">
+                                                <Run Text="🔍 偵測元件: " FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                                <Run Text="{Binding DetectElements}"/>
+                                            </TextBlock>
+                                            <TextBlock Foreground="{StaticResource TextSecondary}" FontSize="11.5" TextWrapping="Wrap" LineHeight="15">
+                                                <Run Text="🎯 評判標準: " FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+                                                <Run Text="{Binding CheckCriteria}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- 按鈕列 -->
+                                    <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Command="{Binding RunCheckCommand}" Content="⚡ 執行檢討" Style="{StaticResource BtnPrimary}" Height="28" Padding="12,0" HorizontalAlignment="Left" FontSize="11.5"/>
+                                        <Button Grid.Column="1" Command="{Binding GoToCommand}" Content="{Binding ActionText}" Style="{StaticResource BtnSecondary}" Height="28" Padding="12,0" HorizontalAlignment="Right" FontSize="11.5"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </DataTemplate>
+
+    <!-- 🚶‍♂️ 1. 避難步行距離檢討 View Template -->
+    <DataTemplate DataType="{x:Type vm:EscapeDistanceReviewViewModel}">
+        <TabControl Style="{StaticResource HiddenTabControlStyle}" SelectedIndex="{Binding SelectedSubTabIndex}">
+            
+            <!-- 步驟 1: 法規說明與前置檢查 -->
+            <TabItem>
+                <Border Background="{StaticResource BgPrimary}" Padding="20"><Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="{Binding RegRuleName}" Foreground="{StaticResource AccentBlue}" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding RegRuleDescription}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,12" TextWrapping="Wrap" LineHeight="18"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="所需模型元件" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredComponentsText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="所需參數與配置欄位" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredParametersText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="📋 模型前置健康度診斷表" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding PreCheckItems}" SelectedItem="{Binding SelectedPreCheckItem, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="檢查對象" Binding="{Binding TargetName}" Width="220" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="完備狀態" Binding="{Binding Status}" Width="180"/>
+                                <DataGridTextColumn Header="影響與限制說明" Binding="{Binding Description}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                    <Grid Grid.Row="2" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding RunPreCheckCommand}" Content="⚡ 重新整理診斷" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0" Margin="0,0,10,0"/>
+                        <Button Grid.Column="1" Command="{Binding SelectMissingElementsCommand}" Content="👁 在 Revit 中選取/定位缺失元件" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0"/>
+                        <Button Grid.Column="3" Command="{Binding SwitchToResultsCommand}" Content="進入檢核結果列表 ➔" Style="{StaticResource BtnPrimary}" Height="36" Padding="20,0"/>
+                    </Grid>
+                </Grid></Border>
+            </TabItem>
+
+            <!-- 步驟 2: 詳細檢核結果 -->
+            <TabItem>
+                <Grid Style="{StaticResource SubViewGrid}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,0,0,1" Padding="16,10">
+                        <Button Command="{Binding SwitchToPreCheckCommand}" Content="⬅ 返回法規說明與健康診斷" Style="{StaticResource BtnSecondary}" Height="28" Padding="12,0" HorizontalAlignment="Left"/>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="320"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="{StaticResource BgPrimary}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="避難步行距離檢討" Foreground="{StaticResource TextPrimary}" FontSize="18" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,0" Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Command="{Binding RunCheckCommand}" Content="⚡ 重新執行檢核" Style="{StaticResource BtnPrimary}" Height="34" Padding="12,0" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Issues}" SelectedItem="{Binding SelectedIssue, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                                    </DataGrid.Resources>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="等級" Binding="{Binding SeverityIcon}" Width="50"/>
+                                        <DataGridTextColumn Header="房間名稱" Binding="{Binding ElementName}" Width="120" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="實際步行長度" Binding="{Binding ActualDistanceMeter, StringFormat={}{0:F2}m}" Width="110"/>
+                                        <DataGridTextColumn Header="法規限制" Binding="{Binding LimitDistanceMeter, StringFormat={}{0:F1}m}" Width="90"/>
+                                        <DataGridTextColumn Header="超標值" Binding="{Binding OverDistanceMeter, StringFormat={}{0:F2}m}" Width="90" Foreground="#F25C54"/>
+                                        <DataGridTextColumn Header="樓層" Binding="{Binding LevelName}" Width="100"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+
+                        <GridSplitter Grid.Column="1" Background="{StaticResource BorderColor}" HorizontalAlignment="Stretch"/>
+
+                        <Border Grid.Column="2" Background="{StaticResource BgPanel}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="診斷缺失詳情" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                    <Border Background="{StaticResource BgCard}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,16">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementName}" Foreground="{StaticResource AccentBlue}" FontSize="15" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding SelectedIssue.LevelName, StringFormat='所在樓層: {0}'}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,0"/>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementId, StringFormat='房間 ID: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Text="說明" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Description}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,16"/>
+                                    
+                                    <TextBlock Text="最遠避難點座標" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Location}" Foreground="{StaticResource TextSecondary}" FontSize="13" FontFamily="Consolas"/>
+                                </StackPanel>
+
+                                <Button Grid.Row="1" Command="{Binding ShowIssueIn3DCommand}" Content="👁 在 3D 剖面中對焦定位" Style="{StaticResource BtnPrimary}" Height="36" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DataTemplate>
+
+    <!-- 📐 2. 樓梯級高級深安全尺寸 View Template -->
+    <DataTemplate DataType="{x:Type vm:StairDimensionReviewViewModel}">
+        <TabControl Style="{StaticResource HiddenTabControlStyle}" SelectedIndex="{Binding SelectedSubTabIndex}">
+            
+            <TabItem>
+                <Border Background="{StaticResource BgPrimary}" Padding="20"><Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="{Binding RegRuleName}" Foreground="{StaticResource AccentBlue}" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding RegRuleDescription}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,12" TextWrapping="Wrap" LineHeight="18"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="所需模型元件" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredComponentsText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="所需參數與配置欄位" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredParametersText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="📋 模型前置健康度診斷表" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding PreCheckItems}" SelectedItem="{Binding SelectedPreCheckItem, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="檢查對象" Binding="{Binding TargetName}" Width="220" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="完備狀態" Binding="{Binding Status}" Width="180"/>
+                                <DataGridTextColumn Header="影響與限制說明" Binding="{Binding Description}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                    <Grid Grid.Row="2" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding RunPreCheckCommand}" Content="⚡ 重新整理診斷" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0" Margin="0,0,10,0"/>
+                        <Button Grid.Column="1" Command="{Binding SelectMissingElementsCommand}" Content="👁 在 Revit 中選取/定位缺失元件" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0"/>
+                        <Button Grid.Column="3" Command="{Binding SwitchToResultsCommand}" Content="進入檢核結果列表 ➔" Style="{StaticResource BtnPrimary}" Height="36" Padding="20,0"/>
+                    </Grid>
+                </Grid></Border>
+            </TabItem>
+
+            <TabItem>
+                <Grid Style="{StaticResource SubViewGrid}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,0,0,1" Padding="16,10">
+                        <Button Command="{Binding SwitchToPreCheckCommand}" Content="⬅ 返回法規說明與健康診斷" Style="{StaticResource BtnSecondary}" Height="28" Padding="12,0" HorizontalAlignment="Left"/>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="320"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="{StaticResource BgPrimary}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="樓梯級高級深尺寸檢討" Foreground="{StaticResource TextPrimary}" FontSize="18" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,0" Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Command="{Binding RunCheckCommand}" Content="⚡ 重新執行檢核" Style="{StaticResource BtnPrimary}" Height="34" Padding="12,0" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Issues}" SelectedItem="{Binding SelectedIssue, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                                    </DataGrid.Resources>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="等級" Binding="{Binding SeverityIcon}" Width="50"/>
+                                        <DataGridTextColumn Header="樓梯名稱/型別" Binding="{Binding ElementName}" Width="160" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="描述" Binding="{Binding Description}" Width="*"/>
+                                        <DataGridTextColumn Header="所屬群組/樓層" Binding="{Binding LevelName}" Width="120"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+
+                        <GridSplitter Grid.Column="1" Background="{StaticResource BorderColor}" HorizontalAlignment="Stretch"/>
+
+                        <Border Grid.Column="2" Background="{StaticResource BgPanel}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="診斷缺失詳情" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                    <Border Background="{StaticResource BgCard}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,16">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementName}" Foreground="{StaticResource AccentBlue}" FontSize="15" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementId, StringFormat='樓梯 ID: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,6,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Text="缺失描述" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Description}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,16"/>
+                                </StackPanel>
+
+                                <Button Grid.Row="1" Command="{Binding ShowIssueIn3DCommand}" Content="👁 在 3D 剖面中對焦定位" Style="{StaticResource BtnPrimary}" Height="36" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DataTemplate>
+
+    <!-- ♿ 3. 無障礙迴轉圓空間檢核 View Template -->
+    <DataTemplate DataType="{x:Type vm:WheelchairSpaceReviewViewModel}">
+        <TabControl Style="{StaticResource HiddenTabControlStyle}" SelectedIndex="{Binding SelectedSubTabIndex}">
+            
+            <TabItem>
+                <Border Background="{StaticResource BgPrimary}" Padding="20"><Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="{Binding RegRuleName}" Foreground="{StaticResource AccentBlue}" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding RegRuleDescription}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,12" TextWrapping="Wrap" LineHeight="18"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="所需模型元件" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredComponentsText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="所需參數與配置欄位" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredParametersText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="📋 模型前置健康度診斷表" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding PreCheckItems}" SelectedItem="{Binding SelectedPreCheckItem, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="檢查對象" Binding="{Binding TargetName}" Width="220" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="完備狀態" Binding="{Binding Status}" Width="180"/>
+                                <DataGridTextColumn Header="影響與限制說明" Binding="{Binding Description}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                    <Grid Grid.Row="2" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding RunPreCheckCommand}" Content="⚡ 重新整理診斷" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0" Margin="0,0,10,0"/>
+                        <Button Grid.Column="1" Command="{Binding SelectMissingElementsCommand}" Content="👁 在 Revit 中選取/定位缺失元件" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0"/>
+                        <Button Grid.Column="3" Command="{Binding SwitchToResultsCommand}" Content="進入檢核結果列表 ➔" Style="{StaticResource BtnPrimary}" Height="36" Padding="20,0"/>
+                    </Grid>
+                </Grid></Border>
+            </TabItem>
+
+            <TabItem>
+                <Grid Style="{StaticResource SubViewGrid}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,0,0,1" Padding="16,10">
+                        <Button Command="{Binding SwitchToPreCheckCommand}" Content="⬅ 返回法規說明與健康診斷" Style="{StaticResource BtnSecondary}" Height="28" Padding="12,0" HorizontalAlignment="Left"/>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="320"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="{StaticResource BgPrimary}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="無障礙輪椅迴轉空間檢核" Foreground="{StaticResource TextPrimary}" FontSize="18" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,0" Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Command="{Binding RunCheckCommand}" Content="⚡ 重新執行檢核" Style="{StaticResource BtnPrimary}" Height="34" Padding="12,0" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Issues}" SelectedItem="{Binding SelectedIssue, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                                    </DataGrid.Resources>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="等級" Binding="{Binding SeverityIcon}" Width="50"/>
+                                        <DataGridTextColumn Header="空間/房間名稱" Binding="{Binding ElementName}" Width="150" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="缺失說明" Binding="{Binding Description}" Width="*"/>
+                                        <DataGridTextColumn Header="樓層" Binding="{Binding LevelName}" Width="120"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+
+                        <GridSplitter Grid.Column="1" Background="{StaticResource BorderColor}" HorizontalAlignment="Stretch"/>
+
+                        <Border Grid.Column="2" Background="{StaticResource BgPanel}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="診斷缺失詳情" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                    <Border Background="{StaticResource BgCard}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,16">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementName}" Foreground="{StaticResource AccentBlue}" FontSize="15" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding SelectedIssue.LevelName, StringFormat='所在樓層: {0}'}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,0"/>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementId, StringFormat='空間 ID: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Text="空間診斷描述" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Description}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,16"/>
+                                    
+                                    <TextBlock Text="最大內切圓心點" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Location}" Foreground="{StaticResource TextSecondary}" FontSize="13" FontFamily="Consolas"/>
+                                </StackPanel>
+
+                                <Button Grid.Row="1" Command="{Binding ShowIssueIn3DCommand}" Content="👁 在 3D 剖面中對焦定位" Style="{StaticResource BtnPrimary}" Height="36" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DataTemplate>
+
+    <!-- 📏 4. 梁下與機電管線結構淨高檢核 View Template -->
+    <DataTemplate DataType="{x:Type vm:NetHeightReviewViewModel}">
+        <TabControl Style="{StaticResource HiddenTabControlStyle}" SelectedIndex="{Binding SelectedSubTabIndex}">
+            
+            <TabItem>
+                <Border Background="{StaticResource BgPrimary}" Padding="20"><Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="{Binding RegRuleName}" Foreground="{StaticResource AccentBlue}" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding RegRuleDescription}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,12" TextWrapping="Wrap" LineHeight="18"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="所需模型元件" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredComponentsText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="所需參數與配置欄位" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredParametersText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="📋 模型前置健康度診斷表" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding PreCheckItems}" SelectedItem="{Binding SelectedPreCheckItem, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="檢查對象" Binding="{Binding TargetName}" Width="220" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="完備狀態" Binding="{Binding Status}" Width="180"/>
+                                <DataGridTextColumn Header="影響與限制說明" Binding="{Binding Description}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                    <Grid Grid.Row="2" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding RunPreCheckCommand}" Content="⚡ 重新整理診斷" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0" Margin="0,0,10,0"/>
+                        <Button Grid.Column="1" Command="{Binding SelectMissingElementsCommand}" Content="👁 在 Revit 中選取/定位缺失元件" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0"/>
+                        <Button Grid.Column="3" Command="{Binding SwitchToResultsCommand}" Content="進入檢核結果列表 ➔" Style="{StaticResource BtnPrimary}" Height="36" Padding="20,0"/>
+                    </Grid>
+                </Grid></Border>
+            </TabItem>
+
+            <TabItem>
+                <Grid Style="{StaticResource SubViewGrid}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,0,0,1" Padding="16,10">
+                        <Button Command="{Binding SwitchToPreCheckCommand}" Content="⬅ 返回法規說明與健康診斷" Style="{StaticResource BtnSecondary}" Height="28" Padding="12,0" HorizontalAlignment="Left"/>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="320"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="{StaticResource BgPrimary}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="梁下與機電結構淨高檢核" Foreground="{StaticResource TextPrimary}" FontSize="18" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,0" Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Command="{Binding RunCheckCommand}" Content="⚡ 重新執行檢核" Style="{StaticResource BtnPrimary}" Height="34" Padding="12,0" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Issues}" SelectedItem="{Binding SelectedIssue, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                                    </DataGrid.Resources>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="等級" Binding="{Binding SeverityIcon}" Width="50"/>
+                                        <DataGridTextColumn Header="空間名稱" Binding="{Binding ElementName}" Width="120" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="實際淨高" Binding="{Binding ActualHeightMeter, StringFormat={}{0:F2}m}" Width="100"/>
+                                        <DataGridTextColumn Header="碰撞對象" Binding="{Binding HitElementName}" Width="*"/>
+                                        <DataGridTextColumn Header="樓層" Binding="{Binding LevelName}" Width="100"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+
+                        <GridSplitter Grid.Column="1" Background="{StaticResource BorderColor}" HorizontalAlignment="Stretch"/>
+
+                        <Border Grid.Column="2" Background="{StaticResource BgPanel}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="診斷缺失詳情" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                    <Border Background="{StaticResource BgCard}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,16">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementName}" Foreground="{StaticResource AccentBlue}" FontSize="15" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding SelectedIssue.LevelName, StringFormat='所在樓層: {0}'}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,0"/>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementId, StringFormat='房間 ID: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Text="缺失詳細資訊" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Description}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,16"/>
+                                    
+                                    <TextBlock Text="低淨高碰撞點 (XYZ)" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Location}" Foreground="{StaticResource TextSecondary}" FontSize="13" FontFamily="Consolas"/>
+                                </StackPanel>
+
+                                <Button Grid.Row="1" Command="{Binding ShowIssueIn3DCommand}" Content="👁 在 3D 剖面中對焦定位" Style="{StaticResource BtnPrimary}" Height="36" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DataTemplate>
+
+    <!-- 🔧 5. 機電穿梁牆套管遺漏檢核 View Template -->
+    <DataTemplate DataType="{x:Type vm:SleevePenetrationReviewViewModel}">
+        <TabControl Style="{StaticResource HiddenTabControlStyle}" SelectedIndex="{Binding SelectedSubTabIndex}">
+            
+            <TabItem>
+                <Border Background="{StaticResource BgPrimary}" Padding="20"><Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="{Binding RegRuleName}" Foreground="{StaticResource AccentBlue}" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding RegRuleDescription}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,12" TextWrapping="Wrap" LineHeight="18"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="所需模型元件" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredComponentsText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="所需參數與配置欄位" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredParametersText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="📋 模型前置健康度診斷表" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding PreCheckItems}" SelectedItem="{Binding SelectedPreCheckItem, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="檢查對象" Binding="{Binding TargetName}" Width="220" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="完備狀態" Binding="{Binding Status}" Width="180"/>
+                                <DataGridTextColumn Header="影響與限制說明" Binding="{Binding Description}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                    <Grid Grid.Row="2" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding RunPreCheckCommand}" Content="⚡ 重新整理診斷" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0" Margin="0,0,10,0"/>
+                        <Button Grid.Column="1" Command="{Binding SelectMissingElementsCommand}" Content="👁 在 Revit 中選取/定位缺失元件" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0"/>
+                        <Button Grid.Column="3" Command="{Binding SwitchToResultsCommand}" Content="進入檢核結果列表 ➔" Style="{StaticResource BtnPrimary}" Height="36" Padding="20,0"/>
+                    </Grid>
+                </Grid></Border>
+            </TabItem>
+
+            <TabItem>
+                <Grid Style="{StaticResource SubViewGrid}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,0,0,1" Padding="16,10">
+                        <Button Command="{Binding SwitchToPreCheckCommand}" Content="⬅ 返回法規說明與健康診斷" Style="{StaticResource BtnSecondary}" Height="28" Padding="12,0" HorizontalAlignment="Left"/>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="320"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="{StaticResource BgPrimary}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="機電管線穿梁牆套管遺漏檢討" Foreground="{StaticResource TextPrimary}" FontSize="18" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,0" Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Command="{Binding RunCheckCommand}" Content="⚡ 重新執行檢核" Style="{StaticResource BtnPrimary}" Height="34" Padding="12,0" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Issues}" SelectedItem="{Binding SelectedIssue, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                                    </DataGrid.Resources>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="等級" Binding="{Binding SeverityIcon}" Width="50"/>
+                                        <DataGridTextColumn Header="管線名稱/ID" Binding="{Binding ElementName}" Width="120" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="尺寸" Binding="{Binding MepSize}" Width="90"/>
+                                        <DataGridTextColumn Header="穿透結構件" Binding="{Binding StructureElementName}" Width="*"/>
+                                        <DataGridTextColumn Header="樓層" Binding="{Binding LevelName}" Width="100"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+
+                        <GridSplitter Grid.Column="1" Background="{StaticResource BorderColor}" HorizontalAlignment="Stretch"/>
+
+                        <Border Grid.Column="2" Background="{StaticResource BgPanel}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="診斷缺失詳情" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                    <Border Background="{StaticResource BgCard}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,16">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementName}" Foreground="{StaticResource AccentBlue}" FontSize="15" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding SelectedIssue.MepCategoryName, StringFormat='管線類別: {0}'}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,0"/>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementId, StringFormat='管線 ID: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Text="說明" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Description}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,16"/>
+                                    
+                                    <TextBlock Text="碰撞交叉點 (XYZ)" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Location}" Foreground="{StaticResource TextSecondary}" FontSize="13" FontFamily="Consolas"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}">
+                                    <Button Command="{Binding ShowIssueIn3DCommand}" Content="👁 在 3D 剖面中對焦定位" Style="{StaticResource BtnPrimary}" Height="36" Margin="0,0,0,10"/>
+                                    <Button Command="{Binding AutoFixCommand}" Content="🔧 一鍵放置套管開孔" Style="{StaticResource BtnSuccess}" Height="36"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DataTemplate>
+
+    <!-- 🏠 6. 房間裝修幾何一致性檢核 View Template -->
+    <DataTemplate DataType="{x:Type vm:RoomFinishReviewViewModel}">
+        <TabControl Style="{StaticResource HiddenTabControlStyle}" SelectedIndex="{Binding SelectedSubTabIndex}">
+            
+            <TabItem>
+                <Border Background="{StaticResource BgPrimary}" Padding="20"><Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="{Binding RegRuleName}" Foreground="{StaticResource AccentBlue}" FontSize="16" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding RegRuleDescription}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,12" TextWrapping="Wrap" LineHeight="18"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="所需模型元件" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredComponentsText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="所需參數與配置欄位" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding RequiredParametersText}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="16"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="📋 模型前置健康度診斷表" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding PreCheckItems}" SelectedItem="{Binding SelectedPreCheckItem, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="檢查對象" Binding="{Binding TargetName}" Width="220" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="完備狀態" Binding="{Binding Status}" Width="180"/>
+                                <DataGridTextColumn Header="影響與限制說明" Binding="{Binding Description}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                    <Grid Grid.Row="2" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding RunPreCheckCommand}" Content="⚡ 重新整理診斷" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0" Margin="0,0,10,0"/>
+                        <Button Grid.Column="1" Command="{Binding SelectMissingElementsCommand}" Content="👁 在 Revit 中選取/定位缺失元件" Style="{StaticResource BtnSecondary}" Height="36" Padding="16,0"/>
+                        <Button Grid.Column="3" Command="{Binding SwitchToResultsCommand}" Content="進入檢核結果列表 ➔" Style="{StaticResource BtnPrimary}" Height="36" Padding="20,0"/>
+                    </Grid>
+                </Grid></Border>
+            </TabItem>
+
+            <TabItem>
+                <Grid Style="{StaticResource SubViewGrid}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,0,0,1" Padding="16,10">
+                        <Button Command="{Binding SwitchToPreCheckCommand}" Content="⬅ 返回法規說明與健康診斷" Style="{StaticResource BtnSecondary}" Height="28" Padding="12,0" HorizontalAlignment="Left"/>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="320"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="{StaticResource BgPrimary}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="房間裝修幾何一致性檢討" Foreground="{StaticResource TextPrimary}" FontSize="18" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        <ProgressBar IsIndeterminate="True" Height="3" Margin="0,6,0,0" Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Command="{Binding RunCheckCommand}" Content="⚡ 重新執行檢核" Style="{StaticResource BtnPrimary}" Height="34" Padding="12,0" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Issues}" SelectedItem="{Binding SelectedIssue, Mode=TwoWay}" Style="{StaticResource DataGridStyle}">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                                    </DataGrid.Resources>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="等級" Binding="{Binding SeverityIcon}" Width="50"/>
+                                        <DataGridTextColumn Header="房間名稱" Binding="{Binding ElementName}" Width="150" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="說明" Binding="{Binding Description}" Width="*"/>
+                                        <DataGridTextColumn Header="樓層" Binding="{Binding LevelName}" Width="120"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+
+                        <GridSplitter Grid.Column="1" Background="{StaticResource BorderColor}" HorizontalAlignment="Stretch"/>
+
+                        <Border Grid.Column="2" Background="{StaticResource BgPanel}" Padding="16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="診斷缺失詳情" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                                    <Border Background="{StaticResource BgCard}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,16">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementName}" Foreground="{StaticResource AccentBlue}" FontSize="15" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding SelectedIssue.LevelName, StringFormat='所在樓層: {0}'}" Foreground="{StaticResource TextPrimary}" FontSize="13" Margin="0,6,0,0"/>
+                                            <TextBlock Text="{Binding SelectedIssue.ElementId, StringFormat='房間 ID: {0}'}" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Text="說明" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding SelectedIssue.Description}" Foreground="{StaticResource TextPrimary}" FontSize="13" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,16"/>
+                                </StackPanel>
+
+                                <Button Grid.Row="1" Command="{Binding ShowIssueIn3DCommand}" Content="👁 在 3D 剖面中對焦定位" Style="{StaticResource BtnPrimary}" Height="36" Visibility="{Binding HasSelectedIssue, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DataTemplate>
+
+    <!-- 📜 中華民國建築技術規則與輔助法規庫 View Template -->
+    <DataTemplate DataType="{x:Type vm:RegulatoryCodesCatalogViewModel}">
+        <Grid Style="{StaticResource SubViewGrid}" Background="{StaticResource BgPrimary}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="380"/> <!-- 左側法規條款目錄 -->
+                <ColumnDefinition Width="1"/>   <!-- 分隔線 -->
+                <ColumnDefinition Width="*"/>   <!-- 右側診斷與詳細說明 -->
+            </Grid.ColumnDefinitions>
+
+            <!-- 左側法規目錄 -->
+            <Border Grid.Column="0" Background="{StaticResource BgPanel}" Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="📜 中華民國建築技術規則庫" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="Bold"/>
+                        <TextBlock Text="逐條對照 Revit 模型元件之參數健康度" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Rules}" SelectedItem="{Binding SelectedRule, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
+                        <ListBox.Resources>
+                            <!-- 複寫選單樣式，使其顯示狀態與法條 -->
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+                                <Setter Property="Padding" Value="12,12"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#1E293B"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#0F172A"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.Resources>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:RegulatoryCodeRule}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 國家標誌 -->
+                                    <Border Grid.RowSpan="2" Grid.Column="0" Background="#1E293B" CornerRadius="4" Padding="6,4" VerticalAlignment="Center" Margin="0,0,10,0">
+                                        <TextBlock Text="{Binding Country}" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="Bold"/>
+                                    </Border>
+
+                                    <!-- 法規名稱 -->
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Section}" Foreground="{StaticResource AccentBlue}" FontSize="14" FontWeight="Bold" Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding RuleName}" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="Bold"/>
+                                    </StackPanel>
+
+                                    <!-- 狀態提示 -->
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="診斷:" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{Binding HealthStatus}" FontSize="13" FontWeight="SemiBold" Margin="0,0,12,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="Text" Value="✅ 參數齊備">
+                                                            <Setter Property="Foreground" Value="#30D158"/>
+                                                        </Trigger>
+                                                        <Trigger Property="Text" Value="⚠️ 參數不完備">
+                                                            <Setter Property="Foreground" Value="#FF9F0A"/>
+                                                        </Trigger>
+                                                        <Trigger Property="Text" Value="❌ 缺少元件">
+                                                            <Setter Property="Foreground" Value="#FF453A"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <TextBlock Text="執行:" Foreground="{StaticResource TextSecondary}" FontSize="13" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{Binding RunStatus}" FontSize="13" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="Text" Value="✅ 符合法規">
+                                                            <Setter Property="Foreground" Value="#30D158"/>
+                                                        </Trigger>
+                                                        <Trigger Property="Text" Value="⚪ 未執行">
+                                                            <Setter Property="Foreground" Value="#BAC5D5"/>
+                                                        </Trigger>
+                                                        <Trigger Property="Text" Value="需人工目視審查">
+                                                            <Setter Property="Foreground" Value="#BAC5D5"/>
+                                                        </Trigger>
+                                                        <Trigger Property="Text" Value="請直接由左側對應幾何檢核頁面執行運算">
+                                                            <Setter Property="Foreground" Value="#BAC5D5"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- 分隔線 -->
+            <GridSplitter Grid.Column="1" Background="{StaticResource BorderColor}" HorizontalAlignment="Stretch"/>
+
+            <!-- 右側詳細說明與診斷 -->
+            <Border Grid.Column="2" Padding="20">
+                <Grid Visibility="{Binding HasSelectedRule, Converter={StaticResource BoolToVis}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- 頂部法條詳情 -->
+                        <RowDefinition Height="*"/>    <!-- 中間健康度診斷 DataGrid -->
+                        <RowDefinition Height="Auto"/> <!-- 底部控制與結果 -->
+                    </Grid.RowDefinitions>
+
+                    <!-- 頂部法條詳情 -->
+                    <Border Grid.Row="0" Background="{StaticResource BgPanel}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding SelectedRule.Chapter}" Foreground="{StaticResource TextSecondary}" FontSize="13"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="{Binding SelectedRule.Section}" Foreground="{StaticResource AccentBlue}" FontSize="18" FontWeight="Bold" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{Binding SelectedRule.RuleName}" Foreground="{StaticResource TextPrimary}" FontSize="18" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#0F172A" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="4" Padding="8,4" VerticalAlignment="Top">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="比對方式: " Foreground="{StaticResource TextSecondary}" FontSize="13"/>
+                                        <TextBlock Text="{Binding SelectedRule.CheckMethod}" Foreground="{StaticResource TextPrimary}" FontSize="13" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <Separator Background="{StaticResource BorderColor}" Margin="0,12"/>
+
+                            <TextBlock Text="法條說明與檢核邏輯" Foreground="{StaticResource TextSecondary}" FontSize="13" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding SelectedRule.Description}" Foreground="{StaticResource TextPrimary}" FontSize="14" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,12"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 中間健康度前置診斷表 -->
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="📋 欄位健康度前置診斷 (Revit 元件參數完整性)" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding PreCheckItems}" Style="{StaticResource DataGridStyle}">
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource HeaderStyle}"/>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource CellStyle}"/>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="診斷對象" Binding="{Binding TargetName}" Width="200" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="狀態" Binding="{Binding Status}" Width="200">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <!-- 對於缺失/警告 -->
+                                                <DataTrigger Binding="{Binding IsCritical}" Value="True">
+                                                    <Setter Property="Foreground" Value="#FF453A"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="診斷說明" Binding="{Binding Description}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                    <!-- 底部控制與結果 -->
+                    <Border Grid.Row="2" BorderBrush="{StaticResource BorderColor}" BorderThickness="0,1,0,0" Padding="0,16,0,0" Margin="0,16,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondary}" FontSize="13" TextWrapping="Wrap"/>
+                                <ProgressBar IsIndeterminate="True" Height="4" Margin="0,8,0,0" Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}"/>
+                            </StackPanel>
+
+                            <Button Grid.Column="1" Command="{Binding RunCheckCommand}" Content="⚡ 執行參數合規檢查" Style="{StaticResource BtnPrimary}" Height="38" Padding="20,0" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+    </DataTemplate>
+
+</ResourceDictionary>

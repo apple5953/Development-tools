@@ -29,6 +29,13 @@ namespace DevelopmentTools
         private static AICommandHandler _aiCommandHandler;
         private static ExternalEvent _aiCommandEvent;
 
+        // 事前檢核視窗
+        private static Modules.DesignReview.Views.DesignReviewWindow _designReviewWindow;
+
+        // Code Review Window & ViewModel
+        private static System.Windows.Window _codeReviewWindow;
+        private static Modules.DesignReview.ViewModels.CodeReviewPaneViewModel _codeReviewPaneViewModel;
+
         private static readonly System.Collections.Generic.HashSet<string> _activeDocs = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public static void Log(string msg)
@@ -209,6 +216,75 @@ namespace DevelopmentTools
             });
         }
 
+        public static void ShowCodeReviewPane(UIApplication uiapp)
+        {
+            try
+            {
+                if (_codeReviewWindow != null && _codeReviewWindow.IsLoaded)
+                {
+                    _codeReviewWindow.Activate();
+                    _codeReviewWindow.Focus();
+                    return;
+                }
+
+                if (_codeReviewPaneViewModel == null)
+                {
+                    Log("[CodeReview] Creating new ViewModel");
+                    _codeReviewPaneViewModel = new Modules.DesignReview.ViewModels.CodeReviewPaneViewModel(uiapp);
+                    Log("[CodeReview] ViewModel created OK");
+                }
+                else
+                {
+                    Log("[CodeReview] Reusing existing ViewModel, calling LoadInitialProject");
+                    _codeReviewPaneViewModel.LoadInitialProject();
+                }
+
+                var page = new Modules.DesignReview.Views.CodeReviewPanePage();
+                page.SetViewModel(_codeReviewPaneViewModel);
+                Log("[CodeReview] Page created and VM bound");
+
+                _codeReviewWindow = new System.Windows.Window
+                {
+                    Title = "BCR 法規檢討與追蹤",
+                    Width = 380,
+                    Height = 750,
+                    WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
+                    Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(7, 9, 14)),
+                    Content = page
+                };
+
+                var helper = new System.Windows.Interop.WindowInteropHelper(_codeReviewWindow);
+                helper.Owner = uiapp.MainWindowHandle;
+
+                _codeReviewWindow.Closed += (s, e) => { _codeReviewWindow = null; };
+                _codeReviewWindow.Show();
+                Log("[CodeReview] Window shown");
+            }
+            catch (Exception ex)
+            {
+                Log($"[CodeReview] ShowCodeReviewPane EXCEPTION: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                Autodesk.Revit.UI.TaskDialog.Show("法規檢討錯誤", $"開啟法規檢討視窗時發生錯誤：\n{ex.Message}");
+            }
+        }
+
+        public static void ShowOrActivateDesignReview(ExternalCommandData commandData)
+        {
+            if (_designReviewWindow != null && _designReviewWindow.IsLoaded)
+            {
+                _designReviewWindow.Activate();
+                _designReviewWindow.Focus();
+                return;
+            }
+
+            var vm = new Modules.DesignReview.ViewModels.DesignReviewViewModel(commandData.Application);
+            _designReviewWindow = new Modules.DesignReview.Views.DesignReviewWindow(vm);
+
+            var helper = new System.Windows.Interop.WindowInteropHelper(_designReviewWindow);
+            helper.Owner = commandData.Application.MainWindowHandle;
+            _designReviewWindow.Closed += (s, e) => { _designReviewWindow = null; };
+            _designReviewWindow.Show();
+        }
+
         public static void ShowOrActivateAIAssistant(ExternalCommandData commandData)
         {
             if (_aiWindow != null && _aiWindow.IsLoaded)
@@ -297,6 +373,8 @@ namespace DevelopmentTools
         {
             try
             {
+                // （已將原右側常駐頁面改為獨立彈出視窗模式）
+
                 // 1. 建立 ExternalEvent（在 OnStartup 建立，才能在整個 session 存活）
                 EventHandler = new TileSyncEventHandler();
                 SyncEvent = ExternalEvent.Create(EventHandler);
@@ -572,6 +650,26 @@ namespace DevelopmentTools
 
 
 
+                // Panel 9: 法規檢討
+                RibbonPanel codeReviewPanel = application.CreateRibbonPanel(tabName, "法規檢討");
+
+                PushButtonData bcrProjectBtn = new PushButtonData(
+                    "BcrProject", "法規檢討",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_CreateCodeReviewProject");
+                bcrProjectBtn.ToolTip = "開啟法規檢討視窗與進度追蹤。初次開啟將引導初始化專案。";
+                ApplyRibbonIcon(bcrProjectBtn, "bcr-project.png");
+                
+                PushButtonData bcrExportBtn = new PushButtonData(
+                    "BcrExportReport", "匯出報告",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_ExportCodeReviewReport");
+                bcrExportBtn.ToolTip = "匯出當前法規檢討狀態與異常列表為 CSV Excel 報告。";
+                ApplyRibbonIcon(bcrExportBtn, "bcr-export.png");
+
+                codeReviewPanel.AddItem(bcrProjectBtn);
+                codeReviewPanel.AddItem(bcrExportBtn);
+
+
+
                 // 3. 註冊 DMU Updater
                 _updater = new TileUpdater(application.ActiveAddInId);
                 UpdaterRegistry.RegisterUpdater(_updater);
@@ -659,6 +757,8 @@ namespace DevelopmentTools
                         { "sheet-view-placer.png",   ("📋", "#1A5276") },
                         { "quick-dimension.png",     ("📏", "#6C3483") },
                         { "sheet-transfer.png",      ("📦", "#0052CC") },
+                        { "bcr-project.png",         ("⚖️", "#E67E22") },
+                        { "bcr-export.png",          ("📥", "#27AE60") },
                     };
                     if (fallbackMap.TryGetValue(iconFileName, out var info))
                     {

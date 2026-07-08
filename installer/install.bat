@@ -19,11 +19,15 @@ copy /Y "TileJointSharedParam.txt" "%TARGET_DIR%\App\" >nul
 copy /Y "version.json" "%TARGET_DIR%\App\" >nul
 copy /Y "platform_config.json" "%TARGET_DIR%\App\" >nul
 
-echo   Copying Resources (icons/templates)...
+echo   Copying Resources (icons/templates) and Rules...
 if not exist "%TARGET_DIR%\App\Resources\RibbonIcons" mkdir "%TARGET_DIR%\App\Resources\RibbonIcons"
 if not exist "%TARGET_DIR%\App\Resources\Templates" mkdir "%TARGET_DIR%\App\Resources\Templates"
+if not exist "%TARGET_DIR%\App\Rules" mkdir "%TARGET_DIR%\App\Rules"
 xcopy /Y /E /Q "Resources\RibbonIcons\*" "%TARGET_DIR%\App\Resources\RibbonIcons\" >nul
 xcopy /Y /E /Q "Resources\Templates\*" "%TARGET_DIR%\App\Resources\Templates\" >nul
+if exist "Rules" (
+    xcopy /Y /E /Q "Rules\*" "%TARGET_DIR%\App\Rules\" >nul
+)
 
 echo   Cleaning conflicting system DLLs from App folder...
 del /F /Q "%TARGET_DIR%\App\System.Buffers.dll" >nul 2>nul
