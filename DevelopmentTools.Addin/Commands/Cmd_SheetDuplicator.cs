@@ -15,15 +15,9 @@ namespace DevelopmentTools.Commands
         {
             try
             {
-                bool isAuthorized = true;
-                if (GoogleAuthManager.IsAuthEnabled())
+                if (!CommandAccessGuard.EnsureAuthorized("SheetTools", "圖紙逐層量化"))
                 {
-                    isAuthorized = GoogleAuthManager.VerifyAccess("SheetTools", "圖紙逐層量化");
-                }
-
-                if (!isAuthorized)
-                {
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
 
                 DoShowDialog(commandData);

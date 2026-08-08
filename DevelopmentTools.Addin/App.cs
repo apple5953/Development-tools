@@ -35,7 +35,11 @@ namespace DevelopmentTools
         // Code Review Window & ViewModel
         private static System.Windows.Window _codeReviewWindow;
         private static Modules.DesignReview.ViewModels.CodeReviewPaneViewModel _codeReviewPaneViewModel;
+        // Adaptive Region Dockable Pane UI
+        public static DevelopmentTools.Modules.AdaptiveSectionBox.Views.RegionManagerDockablePane RegionPane { get; private set; }
 
+        // Adaptive Region Async Handler (防止被 GC 回收)
+        public static DevelopmentTools.Modules.AdaptiveSectionBox.Interaction.AdaptiveRegionExternalEventHandler AdaptiveRegionHandler { get; private set; }
         private static readonly System.Collections.Generic.HashSet<string> _activeDocs = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public static void Log(string msg)
@@ -322,7 +326,7 @@ namespace DevelopmentTools
                 {
                     try
                     {
-                        bool isAuthorized = await GoogleAuthManager.VerifyAccessAsync("Tiling", "磁磚鋪設系統");
+                        bool isAuthorized = await CommandAccessGuard.EnsureAuthorizedAsync("Tiling", "磁磚鋪設系統");
                         if (!isAuthorized) return;
 
                         uiDispatcher.Invoke(() =>
@@ -393,10 +397,10 @@ namespace DevelopmentTools
                 string originalPath = new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath;
 
                 // Panel 1: 系統管理
-                RibbonPanel adminPanel = application.CreateRibbonPanel(tabName, "系統管理");
+                RibbonPanel adminPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_Admin"]);
                 
                 PushButtonData loginBtn = new PushButtonData(
-                    "GoogleLogin", "Google 登入",
+                    "GoogleLogin", LanguageManager.Instance["Ribbon_Btn_Login"],
                     assemblyPath, "DevelopmentTools.Commands.LoginCommand");
                 loginBtn.LargeImage = CreateDynamicIcon("🔑", "#4285F4", "#FFFFFF");
                 loginBtn.ToolTip = "【Google 登入 - 快速指南】\n\n" +
@@ -409,7 +413,7 @@ namespace DevelopmentTools
                                            "■ 安全保障：外掛採用 Google 官方 OAuth 2.0 驗證協議，絕不會收集或儲存您的密碼，僅確認您的使用授權狀態。";
                 
                 PushButtonData feedbackBtn = new PushButtonData(
-                    "SystemFeedback", "問題與反饋",
+                    "SystemFeedback", LanguageManager.Instance["Ribbon_Btn_Feedback"],
                     assemblyPath, "DevelopmentTools.Commands.FeedbackCommand");
                 feedbackBtn.LargeImage = CreateDynamicIcon("💬", "#34A853", "#FFFFFF");
                 feedbackBtn.ToolTip = "【問題與反饋 - 快速指南】\n\n" +
@@ -421,7 +425,7 @@ namespace DevelopmentTools
                                               "■ 功能提案：若有任何希望新增的指令、優化操作流程的想法，都歡迎直接寫在反饋中，我們將於後續版本評估加入。";
 
                 PushButtonData updateBtn = new PushButtonData(
-                    "CheckForUpdates", "檢查更新",
+                    "CheckForUpdates", LanguageManager.Instance["Ribbon_Btn_Update"],
                     assemblyPath, "DevelopmentTools.Commands.CheckUpdateCommand");
                 updateBtn.LargeImage = CreateDynamicIcon("🔄", "#EA4335", "#FFFFFF");
                 updateBtn.ToolTip = "【檢查更新 - 快速指南】\n\n" +
@@ -433,14 +437,18 @@ namespace DevelopmentTools
                                             "■ 靜默檢測：每次點開排版主視窗時，後台執行緒都會自動做一次無感的更新檢測。\n" +
                                             "■ 防毒信任：更新時需要透過獨立的 Updater 覆蓋安裝，若被防毒軟體攔截，請選擇「信任並允許執行」。";
 
+                loginBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_Login"];
+                feedbackBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_Feedback"];
+                updateBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_Update"];
+
                 adminPanel.AddItem(loginBtn);
                 adminPanel.AddItem(feedbackBtn);
                 adminPanel.AddItem(updateBtn);
 
                 // Panel 1.5: 語言切換 (Added next to 系統管理)
                 
-                PulldownButtonData langDropdownData = new PulldownButtonData("LanguageDropdown", "語言 / Language");
-                langDropdownData.ToolTip = "切換系統語言 / Switch Language / 言語を切り替える";
+                PulldownButtonData langDropdownData = new PulldownButtonData("LanguageDropdown", LanguageManager.Instance["Ribbon_Btn_LangDropdown"]);
+                langDropdownData.ToolTip = LanguageManager.Instance["Ribbon_TT_LangDropdown"];
                 
                 string langDllPath = "";
                 try { langDllPath = System.Reflection.Assembly.GetExecutingAssembly().Location; } catch { }
@@ -474,10 +482,10 @@ namespace DevelopmentTools
                 langDropdown.AddPushButton(langJaBtn);
 
                 // Panel 2: 空間排版
-                RibbonPanel layoutPanel = application.CreateRibbonPanel(tabName, "空間排版");
+                RibbonPanel layoutPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_Layout"]);
                 
                 PushButtonData mainBtn = new PushButtonData(
-                    "ShowControlPanel", "磁磚鋪設系統",
+                    "ShowControlPanel", LanguageManager.Instance["Ribbon_Btn_TileSystem"],
                     assemblyPath, "DevelopmentTools.Commands.ShowControlPanelCommand");
                 mainBtn.ToolTip = "【磁磚鋪設系統 - 快速指南】\n\n" +
                                   "1. 點擊按鈕開啟磁磚設計浮動主面板。\n" +
@@ -489,10 +497,11 @@ namespace DevelopmentTools
                                           "■ 設計微調：可在面板中微調起磚原點偏移量 X/Y，或調整整體排磚旋轉角度，以避開碎磚或對齊特定縫隙。\n" +
                                           "■ 動態關聯：外掛在專案中註冊了 DMU (Dynamic Model Update)，當房間的牆壁被手動拖動時，面域內的磁磚會自動重新計算，無須人工手動重做。";
                 mainBtn.LargeImage = CreateDynamicIcon("🟦", "#2980B9", "#FFFFFF");
+                mainBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_TileSystem"];
                 layoutPanel.AddItem(mainBtn);
 
                 PushButtonData elevationBtn = new PushButtonData(
-                    "TileElevationGenerator", "展開圖生成",
+                    "TileElevationGenerator", LanguageManager.Instance["Ribbon_Btn_Elevation"],
                     assemblyPath, "DevelopmentTools.Commands.DT_TileElevationGeneratorCommand");
                 elevationBtn.ToolTip = "【展開圖生成 - 快速指南】\n\n" +
                                        "1. 點開按鈕，選取地板 (Floor) 或多面牆體。\n" +
@@ -504,13 +513,14 @@ namespace DevelopmentTools
                                                "■ 高低差自動補償：讀取各牆面底部的 Level 標高高程，在圖紙 Y 軸對齊時自動進行偏移量扣除，確保所有立面圖的樓面線 (Floor Line) 處於同一條水平線上。\n" +
                                                "■ 剖面方向：生成剖面線視角預設是從樓板中心點朝牆體表面向外看。";
                 elevationBtn.LargeImage = CreateDynamicIcon("📐", "#8E44AD", "#FFFFFF");
+                elevationBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_Elevation"];
                 layoutPanel.AddItem(elevationBtn);
 
                 // Panel 3: 粉刷裝修
-                RibbonPanel finishPanel = application.CreateRibbonPanel(tabName, "粉刷裝修");
+                RibbonPanel finishPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_Finish"]);
 
                 PushButtonData wallFinishBtn = new PushButtonData(
-                    "WallFinishTool", "自動粉刷",
+                    "WallFinishTool", LanguageManager.Instance["Ribbon_Btn_WallFinish"],
                     assemblyPath, "DevelopmentTools.Commands.WallFinishCommand");
                 wallFinishBtn.ToolTip = "【自動粉刷 - 快速指南】\n\n" +
                                         "1. 點擊此按鈕進入選取模式。\n" +
@@ -520,10 +530,11 @@ namespace DevelopmentTools
                                                 "■ 牆體生成：分析房間的 Finish 邊界，在牆面外側快速繪製並長出具有厚度的薄牆。您可以自訂粉刷厚度（如 15mm）與對應的 Revit 材料（如水泥砂漿）。\n" +
                                                 "■ 門窗精準洞口扣減：外掛會自動偵測牆上的 Window 窗與 Door 門，分析其原有的洞口形狀，在生成的粉刷層實體中自動扣除重疊的洞口，確保明細表工程量計算精準無誤。";
                 wallFinishBtn.LargeImage = CreateDynamicIcon("🏗", "#27AE60", "#FFFFFF");
+                wallFinishBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_WallFinish"];
                 finishPanel.AddItem(wallFinishBtn);
 
                 PushButtonData roomFinishConfigBtn = new PushButtonData(
-                    "RoomFinishConfigurator", "房間裝修配置",
+                    "RoomFinishConfigurator", LanguageManager.Instance["Ribbon_Btn_RoomConfig"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_RoomFinishConfigurator");
                 roomFinishConfigBtn.ToolTip = "【房間裝修配置 - 快速指南】\n\n" +
                                               "1. 點擊按鈕開啟配置視窗，系統會列出專案中所有的房間 (Rooms)。\n" +
@@ -534,13 +545,14 @@ namespace DevelopmentTools
                                                       "■ 參數對應：直接讀寫 Revit Room 元件內建的地板裝修 (Base Finish)、牆面裝修 (Wall Finish) 與天花板裝修 (Ceiling Finish) 屬性。\n" +
                                                       "■ 自動化工作流：透過本工具在房間中預先填入好裝修編號或材質（如: T01 地磚、P01 乳膠漆），後續其他裝修生成工具在分析房間時，即可自動識別並生成相應厚度與材質的實體牆/板/填充線，實現 BIM 智慧化裝修自動化。";
                 roomFinishConfigBtn.LargeImage = CreateDynamicIcon("🏠", "#16A085", "#FFFFFF");
+                roomFinishConfigBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_RoomConfig"];
                 finishPanel.AddItem(roomFinishConfigBtn);
 
                 // Panel 4: DT｜樓板工具
-                RibbonPanel floorPanel = application.CreateRibbonPanel(tabName, "DT｜樓板工具");
+                RibbonPanel floorPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_Floor"]);
 
                 PushButtonData floorSnapBtn = new PushButtonData(
-                    "FloorSnapToRoom", "樓板貼房間",
+                    "FloorSnapToRoom", LanguageManager.Instance["Ribbon_Btn_FloorSnap"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_FloorSnapToRoom");
                 floorSnapBtn.ToolTip = "【樓板貼房間 - 快速指南】\n\n" +
                                        "1. 先預選樓板，或者點按鈕後依 Revit 提示手動選取樓板（選完必須點左上角綠色欄的「完成 (Finish)」）。\n" +
@@ -551,13 +563,14 @@ namespace DevelopmentTools
                                                "■ 端點重建：移動後，程式會針對所有相鄰的直線在 2D XY 平面上重新求無限延伸線的交點，重設其端點。對於圓弧 (Arc)，則會保持其曲率半徑，僅微調其相鄰端點，確保草圖 100% 閉合。\n" +
                                                "■ 獨立防崩潰控制：框選多個樓板時，每塊樓板都會使用獨立的事務群組 (TransactionGroup) 處理。若有部分樓板因為草圖本身太亂或自交而對齊失敗，程式會單獨 Rollback 該樓板並提供報告，其餘成功的樓板依然會照常套用。";
                 floorSnapBtn.LargeImage = CreateDynamicIcon("⬇", "#D35400", "#FFFFFF");
+                floorSnapBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_FloorSnap"];
                 floorPanel.AddItem(floorSnapBtn);
 
                 // Panel 5: DT｜圖紙工具
-                RibbonPanel sheetPanel = application.CreateRibbonPanel(tabName, "圖紙工具");
+                RibbonPanel sheetPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_Sheet"]);
 
                 PushButtonData sheetRenameBtn = new PushButtonData(
-                    "BatchSheetRename", "圖紙批次更名",
+                    "BatchSheetRename", LanguageManager.Instance["Ribbon_Btn_SheetRename"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_BatchSheetRenamer");
                 sheetRenameBtn.ToolTip = "【圖紙批次更名 - 快速指南】\n\n" +
                                          "1. 點擊按鈕開啟批次更名視窗。\n" +
@@ -568,10 +581,11 @@ namespace DevelopmentTools
                                                  "■ 衝突防護機制：Revit 原生要求圖紙編號必須唯一。如果您想對調兩張圖紙的編號（如 A:001->002，B:002->001），本工具會自動偵測衝突並採用「兩步暫存修改法」（先暫時加上隨機或 Temp 後綴，再統一修改為目標編號），完美避開 Revit 限制。\n" +
                                                  "■ 批次修改與預覽：支援即時編輯，提供直觀的介面，防止因手動一個個修改圖紙屬性而造成的繁瑣操作與編號衝突。";
                 sheetRenameBtn.LargeImage = CreateDynamicIcon("📝", "#2C3E50", "#FFFFFF");
+                sheetRenameBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_SheetRename"];
                 sheetPanel.AddItem(sheetRenameBtn);
 
                 PushButtonData viewCreateBtn = new PushButtonData(
-                    "QuickViewCreator", "快速開圖套樣板",
+                    "QuickViewCreator", LanguageManager.Instance["Ribbon_Btn_QuickView"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_QuickViewCreator");
                 viewCreateBtn.ToolTip = "【快速開圖套樣板 - 快速指南】\n\n" +
                                         "1. 點擊按鈕開啟開圖視窗。\n" +
@@ -584,10 +598,11 @@ namespace DevelopmentTools
                                                 "■ 命名防碰撞：新視圖名稱為 [來源視圖名稱]-[樣板名稱]。若名稱已存在，系統會自動遞增後綴 (如 _1, _2) 避免 Revit 衝突崩潰。\n" +
                                                 "■ 一鍵自動出圖：若勾選「同步建立圖紙」，系統會自動採用專案圖框為新視圖建立對齊圖紙，並自動將視圖放置到圖紙正中央，實現開圖到排版的一鍵完成。";
                 viewCreateBtn.LargeImage = CreateDynamicIcon("🖼", "#C0392B", "#FFFFFF");
+                viewCreateBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_QuickView"];
                 sheetPanel.AddItem(viewCreateBtn);
 
                 PushButtonData viewPlaceBtn = new PushButtonData(
-                    "SheetViewPlacer", "圖紙視圖排版",
+                    "SheetViewPlacer", LanguageManager.Instance["Ribbon_Btn_SheetPlacer"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_SheetViewPlacer");
                 viewPlaceBtn.ToolTip = "【圖紙視圖排版 - 快速指南】\n\n" +
                                        "1. 點擊按鈕開啟拖曳排版主視窗。\n" +
@@ -599,6 +614,7 @@ namespace DevelopmentTools
                                                "■ 位置自動偏移：置入新視圖時，若圖紙已有視窗，系統會自動套用微幅偏移以防完全重疊遮擋，並會自動套用下拉選定的視埠樣式。\n" +
                                                "■ 支援明細表與圖例：除了一般平面/剖立面/3D 視圖外，亦支援將明細表 (Schedule) 等可多重置入的視圖進行拖放排版。";
                 viewPlaceBtn.LargeImage = CreateDynamicIcon("📋", "#1A5276", "#FFFFFF");
+                viewPlaceBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_SheetPlacer"];
                 sheetPanel.AddItem(viewPlaceBtn);
 
                 PushButtonData sheetDuplicatorBtn = new PushButtonData(
@@ -610,10 +626,10 @@ namespace DevelopmentTools
                 sheetPanel.AddItem(sheetDuplicatorBtn);
 
                 // Panel 6: DT｜標註工具
-                RibbonPanel tagPanel = application.CreateRibbonPanel(tabName, "標註工具");
+                RibbonPanel tagPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_Tag"]);
 
                 PushButtonData quickDimBtn = new PushButtonData(
-                    "QuickDimension", "快速尺寸標註",
+                    "QuickDimension", LanguageManager.Instance["Ribbon_Btn_QuickDim"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_QuickDimension");
                 quickDimBtn.ToolTip = "【快速尺寸標註 - 快速指南】\n\n" +
                                       "1. 點擊按鈕開啟標註工具箱。\n" +
@@ -625,6 +641,7 @@ namespace DevelopmentTools
                                               "■ 牆中心對齊：藉由牆體定位中心線直接提取 Reference，自動在平行牆體中線建立連續的對齊標註。\n" +
                                               "■ 開口邊到邊：讀取門、窗、洞口元件內部的 Left 與 Right 強參照面，實現開口淨寬與間距的快速一鍵尺寸標註。";
                 quickDimBtn.LargeImage = CreateDynamicIcon("📏", "#6C3483", "#FFFFFF");
+                quickDimBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_QuickDim"];
                 tagPanel.AddItem(quickDimBtn);
 
                 // Panel 7: AI 助手
@@ -651,18 +668,18 @@ namespace DevelopmentTools
 
 
                 // Panel 9: 法規檢討
-                RibbonPanel codeReviewPanel = application.CreateRibbonPanel(tabName, "法規檢討");
+                RibbonPanel codeReviewPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_CodeReview"]);
 
                 PushButtonData bcrProjectBtn = new PushButtonData(
-                    "BcrProject", "法規檢討",
+                    "BcrProject", LanguageManager.Instance["Ribbon_Btn_CodeReview"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_CreateCodeReviewProject");
-                bcrProjectBtn.ToolTip = "開啟法規檢討視窗與進度追蹤。初次開啟將引導初始化專案。";
+                bcrProjectBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_CodeReview"];
                 ApplyRibbonIcon(bcrProjectBtn, "bcr-project.png");
                 
                 PushButtonData bcrExportBtn = new PushButtonData(
-                    "BcrExportReport", "匯出報告",
+                    "BcrExportReport", LanguageManager.Instance["Ribbon_Btn_CodeReviewExport"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_ExportCodeReviewReport");
-                bcrExportBtn.ToolTip = "匯出當前法規檢討狀態與異常列表為 CSV Excel 報告。";
+                bcrExportBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_CodeReviewExport"];
                 ApplyRibbonIcon(bcrExportBtn, "bcr-export.png");
 
                 codeReviewPanel.AddItem(bcrProjectBtn);
@@ -680,6 +697,9 @@ namespace DevelopmentTools
 
                 UpdaterRegistry.AddTrigger(_updater.GetUpdaterId(), gmFilter, Element.GetChangeTypeAny());
 
+                ElementClassFilter dsClassFilter = new ElementClassFilter(typeof(DirectShape));
+                UpdaterRegistry.AddTrigger(_updater.GetUpdaterId(), dsClassFilter, Element.GetChangeTypeGeometry());
+
                 // 訂閱開檔/同步中央/讀取最新變更事件，以控制 Updater 避開這些高載入狀態
                 application.ControlledApplication.DocumentOpening += OnDocOpening;
                 application.ControlledApplication.DocumentOpened += OnDocOpened;
@@ -687,6 +707,42 @@ namespace DevelopmentTools
                 application.ControlledApplication.DocumentSynchronizedWithCentral += OnDocSynced;
                 application.ControlledApplication.DocumentReloadingLatest += OnDocReloading;
                 application.ControlledApplication.DocumentReloadedLatest += OnDocReloaded;
+                // --- 補回 Adaptive Region 空間區域初始化與註冊 ---
+                AdaptiveRegionHandler = new DevelopmentTools.Modules.AdaptiveSectionBox.Interaction.AdaptiveRegionExternalEventHandler();
+                
+                // 在 Revit 啟動時全局註冊 3D 著色渲染服務，確保 GPU 管線初始化完畢
+                DevelopmentTools.Modules.AdaptiveSectionBox.Rendering.RenderingService.Instance.Register();
+
+                // 註冊 Adaptive Region Dockable Pane 停靠面板
+                try
+                {
+                    var paneId = new DockablePaneId(DevelopmentTools.Commands.Cmd_AdaptiveRegion.PaneGuid);
+                    RegionPane = new DevelopmentTools.Modules.AdaptiveSectionBox.Views.RegionManagerDockablePane();
+                    application.RegisterDockablePane(paneId, "智慧空間區域 (Adaptive Region)", RegionPane);
+                }
+                catch (Exception ex)
+                {
+                    Log($"註冊 DockablePane 失敗: {ex.Message}");
+                }
+
+                // 訂閱視圖切換事件以同步文件
+                application.ViewActivated += OnViewActivated;
+
+                // 建立 Ribbon 按鈕
+                try
+                {
+                    RibbonPanel regionPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_AdaptiveRegion"]);
+                    PushButtonData adaptiveRegionBtn = new PushButtonData(
+                        "AdaptiveRegion", LanguageManager.Instance["Ribbon_Btn_AdaptiveRegion"],
+                        assemblyPath, "DevelopmentTools.Commands.Cmd_AdaptiveRegion");
+                    adaptiveRegionBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_AdaptiveRegion"];
+                    adaptiveRegionBtn.LargeImage = CreateDynamicIcon("🎯", "#E74C3C", "#FFFFFF");
+                    regionPanel.AddItem(adaptiveRegionBtn);
+                }
+                catch (Exception ex)
+                {
+                    Log($"建立 Ribbon 空間區域 Panel 失敗: {ex.Message}");
+                }
                 application.ControlledApplication.ApplicationInitialized += (s, e) =>
                 {
                     try
@@ -701,8 +757,9 @@ namespace DevelopmentTools
 
                 return Result.Succeeded;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Log($"OnStartup 崩潰: {ex.Message}\n{ex.StackTrace}");
                 return Result.Failed;
             }
         }
@@ -825,8 +882,14 @@ namespace DevelopmentTools
             try
             {
                 SyncEvent?.Dispose();
+                _aiSelectionEvent?.Dispose();
+                _aiCommandEvent?.Dispose();
                 if (_updater != null)
                     UpdaterRegistry.UnregisterUpdater(_updater.GetUpdaterId());
+
+                // 安全關閉滑鼠 Hook 編輯模式與註銷 3D 著色
+                DevelopmentTools.Modules.AdaptiveSectionBox.Interaction.InteractionService.Instance.Stop();
+                DevelopmentTools.Modules.AdaptiveSectionBox.Rendering.RenderingService.Instance.Dispose();
 
                 // 取消訂閱事件
                 application.ControlledApplication.DocumentOpening -= OnDocOpening;
@@ -835,9 +898,39 @@ namespace DevelopmentTools
                 application.ControlledApplication.DocumentSynchronizedWithCentral -= OnDocSynced;
                 application.ControlledApplication.DocumentReloadingLatest -= OnDocReloading;
                 application.ControlledApplication.DocumentReloadedLatest -= OnDocReloaded;
+
+                application.ViewActivated -= OnViewActivated;
             }
             catch { }
             return Result.Succeeded;
+        }
+
+        private void OnViewActivated(object sender, Autodesk.Revit.UI.Events.ViewActivatedEventArgs e)
+        {
+            try
+            {
+                if (e.Document != null)
+                {
+                    var uidoc = new UIDocument(e.Document);
+                    
+                    // 自動同步當前文件與 3D 預覽
+                    DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels.RegionManagerViewModel.Instance.SetDocument(uidoc);
+
+                    // 安全防禦：若目前編輯中，但切換至非 3D 視圖或不同文件，則自動結束編輯
+                    var interactionService = DevelopmentTools.Modules.AdaptiveSectionBox.Interaction.InteractionService.Instance;
+                    if (interactionService.IsEditModeActive)
+                    {
+                        if (e.CurrentActiveView?.ViewType != ViewType.ThreeD || e.Document.PathName != e.PreviousActiveView?.Document?.PathName)
+                        {
+                            interactionService.Stop();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"Error in OnViewActivated: {ex.Message}");
+            }
         }
     }
 }

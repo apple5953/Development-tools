@@ -5,6 +5,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.ExtensibleStorage;
 using Autodesk.Revit.UI;
+using DevelopmentTools.Core;
 using DevelopmentTools.Modules.DesignReview.Models;
 using DevelopmentTools.Modules.DesignReview.Services;
 
@@ -19,6 +20,11 @@ namespace DevelopmentTools.Commands
         {
             try
             {
+                if (!CommandAccessGuard.EnsureAuthorized("CodeReview", "法規檢討"))
+                {
+                    return Result.Cancelled;
+                }
+
                 UIApplication uiapp = commandData.Application;
                 UIDocument uidoc = uiapp.ActiveUIDocument;
                 if (uidoc == null)

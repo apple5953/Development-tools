@@ -21,16 +21,9 @@ namespace DevelopmentTools.Commands
         {
             try
             {
-                // 1. 檢查既有授權系統
-                bool isAuthorized = true;
-                if (GoogleAuthManager.IsAuthEnabled())
+                if (!CommandAccessGuard.EnsureAuthorized("DT_QuickDimension", "快速尺寸標註"))
                 {
-                    isAuthorized = GoogleAuthManager.VerifyAccess("DT_QuickDimension", "快速尺寸標註");
-                }
-
-                if (!isAuthorized)
-                {
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
 
                 UIDocument uidoc = commandData.Application.ActiveUIDocument;

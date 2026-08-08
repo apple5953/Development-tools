@@ -21,16 +21,9 @@ namespace DevelopmentTools.Commands
         {
             try
             {
-                // 1. 檢查既有授權系統
-                bool isAuthorized = true;
-                if (GoogleAuthManager.IsAuthEnabled())
+                if (!CommandAccessGuard.EnsureAuthorized("DT_RoomFinishConfigurator", "房間裝修配置"))
                 {
-                    isAuthorized = GoogleAuthManager.VerifyAccess("DT_RoomFinishConfigurator", "房間裝修配置");
-                }
-
-                if (!isAuthorized)
-                {
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
 
                 UIDocument uidoc = commandData.Application.ActiveUIDocument;

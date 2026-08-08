@@ -1,6 +1,7 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using DevelopmentTools.Core;
 using DevelopmentTools.Modules.DesignReview.Services;
 
 namespace DevelopmentTools.Commands
@@ -12,6 +13,11 @@ namespace DevelopmentTools.Commands
         {
             try
             {
+                if (!CommandAccessGuard.EnsureAuthorized("CodeReviewExport", "匯出報告"))
+                {
+                    return Result.Cancelled;
+                }
+
                 var doc = commandData.Application.ActiveUIDocument.Document;
                 string projectName = doc.Title;
 

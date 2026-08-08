@@ -109,7 +109,7 @@ $versionJson = @{
     "main_dll" = "DevelopmentTools.Addin.dll"
     "install_folder" = "%LOCALAPPDATA%\DevelopmentTools\App"
     "updater_path" = "%LOCALAPPDATA%\DevelopmentTools\Updater\DevelopmentTools.Updater.exe"
-    "manifest_url" = "https://raw.githubusercontent.com/$Owner/$Repo/main/update_manifest.json"
+    "manifest_url" = "https://cdn.jsdelivr.net/gh/$Owner/$Repo@main/update_manifest.json"
     "updated_at" = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
 }
 $versionJson | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $zipTempDir "version.json") -Encoding utf8

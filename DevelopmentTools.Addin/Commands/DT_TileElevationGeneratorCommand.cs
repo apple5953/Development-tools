@@ -19,15 +19,9 @@ namespace DevelopmentTools.Commands
         {
             try
             {
-                bool isAuthorized = true;
-                if (GoogleAuthManager.IsAuthEnabled())
+                if (!CommandAccessGuard.EnsureAuthorized("Tiling", "磁磚展開圖生成器"))
                 {
-                    isAuthorized = GoogleAuthManager.VerifyAccess("Tiling", "磁磚展開圖生成器");
-                }
-
-                if (!isAuthorized)
-                {
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
 
                 // 驗證成功，此時 100% 處於 API Context 中

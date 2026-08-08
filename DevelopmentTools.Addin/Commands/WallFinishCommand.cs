@@ -18,16 +18,9 @@ namespace DevelopmentTools.Commands
         {
             try
             {
-                // 1. 檢查既有授權系統
-                bool isAuthorized = true;
-                if (GoogleAuthManager.IsAuthEnabled())
+                if (!CommandAccessGuard.EnsureAuthorized("WallFinish", "自動粉刷系統"))
                 {
-                    isAuthorized = GoogleAuthManager.VerifyAccess("WallFinish", "自動粉刷系統");
-                }
-
-                if (!isAuthorized)
-                {
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
 
                 UIDocument uidoc = commandData.Application.ActiveUIDocument;

@@ -1,6 +1,7 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using DevelopmentTools.Core;
 using DevelopmentTools.Modules.SheetTransfer.Views;
 
 namespace DevelopmentTools.Commands
@@ -12,6 +13,11 @@ namespace DevelopmentTools.Commands
         {
             try
             {
+                if (!CommandAccessGuard.EnsureAuthorized("SheetTransfer", "跨專案圖紙轉移"))
+                {
+                    return Result.Cancelled;
+                }
+
                 var window = new SheetTransferWindow(commandData.Application);
                 var helper = new System.Windows.Interop.WindowInteropHelper(window);
                 helper.Owner = commandData.Application.MainWindowHandle;

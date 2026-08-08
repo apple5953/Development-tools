@@ -36,6 +36,16 @@ namespace DevelopmentTools.Core
             foreach (ElementId id in data.GetModifiedElementIds())
             {
                 Element elem = doc.GetElement(id);
+                if (elem is DirectShape ds && ds.Id == DevelopmentTools.Modules.AdaptiveSectionBox.Interaction.InteractionService.Instance.ProxyElementId)
+                {
+                    var bbox = ds.get_BoundingBox(view3D);
+                    if (bbox != null)
+                    {
+                        view3D.SetSectionBox(bbox);
+                    }
+                    continue;
+                }
+
                 if (elem is FamilyInstance fi && fi.Symbol.Family.Name.Equals("RoomTileCoordinate", StringComparison.OrdinalIgnoreCase))
                 {
                     // 檢查是否啟用自動即時更新。若無此參數或值不為 0 (No) 則預設為 True

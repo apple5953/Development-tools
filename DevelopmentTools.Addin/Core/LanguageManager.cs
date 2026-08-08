@@ -299,6 +299,7 @@ namespace DevelopmentTools.Core
             AddTranslation("TileElev_HelpTooltip", "點擊查看操作說明", "Click for instructions", "クリックして操作説明を表示");
             AddTranslation("Common_Close", "關閉", "Close", "閉じる");
                         AddTranslation("TileSys_Title", "磁磚排版系統 v3", "Tile Layout System v3", "タイルレイアウトシステム v3");
+            AddTranslation("TileSys_Mode1", "▍ 磁磚排版與建立", "▍ Tile Layout & Creation", "▍ タイル配置と作成");
             AddTranslation("TileSys_GenLayout", "自動產生排版", "Generate Layout", "レイアウト自動作成");
             AddTranslation("TileSys_AdjustOrigin", "調整磁磚起點", "Adjust Origin", "タイル起点調整");
             AddTranslation("TileSys_DeleteLayout", "刪除現有排版", "Delete Layout", "レイアウトを削除");
@@ -331,6 +332,14 @@ namespace DevelopmentTools.Core
             AddTranslation("Ribbon_TT_QuickDim", "快速建立尺寸標註", "Quickly create dimensions", "すばやく寸法を作成");
             AddTranslation("Ribbon_Btn_LangDropdown", "語言切換", "Language", "言語切替");
             AddTranslation("Ribbon_TT_LangDropdown", "切換介面語言", "Switch Interface Language", "インターフェース言語を切り替え");
+            AddTranslation("Ribbon_Panel_CodeReview", "法規檢討", "Code Review", "法規チェック");
+            AddTranslation("Ribbon_Btn_CodeReview", "法規檢討", "Code Review", "法規チェック");
+            AddTranslation("Ribbon_TT_CodeReview", "開啟法規檢討視窗與進度追蹤。初次開啟將引導初始化專案。", "Open the code review window and progress tracker. The first launch guides project initialization.", "法規チェック画面と進捗管理を開きます。初回起動時はプロジェクト初期化を案内します。");
+            AddTranslation("Ribbon_Btn_CodeReviewExport", "匯出報告", "Export Report", "レポート出力");
+            AddTranslation("Ribbon_TT_CodeReviewExport", "匯出目前法規檢討狀態與異常列表為 CSV Excel 報告。", "Export the current code review status and issue list as a CSV Excel report.", "現在の法規チェック状態と問題一覧を CSV Excel レポートとして出力します。");
+            AddTranslation("Ribbon_Panel_AdaptiveRegion", "剖面框工具", "Section Box", "断面ボックスツール");
+            AddTranslation("Ribbon_Btn_AdaptiveRegion", "智慧剖面框", "Adaptive Section Box", "スマート断面ボックス");
+            AddTranslation("Ribbon_TT_AdaptiveRegion", "【智慧剖面框 - 快速指南】\n\n1. 點擊按鈕，展開空間區域停靠面板。\n2. 新建一個 3D 空間區域，並在 3D 視圖中直接以互動控制點編輯其任意多邊形形狀。\n3. 此區域為底層共用邊界，可供磁磚、施工架、法規檢討等其他功能作為邊界篩選與局部算量之底層底座。", "【Adaptive Section Box - Quick Guide】\n\n1. Click button to show the region manager dockable pane.\n2. Create a new 3D region, and edit its arbitrary polygonal shape interactively in 3D view.\n3. This region serves as a shared boundary for other features such as tiling, scaffolding, code review, etc.", "【スマート断面ボックス - クイックガイド】\n\n1. ボタンをクリックして領域管理パネルを展開します。\n2. 新しい3D領域を作成し、3Dビューでインタラクティブに多角形形状を編集します。\n3. この領域は、タイル、足場、法規チェックなどの他の機能の共通境界として機能します。");
 
                         AddTranslation("Ribbon_Panel_Tag", "標註工具", "Tags", "注釈ツール");
                         AddTranslation("TileSys_Desc_GenLayout", "點選任意牆面或地板面，自動讀取描述欄位內的磁磚尺寸與縫隙，疊加填充線（不動原有材質）", "Select any wall or floor face to auto-generate tile layout patterns based on description parameters (non-destructive).", "壁または床面を選択して、タイルのレイアウトパターンを自動生成します（既存の材質に影響しません）。");
@@ -344,10 +353,6 @@ namespace DevelopmentTools.Core
             AddTranslation("TileSys_Desc_ChangeTileMaterial", "選取多塊已生成的 3D 磁磚，批次變更其局部材質與樣式", "Select multiple 3D tiles to batch change their individual material and style.", "複数の3Dタイルを選択し、個々のマテリアルとスタイルを一括で変更します。");
             AddTranslation("TileSys_ConvertToEditable", "📐 轉換為可編輯磁磚", "📐 Convert to Editable Tiles", "📐 編集可能なタイルに変換");
             AddTranslation("TileSys_Desc_ConvertToEditable", "點選不可調整的 3D 磁磚，原地轉換為原生 Walls / Floors 元件，即可雙擊 Edit Profile 進行修改", "Select non-adjustable 3D tiles to convert them into native Walls/Floors for profile editing.", "調整不可能な3Dタイルを選択し、プロファイル編集用のネイティブな壁/床に変換します。");
-            AddTranslation("TileSys_Stats2D", "📊 3. 平面幾何統計", "📊 3. 2D Geometry Stats", "📊 3. 2D ジオメトリ統計");
-            AddTranslation("TileSys_Desc_Stats2D", "多選已改寫前景填充線的正式面，藉由幾何排版引擎估算數量", "Select overridden formal faces to estimate quantities using the geometric layout engine.", "上書きされた正式な面を選択し、幾何学レイアウトエンジンを使用して数量を推定します。");
-            AddTranslation("TileSys_Stats3D", "🔍 4. 3D 實體統計", "🔍 4. 3D Element Stats", "🔍 4. 3D 要素統計");
-            AddTranslation("TileSys_Desc_Stats3D", "多選房間元件，統計選定空間內所有已生成的 3D 磁磚實體與損耗率", "Select rooms to calculate generated 3D tiles and waste rates within the space.", "部屋を選択し、空間内の生成された3Dタイルとロス率を計算します。");
             AddTranslation("TileSys_CreateSchedule", "📄 建立 Revit 明細表", "📄 Create Revit Schedule", "📄 Revit 集計表を作成");
             AddTranslation("TileSys_Desc_CreateSchedule", "在專案中建立常規模型磁磚明細表", "Create a Generic Model Tile Schedule in the project.", "プロジェクト内に一般モデルのタイル集計表を作成します。");
             AddTranslation("TileSys_ExportExcel", "📥 匯出 Excel 統計表", "📥 Export Excel Stats", "📥 Excel 統計をエクスポート");
@@ -376,10 +381,6 @@ namespace DevelopmentTools.Core
             AddTranslation("RoomFinish_InputHint", "填入要批次寫入的材質代號或名稱，例如: T-01", "Enter the material code or name to batch write, e.g., T-01", "一括で書き込むマテリアルコードまたは名前を入力します（例：T-01）");
             AddTranslation("TileSys_ConvertToEditable2", "📐 轉換為可編輯磁磚", "📐 Convert to Editable Tiles", "📐 編集可能なタイルに変換");
             AddTranslation("TileSys_ConvertToEditable_Desc", "點選不可調整的 3D 磁磚，原地轉換為原生 Walls / Floors 元件，即可雙擊 Edit Profile 進行修改", "Select non-adjustable 3D tiles and convert them to native Walls/Floors for profile editing.", "調整不可能な3Dタイルを選択し、プロファイル編集用にネイティブな壁/床に変換します。");
-            AddTranslation("TileSys_Stats2D2", "📊 3. 平面幾何統計", "📊 3. 2D Geometry Stats", "📊 3. 2D ジオメトリ統計");
-            AddTranslation("TileSys_Stats2D_Desc", "多選已改寫前景填充線的正式面，藉由幾何排版引擎估算數量", "Select overridden formal faces to estimate quantities using the layout engine.", "上書きされた正式な面を選択し、レイアウトエンジンを使用して数量を推定します。");
-            AddTranslation("TileSys_Stats3D2", "🔍 4. 3D 實體統計", "🔍 4. 3D Element Stats", "🔍 4. 3D 要素統計");
-            AddTranslation("TileSys_Stats3D_Desc", "多選房間元件，統計選定空間內所有已生成的 3D 磁磚實體與損耗率", "Select rooms to calculate generated 3D tiles and waste rates.", "部屋を選択し、生成された3Dタイルとロス率を計算します。");
             AddTranslation("TileSys_CreateSchedule2", "📄 建立 Revit 明細表", "📄 Create Revit Schedule", "📄 Revit 集計表を作成");
             AddTranslation("TileSys_CreateSchedule_Desc", "在專案中建立常規模型磁磚明細表", "Create a Generic Model Tile Schedule in the project.", "プロジェクト内に一般モデルのタイル集計表を作成します。");
             AddTranslation("TileSys_ExportExcel2", "📥 匯出 Excel 統計表", "📥 Export Excel Stats", "📥 Excel 統計をエクスポート");

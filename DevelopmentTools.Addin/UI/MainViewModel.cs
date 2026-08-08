@@ -44,6 +44,27 @@ namespace DevelopmentTools.UI
             set { _jointWidth = value; OnPropertyChanged(); }
         }
 
+        private int _jointProfileIndex = 0;
+        public int JointProfileIndex
+        {
+            get => _jointProfileIndex;
+            set { _jointProfileIndex = value; OnPropertyChanged(); }
+        }
+
+        private int _tileBoundaryJoinModeIndex = 0;
+        public int TileBoundaryJoinModeIndex
+        {
+            get => _tileBoundaryJoinModeIndex;
+            set { _tileBoundaryJoinModeIndex = value; OnPropertyChanged(); }
+        }
+
+        private double _tileWasteRate = 10;
+        public double TileWasteRate
+        {
+            get => _tileWasteRate;
+            set { _tileWasteRate = value; OnPropertyChanged(); }
+        }
+
         // 由 App 注入
         public ExternalEvent SyncExternalEvent { get; set; }
         public TileSyncEventHandler SyncHandler { get; set; }
@@ -56,12 +77,26 @@ namespace DevelopmentTools.UI
         public ICommand ConvertToEditableCommand      { get; }
         public ICommand CalculatePlaneQuantityCommand { get; }
         public ICommand Calculate3DQuantityCommand    { get; }
+        public ICommand CreateCurrentSpaceTileScheduleCommand { get; }
+        public ICommand HighlightFullTilePartsCommand { get; }
+        public ICommand HighlightHalfTilePartsCommand { get; }
+        public ICommand HighlightUnderHalfTilePartsCommand { get; }
         public ICommand AddJointWallsCommand          { get; }
         public ICommand AddJointFloorsCommand         { get; }
         public ICommand DeleteTilesCommand            { get; }
         public ICommand CreateScheduleCommand         { get; }
         public ICommand ExportExcelCommand            { get; }
         public ICommand OpenHelpCommand               { get; }
+        public ICommand ConfirmCalibrationCommand     { get; }
+        public ICommand ClearCalibrationCommand       { get; }
+        public ICommand Step1Command                  { get; }
+        public ICommand SaveLayoutFacesCommand        { get; }
+        public ICommand Step2Command                  { get; }
+        public ICommand Step3Command                  { get; }
+        public ICommand EditSketchCommand             { get; }
+        public ICommand OpenWallJoinToolCommand       { get; }
+        public ICommand OpenTilePurchaseDashboardCommand { get; }
+
  
         public MainViewModel(ExternalCommandData commandData)
         {
@@ -73,12 +108,27 @@ namespace DevelopmentTools.UI
             ConvertToEditableCommand      = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.ConvertToEditable,      "等待選擇磁磚進行可編輯轉換..."));
             CalculatePlaneQuantityCommand = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.CalculatePlaneQuantity, "等待多選已確認面計算平面數量..."));
             Calculate3DQuantityCommand    = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.Calculate3DQuantity,    "等待多選房間元件以進行3D實體統計..."));
+            CreateCurrentSpaceTileScheduleCommand = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.CreateCurrentSpaceTileSchedule, "正在建立目前空間磁磚表..."));
+            HighlightFullTilePartsCommand = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.HighlightFullTileParts, "正在亮顯整磚 Parts..."));
+            HighlightHalfTilePartsCommand = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.HighlightHalfTileParts, "正在亮顯半磚 Parts..."));
+            HighlightUnderHalfTilePartsCommand = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.HighlightUnderHalfTileParts, "正在亮顯不足半磚 Parts..."));
             AddJointWallsCommand          = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.AddJointParamToWalls,    "正在加入裝修牆縫隙參數..."));
             AddJointFloorsCommand         = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.AddJointParamToFloors,   "正在加入裝修地板縫隙參數..."));
             DeleteTilesCommand            = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.DeleteTiles,             "清除中..."));
-            CreateScheduleCommand         = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.CreateSchedule,          "正在建立 Revit 明細表..."));
+            CreateScheduleCommand         = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.CreateSchedule,          "正在粗估選取牆面磁磚數量..."));
             ExportExcelCommand            = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.ExportExcel,             "正在準備匯出統計數據..."));
             OpenHelpCommand               = new RelayCommand(OpenHelp);
+
+            ConfirmCalibrationCommand     = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.Step3ExecuteDivideParts,     "正在使用已確認的 PAT ModelCurve 分割 Parts..."));
+            ClearCalibrationCommand       = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.DeleteTileParts,             "正在刪除 Parts..."));
+
+            Step1Command                  = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.Step1CreateRawParts,         "正在設定磁磚放樣基準..."));
+            SaveLayoutFacesCommand        = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.SaveTileLayoutFaces,         "正在儲存磁磚放樣選取面..."));
+            Step2Command                  = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.Step2CalculateSplitCurves,   "正在批次建立磁磚放樣控制線..."));
+            Step3Command                  = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.Step3ExecuteDivideParts,     "正在使用已確認的 PAT ModelCurve 分割 Parts..."));
+            EditSketchCommand             = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.EditPartsSketch,             "正在開啟 Parts 分割草圖..."));
+            OpenWallJoinToolCommand       = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.OpenWallJoinTool,             "正在開啟 Revit 牆接合工具..."));
+            OpenTilePurchaseDashboardCommand = new RelayCommand(() => Raise(TileSyncEventHandler.Operation.OpenTilePurchaseDashboard, "正在開啟磁磚採購/檢查介面..."));
         }
 
         private void OpenHelp()
@@ -175,6 +225,27 @@ namespace DevelopmentTools.UI
 
         public bool CanExecute(object parameter) => _canExecute?.Invoke() ?? true;
         public void Execute(object parameter) => _execute();
+
+        public event EventHandler CanExecuteChanged
+        {
+            add    => System.Windows.Input.CommandManager.RequerySuggested += value;
+            remove => System.Windows.Input.CommandManager.RequerySuggested -= value;
+        }
+    }
+
+    public class RelayCommand<T> : ICommand
+    {
+        private readonly Action<T> _execute;
+        private readonly Func<T, bool> _canExecute;
+
+        public RelayCommand(Action<T> execute, Func<T, bool> canExecute = null)
+        {
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
+
+        public bool CanExecute(object parameter) => _canExecute?.Invoke((T)parameter) ?? true;
+        public void Execute(object parameter) => _execute((T)parameter);
 
         public event EventHandler CanExecuteChanged
         {

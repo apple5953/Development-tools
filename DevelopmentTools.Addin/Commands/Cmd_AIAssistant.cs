@@ -1,6 +1,7 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using DevelopmentTools.Core;
 using DevelopmentTools.Modules.AIAssistant;
 
 namespace DevelopmentTools.Commands
@@ -12,6 +13,11 @@ namespace DevelopmentTools.Commands
         {
             try
             {
+                if (!CommandAccessGuard.EnsureAuthorized("AI", "AI 模型分析"))
+                {
+                    return Result.Cancelled;
+                }
+
                 App.ShowOrActivateAIAssistant(commandData);
                 return Result.Succeeded;
             }

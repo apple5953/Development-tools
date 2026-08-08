@@ -21,16 +21,9 @@ namespace DevelopmentTools.Commands
         {
             try
             {
-                // 1. 檢查既有授權系統
-                bool isAuthorized = true;
-                if (GoogleAuthManager.IsAuthEnabled())
+                if (!CommandAccessGuard.EnsureAuthorized("DT_BatchSheetRenamer", "圖紙批次更名"))
                 {
-                    isAuthorized = GoogleAuthManager.VerifyAccess("DT_BatchSheetRenamer", "圖紙批次更名");
-                }
-
-                if (!isAuthorized)
-                {
-                    return Result.Failed;
+                    return Result.Cancelled;
                 }
 
                 UIDocument uidoc = commandData.Application.ActiveUIDocument;

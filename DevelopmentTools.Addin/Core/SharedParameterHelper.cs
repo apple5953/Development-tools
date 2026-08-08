@@ -13,7 +13,8 @@ namespace DevelopmentTools.Core
             "Tile_Thickness", "Joint_Width", "Rotation_Angle", "Pattern_Type", 
             "Wall_Start_Height", "Wall_End_Height", "Floor_Tile_Type", "Wall_Tile_Type", 
             "Generate_Mode", "Preview_Mode", "Tile_Material", "Tile_RVT_Path", "Auto_Update",
-            "Tile_Type"
+            "Tile_Type", "Tile_Surface", "Tile_Size", "Tile_SelectionSet", "Tile_WasteRate", "Tile_QtyWithWaste", "Tile_NetQty", "Tile_AreaM2", "Tile_CalcMethod", "Tile_SurfaceAreaText",
+            "Tile_NetQtyText", "Tile_PurchaseQtyText", "Tile_WasteQtyText", "Tile_TotalNetQtyText", "Tile_TotalPurchaseQtyText", "Tile_PurchaseCalcMethod"
         };
 
         private static readonly ForgeTypeId[] ParameterTypes = {
@@ -35,7 +36,22 @@ namespace DevelopmentTools.Core
             SpecTypeId.String.Text,       // Tile_Material
             SpecTypeId.String.Text,       // Tile_RVT_Path
             SpecTypeId.Boolean.YesNo,     // Auto_Update
-            SpecTypeId.String.Text        // Tile_Type
+            SpecTypeId.String.Text,       // Tile_Type
+            SpecTypeId.String.Text,       // Tile_Surface
+            SpecTypeId.String.Text,       // Tile_Size
+            SpecTypeId.String.Text,       // Tile_SelectionSet
+            SpecTypeId.String.Text,       // Tile_WasteRate
+            SpecTypeId.Number,            // Tile_QtyWithWaste
+            SpecTypeId.Number,            // Tile_NetQty
+            SpecTypeId.Number,            // Tile_AreaM2
+            SpecTypeId.String.Text,       // Tile_CalcMethod
+            SpecTypeId.String.Text,       // Tile_SurfaceAreaText
+            SpecTypeId.String.Text,       // Tile_NetQtyText
+            SpecTypeId.String.Text,       // Tile_PurchaseQtyText
+            SpecTypeId.String.Text,       // Tile_WasteQtyText
+            SpecTypeId.String.Text,       // Tile_TotalNetQtyText
+            SpecTypeId.String.Text,       // Tile_TotalPurchaseQtyText
+            SpecTypeId.String.Text        // Tile_PurchaseCalcMethod
         };
 
         // 取得或建立臨時共享參數檔案
@@ -54,7 +70,7 @@ namespace DevelopmentTools.Core
                 sw.WriteLine("GROUP\t1\tRoom Tile parameters");
                 sw.WriteLine("*PARAM\tGUID\tNAME\tDATATYPE\tDATACATEGORY\tGROUP\tVISIBLE\tDESCRIPTION\tUSERMODIFIABLE");
                 
-                // 19 個參數的 GUID 是固定的，以便在不同專案和族群中保持一致性
+                // GUID 是固定的，以便在不同專案和族群中保持一致性
                 string[] guids = {
                     "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3001", // Anchor_ID
                     "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3002", // Room_ID
@@ -74,7 +90,22 @@ namespace DevelopmentTools.Core
                     "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3016", // Tile_Material
                     "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3017", // Tile_RVT_Path
                     "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3018", // Auto_Update
-                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3019"  // Tile_Type
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3019", // Tile_Type
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3020", // Tile_Surface
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3021", // Tile_Size
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3022", // Tile_SelectionSet
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3023", // Tile_WasteRate
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3024", // Tile_QtyWithWaste
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3025", // Tile_NetQty
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3026", // Tile_AreaM2
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3027", // Tile_CalcMethod
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3028", // Tile_SurfaceAreaText
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3029", // Tile_NetQtyText
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3030", // Tile_PurchaseQtyText
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3031", // Tile_WasteQtyText
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3032", // Tile_TotalNetQtyText
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3033", // Tile_TotalPurchaseQtyText
+                    "b1a6c4b2-849c-4ebc-b3a6-5fa2147d3034"  // Tile_PurchaseCalcMethod
                 };
 
                 for (int i = 0; i < ParameterNames.Length; i++)
@@ -107,27 +138,40 @@ namespace DevelopmentTools.Core
                 Category genModelCategory = doc.Settings.Categories.get_Item(BuiltInCategory.OST_GenericModel);
                 Category wallCategory = doc.Settings.Categories.get_Item(BuiltInCategory.OST_Walls);
                 Category floorCategory = doc.Settings.Categories.get_Item(BuiltInCategory.OST_Floors);
+                Category partsCategory = doc.Settings.Categories.get_Item(BuiltInCategory.OST_Parts);
                 CategorySet myCategories = app.Create.NewCategorySet();
                 myCategories.Insert(genModelCategory);
                 if (wallCategory != null) myCategories.Insert(wallCategory);
                 if (floorCategory != null) myCategories.Insert(floorCategory);
+                if (partsCategory != null) myCategories.Insert(partsCategory);
 
-                using (Transaction t = new Transaction(doc, "Register Shared Parameters"))
+                bool hasActiveTransaction = doc.IsModifiable;
+                if (hasActiveTransaction)
                 {
-                    t.Start();
-
                     foreach (Definition def in group.Definitions)
                     {
                         BindingMap map = doc.ParameterBindings;
                         if (map.Contains(def)) continue;
 
                         InstanceBinding instanceBinding = app.Create.NewInstanceBinding(myCategories);
-                        
-                        // Revit 2024 參數群組使用 GroupTypeId
                         doc.ParameterBindings.Insert(def, instanceBinding, GroupTypeId.Data);
                     }
+                }
+                else
+                {
+                    using (Transaction t = new Transaction(doc, "Register Shared Parameters"))
+                    {
+                        t.Start();
+                        foreach (Definition def in group.Definitions)
+                        {
+                            BindingMap map = doc.ParameterBindings;
+                            if (map.Contains(def)) continue;
 
-                    t.Commit();
+                            InstanceBinding instanceBinding = app.Create.NewInstanceBinding(myCategories);
+                            doc.ParameterBindings.Insert(def, instanceBinding, GroupTypeId.Data);
+                        }
+                        t.Commit();
+                    }
                 }
             }
             finally

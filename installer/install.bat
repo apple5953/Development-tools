@@ -63,8 +63,8 @@ echo     ^<Name^>Development Tools^</Name^>
 echo     ^<Assembly^>%TARGET_DIR%\App\DevelopmentTools.Addin.dll^</Assembly^>
 echo     ^<FullClassName^>DevelopmentTools.App^</FullClassName^>
 echo     ^<ClientId^>c2d5d85c-4d33-4f9e-a89e-21ef1ea3b361^</ClientId^>
-echo     ^<VendorId^>MAYOUCHR^</VendorId^>
-echo     ^<VendorDescription^>MAYOUCHR, Revit Tile Tool Developer^</VendorDescription^>
+echo     ^<VendorId^>DeepMind^</VendorId^>
+echo     ^<VendorDescription^>Google DeepMind Advanced Agentic Coding Team^</VendorDescription^>
 echo   ^</AddIn^>
 echo ^</RevitAddIns^>
 ) > "%TEMP%\%ADDIN_NAME%"

@@ -61,6 +61,10 @@ namespace DevelopmentTools.Commands
                                 panel.Source.Title = lm["Ribbon_Panel_AI"];
                             else if (panel.Source.Id.Contains("Doc") || panel.Source.Title == "文件工具" || panel.Source.Title == "Document Tools" || panel.Source.Title == "ドキュメントツール")
                                 panel.Source.Title = lm["Ribbon_Panel_DocTools"];
+                            else if (panel.Source.Id.Contains("Bcr") || panel.Source.Title == "法規檢討" || panel.Source.Title == "Code Review" || panel.Source.Title == "法規チェック")
+                                panel.Source.Title = lm["Ribbon_Panel_CodeReview"];
+                            else if (panel.Source.Id.Contains("空間區域") || panel.Source.Title == "空間區域" || panel.Source.Title == "剖面框工具" || panel.Source.Title == "Section Box" || panel.Source.Title == "断面ボックスツール")
+                                panel.Source.Title = lm["Ribbon_Panel_AdaptiveRegion"];
 
                             foreach (var item in panel.Source.Items)
                             {
@@ -96,6 +100,9 @@ namespace DevelopmentTools.Commands
             else if (id.EndsWith("SheetDuplicator")) { item.Text = lm["Ribbon_Btn_SheetDuplicator"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetDuplicator"] }; }
             else if (id.EndsWith("AIAssistant")) { item.Text = lm["Ribbon_Btn_AI"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_AI"] }; }
             else if (id.EndsWith("SheetTransfer")) { item.Text = lm["Ribbon_Btn_SheetTransfer"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetTransfer"] }; }
+            else if (id.EndsWith("BcrProject")) { item.Text = lm["Ribbon_Btn_CodeReview"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_CodeReview"] }; }
+            else if (id.EndsWith("BcrExportReport")) { item.Text = lm["Ribbon_Btn_CodeReviewExport"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_CodeReviewExport"] }; }
+            else if (id.EndsWith("AdaptiveRegion")) { item.Text = lm["Ribbon_Btn_AdaptiveRegion"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_AdaptiveRegion"] }; }
             else if (id.EndsWith("LanguageZH")) { item.Text = lm["Ribbon_Lang_ZH"];  }
             else if (id.EndsWith("LanguageEN")) { item.Text = lm["Ribbon_Lang_EN"];  }
             else if (id.EndsWith("LanguageJA")) { item.Text = lm["Ribbon_Lang_JA"];  }
