@@ -16,6 +16,48 @@ namespace DevelopmentTools.UI
             set { _statusText = value; OnPropertyChanged(); }
         }
 
+        private string _tileLayoutScopeText = "目前空間：尚未指定";
+        public string TileLayoutScopeText
+        {
+            get => _tileLayoutScopeText;
+            set { _tileLayoutScopeText = value; OnPropertyChanged(); }
+        }
+
+        private string _tileLayoutRecordKeyText = "紀錄鍵：尚未建立";
+        public string TileLayoutRecordKeyText
+        {
+            get => _tileLayoutRecordKeyText;
+            set { _tileLayoutRecordKeyText = value; OnPropertyChanged(); }
+        }
+
+        private string _tileLayoutControlStatusText = "控制點：尚未設定";
+        public string TileLayoutControlStatusText
+        {
+            get => _tileLayoutControlStatusText;
+            set { _tileLayoutControlStatusText = value; OnPropertyChanged(); }
+        }
+
+        private string _tileLayoutFacesStatusText = "空間面：尚未儲存";
+        public string TileLayoutFacesStatusText
+        {
+            get => _tileLayoutFacesStatusText;
+            set { _tileLayoutFacesStatusText = value; OnPropertyChanged(); }
+        }
+
+        private string _tileLayoutLinesStatusText = "分割線：尚未建立";
+        public string TileLayoutLinesStatusText
+        {
+            get => _tileLayoutLinesStatusText;
+            set { _tileLayoutLinesStatusText = value; OnPropertyChanged(); }
+        }
+
+        private string _tileLayoutIsolationText = "隔離狀態：每個空間會使用自己的控制點與分割線紀錄";
+        public string TileLayoutIsolationText
+        {
+            get => _tileLayoutIsolationText;
+            set { _tileLayoutIsolationText = value; OnPropertyChanged(); }
+        }
+
         private double _tileWidth = 300;
         public double TileWidth
         {
@@ -205,6 +247,54 @@ namespace DevelopmentTools.UI
         public void SetStatus(string text)
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() => StatusText = text);
+        }
+
+        public void SetTileLayoutRecordStatus(
+            string spaceLabel,
+            string recordKey,
+            bool? hasControlPoint,
+            int? savedFaceCount,
+            int? splitLineCount,
+            string isolationNote = null)
+        {
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                if (!string.IsNullOrWhiteSpace(spaceLabel))
+                {
+                    TileLayoutScopeText = "目前空間：" + spaceLabel;
+                }
+
+                if (!string.IsNullOrWhiteSpace(recordKey))
+                {
+                    TileLayoutRecordKeyText = "紀錄鍵：" + recordKey;
+                }
+
+                if (hasControlPoint.HasValue)
+                {
+                    TileLayoutControlStatusText = hasControlPoint.Value
+                        ? "控制點：已設定，拖動此點只影響目前空間"
+                        : "控制點：尚未設定";
+                }
+
+                if (savedFaceCount.HasValue)
+                {
+                    TileLayoutFacesStatusText = savedFaceCount.Value > 0
+                        ? "空間面：已儲存 " + savedFaceCount.Value + " 個面"
+                        : "空間面：尚未儲存";
+                }
+
+                if (splitLineCount.HasValue)
+                {
+                    TileLayoutLinesStatusText = splitLineCount.Value > 0
+                        ? "分割線：已建立 " + splitLineCount.Value + " 條，綁定目前空間"
+                        : "分割線：尚未建立";
+                }
+
+                if (!string.IsNullOrWhiteSpace(isolationNote))
+                {
+                    TileLayoutIsolationText = "隔離狀態：" + isolationNote;
+                }
+            });
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

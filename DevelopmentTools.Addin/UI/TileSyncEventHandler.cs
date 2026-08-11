@@ -2760,6 +2760,13 @@ namespace DevelopmentTools.UI
 				if (selectedHostKeys.Count > 0)
 				{
 					string selectionLabel = this.BuildTileSelectionLabel(selectedHostKeys);
+					ViewSchedule existingCheckSchedule = this.FindExistingTileCheckSchedule(doc, selectionLabel);
+					if (existingCheckSchedule != null)
+					{
+						uidoc.ActiveView = existingCheckSchedule;
+						this.ViewModel.SetStatus(string.Format("已開啟既有磁磚檢核表：{0}。", existingCheckSchedule.Name));
+						return;
+					}
 					List<Part> selectedParts = new List<Part>();
 					using (Transaction transaction = new Transaction(doc, "建立選取天地牆磁磚表"))
 					{
@@ -2789,9 +2796,9 @@ namespace DevelopmentTools.UI
 						}
 						transaction.Commit();
 
-						if (activeSheet == null && purchaseSchedule != null)
+						if (checkSchedule != null)
 						{
-							uidoc.ActiveView = purchaseSchedule;
+							uidoc.ActiveView = checkSchedule;
 						}
 					}
 
@@ -2821,6 +2828,13 @@ namespace DevelopmentTools.UI
 				_currentTileLayoutRoomId = room.Id;
 				_currentTileLayoutSelectionLabel = string.Empty;
 				_currentTileLayoutSelectionPartIds.Clear();
+				ViewSchedule existingRoomCheckSchedule = this.FindExistingTileCheckSchedule(doc, roomLabel);
+				if (existingRoomCheckSchedule != null)
+				{
+					uidoc.ActiveView = existingRoomCheckSchedule;
+					this.ViewModel.SetStatus(string.Format("已開啟既有空間磁磚檢核表：{0}。", existingRoomCheckSchedule.Name));
+					return;
+				}
 				List<Part> matchingParts = new List<Part>();
 				using (Transaction transaction = new Transaction(doc, "建立目前空間磁磚表"))
 				{
@@ -2844,9 +2858,9 @@ namespace DevelopmentTools.UI
 					}
 					transaction.Commit();
 
-					if (activeSheet == null && purchaseSchedule != null)
+					if (checkSchedule != null)
 					{
-						uidoc.ActiveView = purchaseSchedule;
+						uidoc.ActiveView = checkSchedule;
 					}
 				}
 
@@ -4049,6 +4063,17 @@ namespace DevelopmentTools.UI
 				this.FindTileSchedule(doc, null, scopeText, kindText) != null;
 		}
 
+		private ViewSchedule FindExistingTileCheckSchedule(Document doc, string scopeText)
+		{
+			if (doc == null || string.IsNullOrWhiteSpace(scopeText)) return null;
+			string safeScope = this.SanitizeScheduleName(scopeText);
+			return this.FindTileSchedule(doc, "磁磚檢核表_" + safeScope, safeScope, "檢核") ??
+				this.FindTileSchedule(doc, null, safeScope, "檢核") ??
+				this.FindTileSchedule(doc, null, scopeText, "檢核") ??
+				this.FindTileSchedule(doc, null, safeScope, "瑼Ｘ") ??
+				this.FindTileSchedule(doc, null, scopeText, "瑼Ｘ");
+		}
+
 		private void PlaceScheduleOnSheetIfMissing(Document doc, ViewSheet sheet, ViewSchedule schedule, XYZ location)
 		{
 			if (doc == null || sheet == null || schedule == null) return;
@@ -4731,6 +4756,7 @@ namespace DevelopmentTools.UI
 		private static List<ElementId> _tileLayoutControlMarkerIds = new List<ElementId>();
 		private static ElementId _tileLayoutControlDirectionMarkerId = ElementId.InvalidElementId;
 		private static List<TileSavedFaceReference> _savedTileLayoutFaceReferences = new List<TileSavedFaceReference>();
+		private static Dictionary<string, TileLayoutControlState> _tileLayoutControlStates = new Dictionary<string, TileLayoutControlState>(StringComparer.OrdinalIgnoreCase);
 		private static string _currentTileLayoutSpaceLabel = "未指定空間";
 		private static ElementId _currentTileLayoutRoomId = ElementId.InvalidElementId;
 
@@ -4743,6 +4769,7 @@ namespace DevelopmentTools.UI
 			public TileBoundaryJoinMode JoinMode { get; set; } = TileBoundaryJoinMode.IndependentToBoundary;
 			public string SpaceLabel { get; set; } = "未指定空間";
 			public ElementId RoomId { get; set; } = ElementId.InvalidElementId;
+			public string SpaceKey { get; set; } = string.Empty;
 			public List<ElementId> GridLineIds { get; } = new List<ElementId>();
 			public List<ElementId> BoundaryLineIds { get; } = new List<ElementId>();
 		}
@@ -4753,6 +4780,19 @@ namespace DevelopmentTools.UI
 			public ElementId ElementId { get; set; } = ElementId.InvalidElementId;
 			public string SpaceLabel { get; set; } = "未指定空間";
 			public ElementId RoomId { get; set; } = ElementId.InvalidElementId;
+			public string SpaceKey { get; set; } = string.Empty;
+		}
+
+		private class TileLayoutControlState
+		{
+			public string SpaceKey { get; set; } = string.Empty;
+			public string SpaceLabel { get; set; } = "未指定空間";
+			public ElementId RoomId { get; set; } = ElementId.InvalidElementId;
+			public XYZ Origin { get; set; }
+			public XYZ UDir { get; set; }
+			public bool IsSet { get; set; }
+			public List<ElementId> MarkerIds { get; } = new List<ElementId>();
+			public ElementId DirectionMarkerId { get; set; } = ElementId.InvalidElementId;
 		}
 
 		private class PatLineSeed
@@ -6044,15 +6084,201 @@ namespace DevelopmentTools.UI
 			return false;
 		}
 
-		private void CreateOrUpdateTileLayoutControlMarker(Document doc, View view, XYZ origin, XYZ direction)
+		private string GetTileLayoutSpaceKey(ElementId roomId, string spaceLabel)
+		{
+			if (roomId != null && roomId != ElementId.InvalidElementId)
+			{
+				return "Room:" + roomId.IntegerValue.ToString(CultureInfo.InvariantCulture);
+			}
+
+			string label = string.IsNullOrWhiteSpace(spaceLabel) ? "Unassigned" : spaceLabel.Trim();
+			return "Label:" + this.CleanGroupName(label);
+		}
+
+		private bool TryResolveActiveTileLayoutSpace(UIDocument uidoc, Document doc, bool promptIfMissing, out Room room, out string spaceLabel, out ElementId roomId, out string spaceKey)
+		{
+			room = null;
+			spaceLabel = string.IsNullOrWhiteSpace(_currentTileLayoutSpaceLabel) ? "未指定空間" : _currentTileLayoutSpaceLabel;
+			roomId = _currentTileLayoutRoomId;
+			spaceKey = this.GetTileLayoutSpaceKey(roomId, spaceLabel);
+
+			HashSet<ElementId> selectedRoomIds = this.GetSelectedRoomIds(doc, uidoc == null ? null : uidoc.Selection.GetElementIds());
+			if (selectedRoomIds.Count == 1)
+			{
+				roomId = selectedRoomIds.First();
+				room = doc.GetElement(roomId) as Room;
+			}
+			else if (roomId != ElementId.InvalidElementId)
+			{
+				room = doc.GetElement(roomId) as Room;
+			}
+			else
+			{
+				List<ElementId> rememberedRooms = _savedTileLayoutFaceReferences
+					.Where(saved => saved != null && saved.RoomId != ElementId.InvalidElementId)
+					.Select(saved => saved.RoomId)
+					.GroupBy(id => id.IntegerValue)
+					.Select(group => group.First())
+					.ToList();
+				if (rememberedRooms.Count == 1)
+				{
+					roomId = rememberedRooms[0];
+					room = doc.GetElement(roomId) as Room;
+				}
+			}
+
+			if (room == null && promptIfMissing && uidoc != null)
+			{
+				try
+				{
+					Reference roomReference = uidoc.Selection.PickObject(ObjectType.Element, new RoomSelectionFilter(), "Select the room for this tile layout control.");
+					room = roomReference == null ? null : doc.GetElement(roomReference.ElementId) as Room;
+					if (room != null) roomId = room.Id;
+				}
+				catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+				{
+					return false;
+				}
+			}
+
+			if (room != null)
+			{
+				spaceLabel = this.GetRoomScheduleLabel(room);
+				roomId = room.Id;
+			}
+
+			if (string.IsNullOrWhiteSpace(spaceLabel)) spaceLabel = "未指定空間";
+			spaceKey = this.GetTileLayoutSpaceKey(roomId, spaceLabel);
+			_currentTileLayoutSpaceLabel = spaceLabel;
+			_currentTileLayoutRoomId = roomId;
+			return room != null || roomId != ElementId.InvalidElementId || !promptIfMissing;
+		}
+
+		private bool TryPickTileLayoutSpaceForControl(UIDocument uidoc, Document doc, out Room room, out string spaceLabel, out ElementId roomId, out string spaceKey)
+		{
+			room = null;
+			spaceLabel = "未指定空間";
+			roomId = ElementId.InvalidElementId;
+			spaceKey = string.Empty;
+			if (uidoc == null || doc == null) return false;
+
+			HashSet<ElementId> selectedRoomIds = this.GetSelectedRoomIds(doc, uidoc.Selection.GetElementIds());
+			if (selectedRoomIds.Count == 1)
+			{
+				roomId = selectedRoomIds.First();
+				room = doc.GetElement(roomId) as Room;
+			}
+			else
+			{
+				try
+				{
+					Reference roomReference = uidoc.Selection.PickObject(ObjectType.Element, new RoomSelectionFilter(), "請選取要設定或更新磁磚放樣基準的空間。");
+					room = roomReference == null ? null : doc.GetElement(roomReference.ElementId) as Room;
+					if (room != null) roomId = room.Id;
+				}
+				catch (Autodesk.Revit.Exceptions.OperationCanceledException)
+				{
+					return false;
+				}
+			}
+
+			if (room == null)
+			{
+				TaskDialog.Show("Tile Parts", "請先選取一個空間，控制點會依此空間建立獨立紀錄。");
+				return false;
+			}
+
+			spaceLabel = this.GetRoomScheduleLabel(room);
+			if (string.IsNullOrWhiteSpace(spaceLabel)) spaceLabel = "未指定空間";
+			roomId = room.Id;
+			spaceKey = this.GetTileLayoutSpaceKey(roomId, spaceLabel);
+			_currentTileLayoutSpaceLabel = spaceLabel;
+			_currentTileLayoutRoomId = roomId;
+			return true;
+		}
+
+		private int CountSavedTileLayoutFacesForSpace(string spaceKey, ElementId roomId)
+		{
+			if (string.IsNullOrWhiteSpace(spaceKey) && (roomId == null || roomId == ElementId.InvalidElementId)) return 0;
+			return _savedTileLayoutFaceReferences.Count(saved =>
+				saved != null &&
+				(string.Equals(saved.SpaceKey, spaceKey, StringComparison.OrdinalIgnoreCase) ||
+				(roomId != null && roomId != ElementId.InvalidElementId && saved.RoomId == roomId)));
+		}
+
+		private TileLayoutControlState GetOrCreateTileLayoutControlState(string spaceKey, string spaceLabel, ElementId roomId)
+		{
+			if (string.IsNullOrWhiteSpace(spaceKey)) spaceKey = this.GetTileLayoutSpaceKey(roomId, spaceLabel);
+			TileLayoutControlState state;
+			if (!_tileLayoutControlStates.TryGetValue(spaceKey, out state) || state == null)
+			{
+				state = new TileLayoutControlState();
+				state.SpaceKey = spaceKey;
+				_tileLayoutControlStates[spaceKey] = state;
+			}
+			state.SpaceLabel = string.IsNullOrWhiteSpace(spaceLabel) ? "未指定空間" : spaceLabel;
+			state.RoomId = roomId;
+			return state;
+		}
+
+		private void ApplyTileLayoutControlState(TileLayoutControlState state)
+		{
+			if (state == null) return;
+			_tileLayoutControlOrigin = state.Origin;
+			_tileLayoutControlUDir = state.UDir;
+			_tileLayoutControlIsSet = state.IsSet && state.Origin != null && state.UDir != null;
+			_tileLayoutControlMarkerIds = state.MarkerIds.ToList();
+			_tileLayoutControlDirectionMarkerId = state.DirectionMarkerId;
+			_currentTileLayoutSpaceLabel = string.IsNullOrWhiteSpace(state.SpaceLabel) ? "未指定空間" : state.SpaceLabel;
+			_currentTileLayoutRoomId = state.RoomId;
+		}
+
+		private void StampTileLayoutElement(Document doc, Element element, string role, string spaceKey, string spaceLabel, ElementId roomId)
+		{
+			if (doc == null || element == null) return;
+			Parameter commentParam = element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS);
+			if (commentParam == null || commentParam.IsReadOnly) return;
+			string comments = commentParam.AsString();
+			comments = this.UpsertCommentValue(comments, "TileLayoutRole", role ?? string.Empty);
+			comments = this.UpsertCommentValue(comments, "TileLayoutSpaceKey", spaceKey ?? string.Empty);
+			comments = this.UpsertCommentValue(comments, "Room_ID", spaceLabel ?? string.Empty);
+			comments = this.UpsertCommentValue(comments, "RoomElementId", roomId == null || roomId == ElementId.InvalidElementId ? string.Empty : roomId.IntegerValue.ToString(CultureInfo.InvariantCulture));
+			commentParam.Set(comments);
+		}
+
+		private bool ElementBelongsToTileLayoutSpace(Element element, string spaceKey)
+		{
+			if (element == null || string.IsNullOrWhiteSpace(spaceKey)) return false;
+			Parameter commentParam = element.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS);
+			string comments = commentParam == null ? null : commentParam.AsString();
+			return string.Equals(this.ParseCommentValue(comments, "TileLayoutSpaceKey"), spaceKey, StringComparison.OrdinalIgnoreCase);
+		}
+
+		private void CreateOrUpdateTileLayoutControlMarker(Document doc, View view, XYZ origin, XYZ direction, string spaceKey, string spaceLabel, ElementId roomId)
 		{
 			if (doc == null || origin == null || direction == null) return;
-			foreach (ElementId id in _tileLayoutControlMarkerIds)
+			TileLayoutControlState state = this.GetOrCreateTileLayoutControlState(spaceKey, spaceLabel, roomId);
+			foreach (ElementId id in state.MarkerIds.ToList())
 			{
 				try { doc.Delete(id); } catch { }
 			}
-			_tileLayoutControlMarkerIds.Clear();
-			_tileLayoutControlDirectionMarkerId = ElementId.InvalidElementId;
+			foreach (ModelCurve curve in new FilteredElementCollector(doc)
+				.OfClass(typeof(CurveElement))
+				.Cast<CurveElement>()
+				.OfType<ModelCurve>()
+				.ToList())
+			{
+				if (!this.ElementBelongsToTileLayoutSpace(curve, spaceKey)) continue;
+				Parameter commentParam = curve.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS);
+				string role = this.ParseCommentValue(commentParam == null ? null : commentParam.AsString(), "TileLayoutRole");
+				if (string.Equals(role, "SetoutMarker", StringComparison.OrdinalIgnoreCase) ||
+					string.Equals(role, "SetoutDirection", StringComparison.OrdinalIgnoreCase))
+				{
+					try { doc.Delete(curve.Id); } catch { }
+				}
+			}
+			state.MarkerIds.Clear();
+			state.DirectionMarkerId = ElementId.InvalidElementId;
 
 			XYZ uDir = new XYZ(direction.X, direction.Y, 0.0);
 			if (uDir.GetLength() < 0.001) uDir = XYZ.BasisX;
@@ -6084,29 +6310,66 @@ namespace DevelopmentTools.UI
 					ModelCurve modelCurve = doc.Create.NewModelCurve(markerLines[i], sketchPlane);
 					if (modelCurve == null) continue;
 					this.ApplyTileSetoutLineStyle(doc, modelCurve);
-					_tileLayoutControlMarkerIds.Add(modelCurve.Id);
-					if (i == 2) _tileLayoutControlDirectionMarkerId = modelCurve.Id;
+					this.StampTileLayoutElement(doc, modelCurve, i == 2 ? "SetoutDirection" : "SetoutMarker", spaceKey, spaceLabel, roomId);
+					state.MarkerIds.Add(modelCurve.Id);
+					if (i == 2) state.DirectionMarkerId = modelCurve.Id;
 				}
 				catch { }
 			}
+			state.Origin = origin;
+			state.UDir = uDir;
+			state.IsSet = true;
+			this.ApplyTileLayoutControlState(state);
 			this.EnsureTilePreviewLineStylesVisible(doc, view);
 		}
 
 		private bool RefreshTileLayoutControlFromMarker(Document doc)
 		{
-			if (doc == null || _tileLayoutControlDirectionMarkerId == ElementId.InvalidElementId) return _tileLayoutControlIsSet;
-			ModelCurve directionCurve = doc.GetElement(_tileLayoutControlDirectionMarkerId) as ModelCurve;
+			string spaceKey = this.GetTileLayoutSpaceKey(_currentTileLayoutRoomId, _currentTileLayoutSpaceLabel);
+			return this.RefreshTileLayoutControlFromMarker(doc, spaceKey);
+		}
+
+		private bool RefreshTileLayoutControlFromMarker(Document doc, string spaceKey)
+		{
+			if (doc == null || string.IsNullOrWhiteSpace(spaceKey)) return _tileLayoutControlIsSet;
+			TileLayoutControlState state;
+			_tileLayoutControlStates.TryGetValue(spaceKey, out state);
+			ElementId directionMarkerId = state == null ? ElementId.InvalidElementId : state.DirectionMarkerId;
+			if (directionMarkerId == ElementId.InvalidElementId)
+			{
+				ModelCurve found = new FilteredElementCollector(doc)
+					.OfClass(typeof(CurveElement))
+					.Cast<CurveElement>()
+					.OfType<ModelCurve>()
+					.FirstOrDefault(curve =>
+					{
+						Parameter commentParam = curve.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS);
+						string comments = commentParam == null ? null : commentParam.AsString();
+						return string.Equals(this.ParseCommentValue(comments, "TileLayoutSpaceKey"), spaceKey, StringComparison.OrdinalIgnoreCase) &&
+							string.Equals(this.ParseCommentValue(comments, "TileLayoutRole"), "SetoutDirection", StringComparison.OrdinalIgnoreCase);
+					});
+				if (found != null) directionMarkerId = found.Id;
+			}
+			if (directionMarkerId == ElementId.InvalidElementId) return state != null && state.IsSet;
+			ModelCurve directionCurve = doc.GetElement(directionMarkerId) as ModelCurve;
 			Line directionLine = directionCurve == null ? null : directionCurve.GeometryCurve as Line;
-			if (directionLine == null) return _tileLayoutControlIsSet;
+			if (directionLine == null) return state != null && state.IsSet;
 
 			XYZ origin = directionLine.GetEndPoint(0);
 			XYZ rawDirection = directionLine.GetEndPoint(1) - origin;
 			XYZ horizontalDirection = new XYZ(rawDirection.X, rawDirection.Y, 0.0);
-			if (horizontalDirection.GetLength() < 0.001) return _tileLayoutControlIsSet;
+			if (horizontalDirection.GetLength() < 0.001) return state != null && state.IsSet;
 
-			_tileLayoutControlOrigin = origin;
-			_tileLayoutControlUDir = horizontalDirection.Normalize();
-			_tileLayoutControlIsSet = true;
+			if (state == null)
+			{
+				state = this.GetOrCreateTileLayoutControlState(spaceKey, _currentTileLayoutSpaceLabel, _currentTileLayoutRoomId);
+			}
+			state.Origin = origin;
+			state.UDir = horizontalDirection.Normalize();
+			state.IsSet = true;
+			state.DirectionMarkerId = directionMarkerId;
+			if (!state.MarkerIds.Contains(directionMarkerId)) state.MarkerIds.Add(directionMarkerId);
+			this.ApplyTileLayoutControlState(state);
 			return true;
 		}
 
@@ -6524,6 +6787,12 @@ namespace DevelopmentTools.UI
 
 		private void DoStep1CreateRawParts(UIDocument uidoc, Document doc)
 		{
+			Room room;
+			string spaceLabel;
+			ElementId roomId;
+			string spaceKey;
+			if (!this.TryPickTileLayoutSpaceForControl(uidoc, doc, out room, out spaceLabel, out roomId, out spaceKey)) return;
+
 			XYZ origin;
 			XYZ direction;
 			if (!this.TryPickTileLayoutControl(uidoc, out origin, out direction)) return;
@@ -6534,7 +6803,7 @@ namespace DevelopmentTools.UI
 			using (Transaction t = new Transaction(doc, "Create tile setout control marker"))
 			{
 				t.Start();
-				this.CreateOrUpdateTileLayoutControlMarker(doc, uidoc.ActiveView, origin, direction);
+				this.CreateOrUpdateTileLayoutControlMarker(doc, uidoc.ActiveView, origin, direction, spaceKey, spaceLabel, roomId);
 				t.Commit();
 			}
 			if (_tileLayoutControlMarkerIds.Count > 0)
@@ -6542,6 +6811,13 @@ namespace DevelopmentTools.UI
 				uidoc.Selection.SetElementIds(_tileLayoutControlMarkerIds);
 				uidoc.RefreshActiveView();
 			}
+			this.ViewModel?.SetTileLayoutRecordStatus(
+				spaceLabel,
+				spaceKey,
+				true,
+				this.CountSavedTileLayoutFacesForSpace(spaceKey, roomId),
+				0,
+				"已切換到此空間紀錄；控制點更新後請執行 Step 2 重建此空間分割線");
 			this.ViewModel.SetStatus(string.Format(
 				"已建立可拖動放樣控制標記：原點 ({0:F3}, {1:F3}, {2:F3})，主方向 ({3:F3}, {4:F3}, {5:F3})。可拖動/旋轉青色標記後再建立控制線。",
 				origin.X,
@@ -6576,6 +6852,55 @@ namespace DevelopmentTools.UI
 			_patOnlyPreviewLineIds.Clear();
 			_patOnlyBoundaryPreviewLineIds.Clear();
 			_tileLayoutPreviewSets.Clear();
+		}
+
+		private void DeletePreviewControlLines(Document doc, string spaceKey)
+		{
+			if (doc == null || string.IsNullOrWhiteSpace(spaceKey))
+			{
+				this.DeletePreviewControlLines(doc);
+				return;
+			}
+
+			HashSet<int> deletedIds = new HashSet<int>();
+			Action<ElementId> deleteIfExists = id =>
+			{
+				if (id == null || id == ElementId.InvalidElementId || deletedIds.Contains(id.IntegerValue)) return;
+				Element element = doc.GetElement(id);
+				if (element == null) return;
+				try
+				{
+					doc.Delete(id);
+					deletedIds.Add(id.IntegerValue);
+				}
+				catch { }
+			};
+
+			foreach (TileLayoutPreviewSet set in _tileLayoutPreviewSets.Where(set => set != null && string.Equals(set.SpaceKey, spaceKey, StringComparison.OrdinalIgnoreCase)).ToList())
+			{
+				foreach (ElementId id in set.GridLineIds) deleteIfExists(id);
+				foreach (ElementId id in set.BoundaryLineIds) deleteIfExists(id);
+			}
+
+			foreach (ModelCurve curve in new FilteredElementCollector(doc)
+				.OfClass(typeof(CurveElement))
+				.Cast<CurveElement>()
+				.OfType<ModelCurve>())
+			{
+				if (!this.ElementBelongsToTileLayoutSpace(curve, spaceKey)) continue;
+				Parameter commentParam = curve.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS);
+				string role = this.ParseCommentValue(commentParam == null ? null : commentParam.AsString(), "TileLayoutRole");
+				if (string.Equals(role, "GridLine", StringComparison.OrdinalIgnoreCase) ||
+					string.Equals(role, "BoundaryLine", StringComparison.OrdinalIgnoreCase) ||
+					string.Equals(role, "OpeningBoundaryLine", StringComparison.OrdinalIgnoreCase))
+				{
+					deleteIfExists(curve.Id);
+				}
+			}
+
+			_tileLayoutPreviewSets.RemoveAll(set => set != null && string.Equals(set.SpaceKey, spaceKey, StringComparison.OrdinalIgnoreCase));
+			_patOnlyPreviewLineIds.RemoveAll(id => id != null && deletedIds.Contains(id.IntegerValue));
+			_patOnlyBoundaryPreviewLineIds.RemoveAll(id => id != null && deletedIds.Contains(id.IntegerValue));
 		}
 
 		private void DoSaveTileLayoutFaces(UIDocument uidoc, Document doc)
@@ -6623,6 +6948,13 @@ namespace DevelopmentTools.UI
 				.Distinct()
 				.ToList();
 			if (selectedElementIds.Count > 0) uidoc.Selection.SetElementIds(selectedElementIds);
+			this.ViewModel?.SetTileLayoutRecordStatus(
+				spaceLabel,
+				this.GetTileLayoutSpaceKey(room.Id, spaceLabel),
+				null,
+				savedCount,
+				null,
+				"空間面已儲存在此空間紀錄，其他空間不會被覆蓋");
 			this.ViewModel.SetStatus(string.Format("已建立空間群組 [{0}]，儲存 {1} 個天地牆磁磚面。Step 2/Step 3 會沿用此群組統計。", spaceLabel, savedCount));
 		}
 
@@ -6635,9 +6967,11 @@ namespace DevelopmentTools.UI
 		{
 			if (doc == null || references == null) return 0;
 			if (string.IsNullOrWhiteSpace(spaceLabel)) spaceLabel = "未指定空間";
+			string spaceKey = this.GetTileLayoutSpaceKey(roomId, spaceLabel);
 
 			_savedTileLayoutFaceReferences.RemoveAll(saved =>
 				saved == null ||
+				string.Equals(saved.SpaceKey, spaceKey, StringComparison.OrdinalIgnoreCase) ||
 				(roomId != ElementId.InvalidElementId && saved.RoomId == roomId) ||
 				(roomId == ElementId.InvalidElementId && string.Equals(saved.SpaceLabel, spaceLabel, StringComparison.OrdinalIgnoreCase)));
 
@@ -6656,7 +6990,8 @@ namespace DevelopmentTools.UI
 						StableReference = stable,
 						ElementId = reference.ElementId,
 						SpaceLabel = spaceLabel,
-						RoomId = roomId
+						RoomId = roomId,
+						SpaceKey = spaceKey
 					});
 					added++;
 				}
@@ -6680,16 +7015,19 @@ namespace DevelopmentTools.UI
 			return roomIds;
 		}
 
-		private IList<Reference> GetTileLayoutFaceReferences(UIDocument uidoc, Document doc, out bool usedSavedReferences)
+		private IList<Reference> GetTileLayoutFaceReferences(UIDocument uidoc, Document doc, string spaceKey, string spaceLabel, ElementId roomId, out bool usedSavedReferences)
 		{
 			usedSavedReferences = false;
 			List<Reference> references = new List<Reference>();
 			if (doc != null && _savedTileLayoutFaceReferences.Count > 0)
 			{
-				HashSet<ElementId> selectedRoomIds = this.GetSelectedRoomIds(doc, uidoc == null ? null : uidoc.Selection.GetElementIds());
-				List<TileSavedFaceReference> savedScope = selectedRoomIds.Count == 0
-					? _savedTileLayoutFaceReferences.ToList()
-					: _savedTileLayoutFaceReferences.Where(saved => saved != null && selectedRoomIds.Contains(saved.RoomId)).ToList();
+				if (string.IsNullOrWhiteSpace(spaceKey)) spaceKey = this.GetTileLayoutSpaceKey(roomId, spaceLabel);
+				List<TileSavedFaceReference> savedScope = _savedTileLayoutFaceReferences
+					.Where(saved =>
+						saved != null &&
+						(string.Equals(saved.SpaceKey, spaceKey, StringComparison.OrdinalIgnoreCase) ||
+						(roomId != ElementId.InvalidElementId && saved.RoomId == roomId)))
+					.ToList();
 
 				foreach (TileSavedFaceReference saved in savedScope)
 				{
@@ -6707,10 +7045,10 @@ namespace DevelopmentTools.UI
 					return references;
 				}
 
-				if (selectedRoomIds.Count == 0)
-				{
-					_savedTileLayoutFaceReferences.Clear();
-				}
+				_savedTileLayoutFaceReferences.RemoveAll(saved =>
+					saved != null &&
+					(string.Equals(saved.SpaceKey, spaceKey, StringComparison.OrdinalIgnoreCase) ||
+					(roomId != ElementId.InvalidElementId && saved.RoomId == roomId)));
 				TaskDialog.Show("Tile Parts", "先前儲存的選取面已失效，請重新選取一次。");
 			}
 
@@ -6719,8 +7057,8 @@ namespace DevelopmentTools.UI
 				IList<Reference> picked = uidoc.Selection.PickObjects(ObjectType.Face, "Select floor, wall, ceiling tile faces for layout control.");
 				if (picked != null && picked.Count > 0)
 				{
-					_currentTileLayoutSpaceLabel = "未指定空間";
-					_currentTileLayoutRoomId = ElementId.InvalidElementId;
+					_currentTileLayoutSpaceLabel = string.IsNullOrWhiteSpace(spaceLabel) ? "未指定空間" : spaceLabel;
+					_currentTileLayoutRoomId = roomId;
 					this.SaveTileLayoutFaceReferences(doc, picked, _currentTileLayoutSpaceLabel, _currentTileLayoutRoomId);
 					return picked;
 				}
@@ -6745,7 +7083,13 @@ namespace DevelopmentTools.UI
 
 		private void DoStep2CalculateSplitCurves(UIDocument uidoc, Document doc)
 		{
-			this.RefreshTileLayoutControlFromMarker(doc);
+			Room activeRoom;
+			string activeSpaceLabel;
+			ElementId activeRoomId;
+			string activeSpaceKey;
+			if (!this.TryResolveActiveTileLayoutSpace(uidoc, doc, true, out activeRoom, out activeSpaceLabel, out activeRoomId, out activeSpaceKey)) return;
+
+			this.RefreshTileLayoutControlFromMarker(doc, activeSpaceKey);
 			if (!_tileLayoutControlIsSet || _tileLayoutControlOrigin == null || _tileLayoutControlUDir == null)
 			{
 				TaskDialog.Show("Tile Parts", "請先按步驟 1 設定磁磚放樣原點與主方向。");
@@ -6753,7 +7097,7 @@ namespace DevelopmentTools.UI
 			}
 
 			bool usedSavedReferences;
-			IList<Reference> references = this.GetTileLayoutFaceReferences(uidoc, doc, out usedSavedReferences);
+			IList<Reference> references = this.GetTileLayoutFaceReferences(uidoc, doc, activeSpaceKey, activeSpaceLabel, activeRoomId, out usedSavedReferences);
 			if (references == null || references.Count == 0) return;
 
 			TilePatternParams fallbackParams = this.GetPluginOwnedTilePatternParams();
@@ -6772,7 +7116,7 @@ namespace DevelopmentTools.UI
 			{
 				t.Start();
 				SharedParameterHelper.RegisterAndBindParameters(doc);
-				this.DeletePreviewControlLines(doc);
+				this.DeletePreviewControlLines(doc, activeSpaceKey);
 				this.EnablePatOnlyPartsViews(doc, uidoc.ActiveView);
 
 				foreach (Reference reference in references)
@@ -6782,9 +7126,12 @@ namespace DevelopmentTools.UI
 					if (!this.TryResolvePatFace(doc, reference, out hostElement, out face)) continue;
 					TileSavedFaceReference savedFace = this.GetSavedTileFaceReference(doc, reference);
 					string spaceLabel = savedFace == null || string.IsNullOrWhiteSpace(savedFace.SpaceLabel)
-						? _currentTileLayoutSpaceLabel
+						? activeSpaceLabel
 						: savedFace.SpaceLabel;
-					ElementId roomId = savedFace == null ? _currentTileLayoutRoomId : savedFace.RoomId;
+					ElementId roomId = savedFace == null ? activeRoomId : savedFace.RoomId;
+					string spaceKey = savedFace == null || string.IsNullOrWhiteSpace(savedFace.SpaceKey)
+						? activeSpaceKey
+						: savedFace.SpaceKey;
 
 					TilePatternParams tileParams = this.ResolveMaterialDrivenTilePatternParams(doc, hostElement, face, fallbackParams);
 					ElementId materialId = this.GetOrCreateTileHatchMaterial(doc, tileParams);
@@ -6816,7 +7163,8 @@ namespace DevelopmentTools.UI
 						MaterialName = this.GetPluginOwnedMaterialName(tileParams),
 						JoinMode = joinMode,
 						SpaceLabel = string.IsNullOrWhiteSpace(spaceLabel) ? "未指定空間" : spaceLabel,
-						RoomId = roomId
+						RoomId = roomId,
+						SpaceKey = spaceKey
 					};
 
 					foreach (Curve curve in generatedLines)
@@ -6827,6 +7175,7 @@ namespace DevelopmentTools.UI
 							if (modelCurve != null)
 							{
 								this.ApplyCapturedPatLineStyle(doc, modelCurve);
+								this.StampTileLayoutElement(doc, modelCurve, "GridLine", spaceKey, set.SpaceLabel, roomId);
 								set.GridLineIds.Add(modelCurve.Id);
 								selectablePreviewIds.Add(modelCurve.Id);
 							}
@@ -6842,6 +7191,7 @@ namespace DevelopmentTools.UI
 							if (modelCurve != null)
 							{
 								this.ApplyPatBoundaryLineStyle(doc, modelCurve);
+								this.StampTileLayoutElement(doc, modelCurve, "BoundaryLine", spaceKey, set.SpaceLabel, roomId);
 								set.BoundaryLineIds.Add(modelCurve.Id);
 								set.GridLineIds.Add(modelCurve.Id);
 								selectablePreviewIds.Add(modelCurve.Id);
@@ -6858,6 +7208,7 @@ namespace DevelopmentTools.UI
 							if (modelCurve != null)
 							{
 								this.ApplyPatBoundaryLineStyle(doc, modelCurve);
+								this.StampTileLayoutElement(doc, modelCurve, "OpeningBoundaryLine", spaceKey, set.SpaceLabel, roomId);
 								set.BoundaryLineIds.Add(modelCurve.Id);
 								set.GridLineIds.Add(modelCurve.Id);
 								selectablePreviewIds.Add(modelCurve.Id);
@@ -6895,6 +7246,14 @@ namespace DevelopmentTools.UI
 				return;
 			}
 
+			this.ViewModel?.SetTileLayoutRecordStatus(
+				activeSpaceLabel,
+				activeSpaceKey,
+				true,
+				references.Count,
+				gridCount,
+				"控制線已綁定目前空間；重建時只會更新此空間");
+
 			if (paintDiagnostics.Count > 0)
 			{
 				TaskDialog.Show("Tile Parts", "部分面已建立控制線，但 Revit 未允許套用 PAT 材質：\n\n" + string.Join("\n", paintDiagnostics.Take(8)));
@@ -6921,6 +7280,12 @@ namespace DevelopmentTools.UI
 
 			PartsTileQuantitySummary totalSummary = new PartsTileQuantitySummary();
 			int dividedFaceCount = 0;
+			int confirmedControlLineCount = 0;
+			Room activeRoom;
+			string activeSpaceLabel;
+			ElementId activeRoomId;
+			string activeSpaceKey;
+			bool hasActiveSpace = this.TryResolveActiveTileLayoutSpace(uidoc, doc, false, out activeRoom, out activeSpaceLabel, out activeRoomId, out activeSpaceKey);
 			using (Transaction t = new Transaction(doc, "Divide Parts by tile layout control lines"))
 			{
 				t.Start();
@@ -6937,13 +7302,27 @@ namespace DevelopmentTools.UI
 							TileParams = _patOnlyTileParams,
 							MaterialName = _patOnlyMaterialName,
 							SpaceLabel = _currentTileLayoutSpaceLabel,
-							RoomId = _currentTileLayoutRoomId
+							RoomId = _currentTileLayoutRoomId,
+							SpaceKey = this.GetTileLayoutSpaceKey(_currentTileLayoutRoomId, _currentTileLayoutSpaceLabel)
 						}
 					};
+				if (hasActiveSpace && !string.IsNullOrWhiteSpace(activeSpaceKey) && sets.Any(set => set != null && !string.IsNullOrWhiteSpace(set.SpaceKey)))
+				{
+					sets = sets
+						.Where(set => set != null && string.Equals(set.SpaceKey, activeSpaceKey, StringComparison.OrdinalIgnoreCase))
+						.ToList();
+				}
+				if (sets.Count == 0)
+				{
+					t.RollBack();
+					TaskDialog.Show("Tile Parts", "目前空間沒有可確認的控制線，請先針對此空間執行 Step 2。");
+					return;
+				}
 				if (sets.Count == 1 && sets[0].GridLineIds.Count == 0)
 				{
 					sets[0].GridLineIds.AddRange(_patOnlyPreviewLineIds);
 				}
+				confirmedControlLineCount = sets.Sum(set => set == null || set.GridLineIds == null ? 0 : set.GridLineIds.Count);
 
 				foreach (TileLayoutPreviewSet set in sets)
 				{
@@ -7003,6 +7382,13 @@ namespace DevelopmentTools.UI
 
 			if (totalSummary != null)
 			{
+				this.ViewModel?.SetTileLayoutRecordStatus(
+					string.IsNullOrWhiteSpace(activeSpaceLabel) ? _currentTileLayoutSpaceLabel : activeSpaceLabel,
+					string.IsNullOrWhiteSpace(activeSpaceKey) ? this.GetTileLayoutSpaceKey(_currentTileLayoutRoomId, _currentTileLayoutSpaceLabel) : activeSpaceKey,
+					true,
+					null,
+					confirmedControlLineCount,
+					"已使用此空間的控制點與分割線完成 Divide Parts");
 				string surfaceSummary = totalSummary.SurfaceTotals.Count == 0
 					? string.Empty
 					: "，分類：" + string.Join("、", totalSummary.SurfaceTotals.OrderBy(kv => kv.Key).Select(kv => kv.Key + " " + kv.Value));
