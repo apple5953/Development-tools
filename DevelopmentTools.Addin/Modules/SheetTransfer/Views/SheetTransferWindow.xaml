@@ -124,22 +124,23 @@
                         <TreeView.ItemContainerStyle>
                             <Style TargetType="TreeViewItem">
                                 <Setter Property="IsExpanded" Value="True"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                             </Style>
                         </TreeView.ItemContainerStyle>
                         <TreeView.ItemTemplate>
                             <HierarchicalDataTemplate ItemsSource="{Binding Assets}">
                                 <StackPanel Orientation="Horizontal" Margin="0,4">
-                                    <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold"/>
+                                    <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{StaticResource TextPrimary}"/>
+                                    <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
                                     <TextBlock Text="{Binding Assets.Count, StringFormat=' ({0})'}" Foreground="{StaticResource TextSecondary}"/>
                                 </StackPanel>
                                 <HierarchicalDataTemplate.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                            <TextBlock Text="{Binding Icon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{StaticResource TextPrimary}"/>
+                                            <TextBlock Text="{Binding Icon}" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="{StaticResource TextPrimary}"/>
                                             <TextBlock Text="{Binding Number, StringFormat='{}{0} '}" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="{StaticResource TextPrimary}"/>
                                             <TextBlock Text="{Binding ComparisonText}" Margin="8,0,0,0" Foreground="{Binding Comparison, Converter={x:Static local:ComparisonColorConverter.Instance}}" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </DataTemplate>

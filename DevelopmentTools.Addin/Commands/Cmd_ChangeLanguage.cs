@@ -94,12 +94,15 @@ namespace DevelopmentTools.Commands
             else if (id.EndsWith("FloorSnapToRoom")) { item.Text = lm["Ribbon_Btn_FloorSnap"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_FloorSnap"] }; }
             else if (id.EndsWith("BatchSheetRename")) { item.Text = lm["Ribbon_Btn_SheetRename"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetRename"] }; }
             else if (id.EndsWith("QuickViewCreator")) { item.Text = lm["Ribbon_Btn_QuickView"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_QuickView"] }; }
+            else if (id.EndsWith("FastDependentViews")) { item.Text = lm["Ribbon_Btn_FastDependentViews"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_FastDependentViews"] }; }
             else if (id.EndsWith("SheetViewPlacer")) { item.Text = lm["Ribbon_Btn_SheetPlacer"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetPlacer"] }; }
             else if (id.EndsWith("QuickDimension")) { item.Text = lm["Ribbon_Btn_QuickDim"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_QuickDim"] }; }
+            else if (id.EndsWith("AutoBoundary")) { item.Text = lm["Ribbon_Btn_AutoBoundary"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_AutoBoundary"] }; }
             else if (id.EndsWith("LanguageDropdown")) { item.Text = lm["Ribbon_Btn_LangDropdown"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_LangDropdown"] }; }
             else if (id.EndsWith("SheetDuplicator")) { item.Text = lm["Ribbon_Btn_SheetDuplicator"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetDuplicator"] }; }
             else if (id.EndsWith("AIAssistant")) { item.Text = lm["Ribbon_Btn_AI"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_AI"] }; }
             else if (id.EndsWith("SheetTransfer")) { item.Text = lm["Ribbon_Btn_SheetTransfer"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_SheetTransfer"] }; }
+            else if (id.EndsWith("ProjectCompareCopy")) { item.Text = lm["Ribbon_Btn_ProjectCompareCopy"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_ProjectCompareCopy"] }; }
             else if (id.EndsWith("BcrProject")) { item.Text = lm["Ribbon_Btn_CodeReview"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_CodeReview"] }; }
             else if (id.EndsWith("BcrExportReport")) { item.Text = lm["Ribbon_Btn_CodeReviewExport"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_CodeReviewExport"] }; }
             else if (id.EndsWith("AdaptiveRegion")) { item.Text = lm["Ribbon_Btn_AdaptiveRegion"]; item.ToolTip = new RibbonToolTip { Title = item.Text, Content = lm["Ribbon_TT_AdaptiveRegion"] }; }

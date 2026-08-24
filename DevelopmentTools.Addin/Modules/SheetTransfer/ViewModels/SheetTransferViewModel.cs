@@ -28,13 +28,13 @@ namespace DevelopmentTools.Modules.SheetTransfer.ViewModels
 
             AssetGroups = new ObservableCollection<TransferAssetGroup>
             {
-                new TransferAssetGroup { GroupName = "Project Parameters" },
-                new TransferAssetGroup { GroupName = "View Templates" },
-                new TransferAssetGroup { GroupName = "Project Info & Symbols" },
-                new TransferAssetGroup { GroupName = "Sheets" },
-                new TransferAssetGroup { GroupName = "Drafting Views" },
-                new TransferAssetGroup { GroupName = "Legends" },
-                new TransferAssetGroup { GroupName = "Schedules" }
+                new TransferAssetGroup { GroupName = "專案參數設定" },
+                new TransferAssetGroup { GroupName = "視圖樣板" },
+                new TransferAssetGroup { GroupName = "專案資訊與族群型別參數" },
+                new TransferAssetGroup { GroupName = "圖紙" },
+                new TransferAssetGroup { GroupName = "繪圖視圖" },
+                new TransferAssetGroup { GroupName = "圖例" },
+                new TransferAssetGroup { GroupName = "明細表" }
             };
 
             foreach (var group in AssetGroups)

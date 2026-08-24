@@ -50,6 +50,11 @@ namespace DevelopmentTools.Modules.DesignReview.Services
 
         public List<ExtractedElement> ScanCategories(List<BuiltInCategory> categories)
         {
+            return ScanCategories(categories, null);
+        }
+
+        public List<ExtractedElement> ScanCategories(List<BuiltInCategory> categories, string levelTier)
+        {
             var result = new List<ExtractedElement>();
             if (categories == null || !categories.Any()) return result;
 
@@ -61,13 +66,40 @@ namespace DevelopmentTools.Modules.DesignReview.Services
 
             foreach (var elem in collector)
             {
+                // Level filter check
+                Level lvl = null;
+                if (elem.LevelId != ElementId.InvalidElementId)
+                {
+                    lvl = _doc.GetElement(elem.LevelId) as Level;
+                }
+
+                if (lvl == null)
+                {
+                    // Fallback try parameter level
+                    Parameter p = elem.get_Parameter(BuiltInParameter.INSTANCE_REFERENCE_LEVEL_PARAM);
+                    if (p != null && p.HasValue)
+                    {
+                        lvl = _doc.GetElement(p.AsElementId()) as Level;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(levelTier) && levelTier != "所有樓層")
+                {
+                    if (lvl != null)
+                    {
+                        double elev = lvl.Elevation;
+                        if (levelTier.Contains("下層") && elev > 0.0) continue; // Lower levels are <= 0.0
+                        if (levelTier.Contains("上層") && elev <= 0.0) continue; // Upper levels are > 0.0
+                    }
+                }
+
                 var ext = new ExtractedElement
                 {
                     UniqueId = elem.UniqueId,
                     ElementId = elem.Id.ToString(),
                     CategoryName = elem.Category?.Name ?? "未知品類",
                     ElementName = elem.Name,
-                    LevelName = _doc.GetElement(elem.LevelId)?.Name ?? "無樓層"
+                    LevelName = lvl?.Name ?? "無樓層"
                 };
 
                 // 獲取 Location 幾何位置

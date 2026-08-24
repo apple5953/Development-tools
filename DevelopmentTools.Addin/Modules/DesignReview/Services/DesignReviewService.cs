@@ -17,7 +17,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
         }
 
         #region 1. 避難步行距離檢討 (A* 演算法)
-        public List<EscapeDistanceIssue> CheckEscapeDistance()
+        public List<EscapeDistanceIssue> CheckEscapeDistance(string levelTier = null)
         {
             var issues = new List<EscapeDistanceIssue>();
 
@@ -26,6 +26,16 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 .OfCategory(BuiltInCategory.OST_Rooms)
                 .Cast<Room>()
                 .Where(r => r.Area > 0)
+                .Where(r =>
+                {
+                    if (string.IsNullOrEmpty(levelTier) || levelTier == "所有樓層") return true;
+                    var lvl = r.Level;
+                    if (lvl == null) return true;
+                    double elev = lvl.Elevation;
+                    if (levelTier.Contains("下層") && elev > 0.0) return false;
+                    if (levelTier.Contains("上層") && elev <= 0.0) return false;
+                    return true;
+                })
                 .ToList();
 
             var doors = new FilteredElementCollector(_doc)
@@ -45,7 +55,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 BoundingBoxXYZ bbox = room.get_BoundingBox(null);
                 if (bbox == null) continue;
 
-                double gridSpacing = 0.8;
+                double gridSpacing = 2.0; // Optimized spacing from 0.8 to 2.0 to speed up A* searches
                 XYZ min = bbox.Min;
                 XYZ max = bbox.Max;
 
@@ -103,8 +113,15 @@ namespace DevelopmentTools.Modules.DesignReview.Services
             var openSet = new List<AStarNode> { new AStarNode(start, 0, start.DistanceTo(goal)) };
             var closedSet = new HashSet<string>();
 
+            int iterations = 0;
             while (openSet.Any())
             {
+                iterations++;
+                if (iterations > 3000) // Safety boundary guard to prevent infinite loops / freezing
+                {
+                    break;
+                }
+
                 var current = openSet.OrderBy(n => n.F).First();
                 if (current.Point.DistanceTo(goal) < spacing * 1.5)
                 {
@@ -200,16 +217,26 @@ namespace DevelopmentTools.Modules.DesignReview.Services
         #endregion
 
         #region 3. 無障礙迴轉圓空間檢核
-        public List<ReviewIssue> CheckWheelchairSpace()
+        public List<ReviewIssue> CheckWheelchairSpace(string levelTier = null)
         {
             var issues = new List<ReviewIssue>();
 
             var rooms = new FilteredElementCollector(_doc)
-                .OfClass(typeof(SpatialElement))
-                .OfCategory(BuiltInCategory.OST_Rooms)
-                .Cast<Room>()
-                .Where(r => r.Area > 0)
-                .ToList();
+                 .OfClass(typeof(SpatialElement))
+                 .OfCategory(BuiltInCategory.OST_Rooms)
+                 .Cast<Room>()
+                 .Where(r => r.Area > 0)
+                 .Where(r =>
+                 {
+                     if (string.IsNullOrEmpty(levelTier) || levelTier == "所有樓層") return true;
+                     var lvl = r.Level;
+                     if (lvl == null) return true;
+                     double elev = lvl.Elevation;
+                     if (levelTier.Contains("下層") && elev > 0.0) return false;
+                     if (levelTier.Contains("上層") && elev <= 0.0) return false;
+                     return true;
+                 })
+                 .ToList();
 
             foreach (var room in rooms)
             {
@@ -236,7 +263,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 BoundingBoxXYZ bbox = room.get_BoundingBox(null);
                 if (bbox == null || !boundaryLines.Any()) continue;
 
-                double gridSpacing = 0.5;
+                double gridSpacing = 1.5; // Optimized spacing from 0.5 to 1.5 to speed up checks
                 double maxDiameterFeet = 0;
                 XYZ bestCenter = null;
 
@@ -286,7 +313,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
         #endregion
 
         #region 4. 梁下與機電管線結構淨高檢核
-        public List<NetHeightIssue> CheckNetHeight()
+        public List<NetHeightIssue> CheckNetHeight(string levelTier = null)
         {
             var issues = new List<NetHeightIssue>();
 
@@ -295,6 +322,16 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 .OfCategory(BuiltInCategory.OST_Rooms)
                 .Cast<Room>()
                 .Where(r => r.Area > 0)
+                .Where(r =>
+                {
+                    if (string.IsNullOrEmpty(levelTier) || levelTier == "所有樓層") return true;
+                    var lvl = r.Level;
+                    if (lvl == null) return true;
+                    double elev = lvl.Elevation;
+                    if (levelTier.Contains("下層") && elev > 0.0) return false;
+                    if (levelTier.Contains("上層") && elev <= 0.0) return false;
+                    return true;
+                })
                 .ToList();
 
             View3D view3d = new FilteredElementCollector(_doc)
@@ -302,9 +339,30 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 .Cast<View3D>()
                 .FirstOrDefault(v => !v.IsTemplate);
 
+            bool createdTempView = false;
             if (view3d == null)
             {
-                throw new InvalidOperationException("檢驗淨高需要專案中至少存在一個非樣板的 3D 視圖。");
+                // Try to create a temporary 3D View to prevent crash/exception in document
+                using (Transaction t = new Transaction(_doc, "Create Temp 3D View for NetHeight Check"))
+                {
+                    t.Start();
+                    ViewFamilyType viewFamilyType = new FilteredElementCollector(_doc)
+                        .OfClass(typeof(ViewFamilyType))
+                        .Cast<ViewFamilyType>()
+                        .FirstOrDefault(x => x.ViewFamily == ViewFamily.ThreeDimensional);
+                    if (viewFamilyType != null)
+                    {
+                        view3d = View3D.CreateIsometric(_doc, viewFamilyType.Id);
+                        view3d.Name = "Temp_NetHeight_Check_" + Guid.NewGuid().ToString().Substring(0, 8);
+                        createdTempView = true;
+                    }
+                    t.Commit();
+                }
+            }
+
+            if (view3d == null)
+            {
+                throw new InvalidOperationException("檢驗淨高需要專案中至少存在一個非樣板的 3D 視圖，且無法自動生成臨時 3D 視圖。");
             }
 
             var categories = new List<BuiltInCategory>
@@ -329,7 +387,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 BoundingBoxXYZ bbox = room.get_BoundingBox(null);
                 if (bbox == null) continue;
 
-                double gridSpacing = 1.5; 
+                double gridSpacing = 5.0; // Optimized spacing from 1.5 to 5.0 to prevent freeze
                 
                 for (double x = bbox.Min.X; x <= bbox.Max.X; x += gridSpacing)
                 {
@@ -372,12 +430,26 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 }
             }
 
+            if (createdTempView && view3d != null)
+            {
+                try
+                {
+                    using (Transaction t = new Transaction(_doc, "Delete Temp 3D View"))
+                    {
+                        t.Start();
+                        _doc.Delete(view3d.Id);
+                        t.Commit();
+                    }
+                }
+                catch { }
+            }
+
             return issues;
         }
         #endregion
 
         #region 5. 機電穿梁/剪力牆套管遺漏比對
-        public List<SleevePenetrationIssue> CheckSleevePenetrations()
+        public List<SleevePenetrationIssue> CheckSleevePenetrations(string levelTier = null)
         {
             var issues = new List<SleevePenetrationIssue>();
 
@@ -385,12 +457,32 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 .OfClass(typeof(Wall))
                 .Cast<Wall>()
                 .Where(w => w.StructuralUsage != Autodesk.Revit.DB.Structure.StructuralWallUsage.NonBearing)
+                .Where(w =>
+                {
+                    if (string.IsNullOrEmpty(levelTier) || levelTier == "所有樓層") return true;
+                    var lvl = _doc.GetElement(w.LevelId) as Level;
+                    if (lvl == null) return true;
+                    double elev = lvl.Elevation;
+                    if (levelTier.Contains("下層") && elev > 0.0) return false;
+                    if (levelTier.Contains("上層") && elev <= 0.0) return false;
+                    return true;
+                })
                 .ToList();
 
             var beams = new FilteredElementCollector(_doc)
                 .OfClass(typeof(FamilyInstance))
                 .OfCategory(BuiltInCategory.OST_StructuralFraming)
                 .Cast<FamilyInstance>()
+                .Where(b =>
+                {
+                    if (string.IsNullOrEmpty(levelTier) || levelTier == "所有樓層") return true;
+                    var lvl = _doc.GetElement(b.LevelId) as Level;
+                    if (lvl == null) return true;
+                    double elev = lvl.Elevation;
+                    if (levelTier.Contains("下層") && elev > 0.0) return false;
+                    if (levelTier.Contains("上層") && elev <= 0.0) return false;
+                    return true;
+                })
                 .ToList();
 
             var ducts = new FilteredElementCollector(_doc)
@@ -549,7 +641,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
         #endregion
 
         #region 6. 房間裝修參數與實際幾何對齊檢核
-        public List<ReviewIssue> CheckRoomFinishes()
+        public List<ReviewIssue> CheckRoomFinishes(string levelTier = null)
         {
             var issues = new List<ReviewIssue>();
 
@@ -558,6 +650,16 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 .OfCategory(BuiltInCategory.OST_Rooms)
                 .Cast<Room>()
                 .Where(r => r.Area > 0)
+                .Where(r =>
+                {
+                    if (string.IsNullOrEmpty(levelTier) || levelTier == "所有樓層") return true;
+                    var lvl = r.Level;
+                    if (lvl == null) return true;
+                    double elev = lvl.Elevation;
+                    if (levelTier.Contains("下層") && elev > 0.0) return false;
+                    if (levelTier.Contains("上層") && elev <= 0.0) return false;
+                    return true;
+                })
                 .ToList();
 
             foreach (var room in rooms)

@@ -129,6 +129,20 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
 
         public ObservableCollection<string> BuildingTypes { get; } = new ObservableCollection<string> { "集合住宅", "學校/公眾使用", "商辦/商用", "其他類" };
 
+        private string _selectedLevelTierFilter = "所有樓層";
+        public string SelectedLevelTierFilter
+        {
+            get => _selectedLevelTierFilter;
+            set
+            {
+                _selectedLevelTierFilter = value;
+                OnPropertyChanged();
+                ApplyFilters();
+            }
+        }
+
+        public ObservableCollection<string> LevelTierFilters { get; } = new ObservableCollection<string> { "所有樓層", "下層 (地下室/低樓層)", "上層 (地上/高樓層)" };
+
         public ObservableCollection<ReviewItem> FilteredItems { get; } = new ObservableCollection<ReviewItem>();
 
         public ICommand UpdateStatusCommand { get; }
@@ -254,7 +268,7 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
         private void ExecuteRecheck()
         {
             if (Project == null) return;
-            _handler.RequestRecheck(Project, _trackerService);
+            _handler.RequestRecheck(Project, _trackerService, SelectedLevelTierFilter);
             _extEvent.Raise();
         }
 
@@ -263,7 +277,7 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
         private void ExecuteSingleRecheck(ReviewItem item)
         {
             if (item == null || Project == null) return;
-            _handler.RequestSingleRecheck(item, Project, _trackerService);
+            _handler.RequestSingleRecheck(item, Project, _trackerService, SelectedLevelTierFilter);
             _extEvent.Raise();
         }
 
@@ -330,6 +344,7 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
         private ReviewItem _singleRecheckItem;
         private ReviewProject _singleRecheckProject;
         private IssueTrackerService _singleRecheckTrackerService;
+        private string _levelTierFilter;
 
         private readonly object _lock = new object();
 
@@ -352,22 +367,24 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
             }
         }
 
-        public void RequestRecheck(ReviewProject project, IssueTrackerService trackerService)
+        public void RequestRecheck(ReviewProject project, IssueTrackerService trackerService, string levelTier)
         {
             lock (_lock)
             {
                 _recheckProject = project;
                 _recheckTrackerService = trackerService;
+                _levelTierFilter = levelTier;
             }
         }
 
-        public void RequestSingleRecheck(ReviewItem item, ReviewProject project, IssueTrackerService trackerService)
+        public void RequestSingleRecheck(ReviewItem item, ReviewProject project, IssueTrackerService trackerService, string levelTier)
         {
             lock (_lock)
             {
                 _singleRecheckItem = item;
                 _singleRecheckProject = project;
                 _singleRecheckTrackerService = trackerService;
+                _levelTierFilter = levelTier;
             }
         }
 
@@ -381,6 +398,7 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
             ReviewItem singleItem;
             ReviewProject singleProject;
             IssueTrackerService singleService;
+            string levelTier = null;
 
             lock (_lock)
             {
@@ -392,6 +410,7 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
                 singleItem = _singleRecheckItem; _singleRecheckItem = null;
                 singleProject = _singleRecheckProject; _singleRecheckProject = null;
                 singleService = _singleRecheckTrackerService; _singleRecheckTrackerService = null;
+                levelTier = _levelTierFilter;
             }
 
             var doc = app.ActiveUIDocument.Document;
@@ -415,7 +434,7 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
             {
                 try
                 {
-                    RunRecheckLogic(doc, recheckProject, recheckProject.Items, recheckService);
+                    RunRecheckLogic(doc, recheckProject, recheckProject.Items, recheckService, levelTier);
                     TaskDialog.Show("DT Code Review", "全自動法規檢核完成，追蹤狀態已更新！");
                 }
                 catch (Exception ex)
@@ -433,7 +452,7 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
             {
                 try
                 {
-                    RunRecheckLogic(doc, singleProject, new List<ReviewItem> { singleItem }, singleService);
+                    RunRecheckLogic(doc, singleProject, new List<ReviewItem> { singleItem }, singleService, levelTier);
                     bool hasFail = singleItem.Results?.Any(r => !r.Passed) == true;
                     TaskDialog.Show("DT Code Review", $"法規項目 [{singleItem.RuleCode}] 檢核完成！\n結果：{(hasFail ? $"🔴 發現 {singleItem.Results.Count(r => !r.Passed)} 處異常" : "✅ 符合法規規範")}");
                 }
@@ -475,7 +494,7 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
             }
         }
 
-        private void RunRecheckLogic(Document doc, ReviewProject project, IEnumerable<ReviewItem> items, IssueTrackerService trackerService)
+        private void RunRecheckLogic(Document doc, ReviewProject project, IEnumerable<ReviewItem> items, IssueTrackerService trackerService, string levelTier = null)
         {
             var scanner = new ElementScanner(doc);
 
@@ -491,139 +510,152 @@ namespace DevelopmentTools.Modules.DesignReview.ViewModels
             {
                 var results = new List<ReviewResult>();
 
-                if (item.RuleCode == "BCR-012")
+                try
                 {
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }))
-                        results.AddRange(LevelChecker.Check(doc, elem));
-                }
-                else if (item.RuleCode == "BCR-015")
-                {
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Railings }))
-                        results.AddRange(RailingChecker.Check(doc, elem));
-                }
-                else if (item.RuleCode == "BCR-033")
-                {
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }))
-                        results.AddRange(CorridorChecker.Check(doc, elem, project.BuildingType));
-                }
-                else if (item.RuleCode == "BCR-034" || item.RuleCode == "BCR-037")
-                {
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Stairs }))
-                        results.AddRange(StairChecker.Check(doc, elem, project.BuildingType));
-                }
-                else if (item.RuleCode == "BCR-038")
-                {
-                    var levels = scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Levels });
-                    results.AddRange(FloorHeightChecker.Check(doc, levels));
-                }
-                else if (item.RuleCode == "BCR-074")
-                {
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }))
-                        results.AddRange(FireDistrictAreaChecker.Check(doc, elem));
-                }
-                else if (item.RuleCode == "BCR-076" || item.RuleCode == "BCR-077" || item.RuleCode == "BCR-090" || item.RuleCode == "BCR-092" || item.RuleCode == "BCR-118")
-                {
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Doors }))
-                        results.AddRange(DoorChecker.Check(doc, elem, item.RuleCode, project.BuildingType));
-                }
-                else if (item.RuleCode == "BCR-101")
-                {
-                    var svc = new DesignReviewService(doc);
-                    foreach (var issue in svc.CheckEscapeDistance())
-                        results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
-                }
-                else if (item.RuleCode == "BCR-102")
-                {
-                    var svc = new DesignReviewService(doc);
-                    foreach (var issue in svc.CheckWheelchairSpace())
-                        results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
-                }
-                else if (item.RuleCode == "BCR-103")
-                {
-                    var svc = new DesignReviewService(doc);
-                    foreach (var issue in svc.CheckNetHeight())
-                        results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
-                }
-                else if (item.RuleCode == "BCR-104")
-                {
-                    var svc = new DesignReviewService(doc);
-                    foreach (var issue in svc.CheckSleevePenetrations())
-                        results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
-                }
-                else if (item.RuleCode == "BCR-105")
-                {
-                    var svc = new DesignReviewService(doc);
-                    foreach (var issue in svc.CheckRoomFinishes())
-                        results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
-                }
-                else if (item.RuleCode == "BCR-111")
-                {
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Ramps }))
-                        results.AddRange(RampChecker.Check(doc, elem));
-                }
-                else if (item.RuleCode == "BCR-117")
-                {
-                    // 無障礙通路淨寬度
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }))
+                    if (item.RuleCode == "BCR-012")
                     {
-                        string rName = elem.ElementName ?? string.Empty;
-                        if (rName.Contains("無障礙通路") || rName.Contains("走廊") || rName.Contains("走道"))
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }, levelTier))
+                            results.AddRange(LevelChecker.Check(doc, elem));
+                    }
+                    else if (item.RuleCode == "BCR-015")
+                    {
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Railings }, levelTier))
+                            results.AddRange(RailingChecker.Check(doc, elem));
+                    }
+                    else if (item.RuleCode == "BCR-033")
+                    {
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }, levelTier))
+                            results.AddRange(CorridorChecker.Check(doc, elem, project.BuildingType));
+                    }
+                    else if (item.RuleCode == "BCR-034" || item.RuleCode == "BCR-037")
+                    {
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Stairs }, levelTier))
+                            results.AddRange(StairChecker.Check(doc, elem, project.BuildingType));
+                    }
+                    else if (item.RuleCode == "BCR-038")
+                    {
+                        var levels = scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Levels }, levelTier);
+                        results.AddRange(FloorHeightChecker.Check(doc, levels));
+                    }
+                    else if (item.RuleCode == "BCR-074")
+                    {
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }, levelTier))
+                            results.AddRange(FireDistrictAreaChecker.Check(doc, elem));
+                    }
+                    else if (item.RuleCode == "BCR-076" || item.RuleCode == "BCR-077" || item.RuleCode == "BCR-090" || item.RuleCode == "BCR-092" || item.RuleCode == "BCR-118")
+                    {
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Doors }, levelTier))
+                            results.AddRange(DoorChecker.Check(doc, elem, item.RuleCode, project.BuildingType));
+                    }
+                    else if (item.RuleCode == "BCR-101")
+                    {
+                        var svc = new DesignReviewService(doc);
+                        foreach (var issue in svc.CheckEscapeDistance(levelTier))
+                            results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
+                    }
+                    else if (item.RuleCode == "BCR-102")
+                    {
+                        var svc = new DesignReviewService(doc);
+                        foreach (var issue in svc.CheckWheelchairSpace(levelTier))
+                            results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
+                    }
+                    else if (item.RuleCode == "BCR-103")
+                    {
+                        var svc = new DesignReviewService(doc);
+                        foreach (var issue in svc.CheckNetHeight(levelTier))
+                            results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
+                    }
+                    else if (item.RuleCode == "BCR-104")
+                    {
+                        var svc = new DesignReviewService(doc);
+                        foreach (var issue in svc.CheckSleevePenetrations(levelTier))
+                            results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
+                    }
+                    else if (item.RuleCode == "BCR-105")
+                    {
+                        var svc = new DesignReviewService(doc);
+                        foreach (var issue in svc.CheckRoomFinishes(levelTier))
+                            results.Add(new ReviewResult { Passed = false, Message = issue.Description, ElementId = issue.ElementId.ToString(), LevelName = issue.LevelName, Location = XYZPoint.FromXYZ(issue.Location) });
+                    }
+                    else if (item.RuleCode == "BCR-111")
+                    {
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Ramps }, levelTier))
+                            results.AddRange(RampChecker.Check(doc, elem));
+                    }
+                    else if (item.RuleCode == "BCR-117")
+                    {
+                        // 無障礙通路淨寬度
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }, levelTier))
                         {
-                            double w = elem.GetDoubleParameter("廊道淨寬") ?? elem.GetDoubleParameter("寬度") ?? elem.GetDoubleParameter("Width") ?? 0;
-                            if (w > 0 && w < 1300.0)
+                            string rName = elem.ElementName ?? string.Empty;
+                            if (rName.Contains("無障礙通路") || rName.Contains("走廊") || rName.Contains("走道"))
                             {
-                                results.Add(new ReviewResult
+                                double w = elem.GetDoubleParameter("廊道淨寬") ?? elem.GetDoubleParameter("寬度") ?? elem.GetDoubleParameter("Width") ?? 0;
+                                if (w > 0 && w < 1300.0)
                                 {
-                                    Passed = false,
-                                    Message = $"無障礙通路「{rName}」淨寬為 {w:F1}mm，低於法規標準 1.3m (1300mm)。",
-                                    ElementId = elem.ElementId,
-                                    LevelName = elem.LevelName,
-                                    Location = XYZPoint.FromXYZ(elem.Location)
-                                });
+                                    results.Add(new ReviewResult
+                                    {
+                                        Passed = false,
+                                        Message = $"無障礙通路「{rName}」淨寬為 {w:F1}mm，低於法規標準 1.3m (1300mm)。",
+                                        ElementId = elem.ElementId,
+                                        LevelName = elem.LevelName,
+                                        Location = XYZPoint.FromXYZ(elem.Location)
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    else if (item.RuleCode == "BCR-119")
+                    {
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }, levelTier))
+                            results.AddRange(AccessibleToiletChecker.Check(doc, elem));
+                    }
+                    else if (item.RuleCode == "BCR-120")
+                    {
+                        foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Parking }, levelTier))
+                            results.AddRange(ParkingChecker.Check(doc, elem));
+                    }
+
+                    // fallback: 如果沒有特定檢核結果，按 RuleConfig 的 ApplicableCategories 掃描
+                    if (!results.Any())
+                    {
+                        var ruleConfig = ruleEngine.RuleConfigs.FirstOrDefault(r => r.RuleCode == item.RuleCode);
+                        if (ruleConfig?.ApplicableCategories?.Any() == true)
+                        {
+                            var categories = ruleConfig.ApplicableCategories
+                                .Select(catName =>
+                                {
+                                    if (Enum.TryParse<BuiltInCategory>(catName, out var bic)) return bic;
+                                    if (!catName.StartsWith("OST_") && Enum.TryParse<BuiltInCategory>("OST_" + catName, out var bic2)) return bic2;
+                                    return BuiltInCategory.INVALID;
+                                })
+                                .Where(c => c != BuiltInCategory.INVALID)
+                                .ToList();
+
+                            if (categories.Any())
+                            {
+                                foreach (var elem in scanner.ScanCategories(categories, levelTier))
+                                    results.Add(new ReviewResult
+                                    {
+                                        Passed = true,
+                                        Message = item.Type == ReviewType.Auto ? "自動檢核通過，元件規格符合法規限制。" : "[人工檢核] 適用元件，請人工查核是否合規。",
+                                        ElementId = elem.ElementId,
+                                        LevelName = elem.LevelName,
+                                        Location = XYZPoint.FromXYZ(elem.Location)
+                                    });
                             }
                         }
                     }
                 }
-                else if (item.RuleCode == "BCR-119")
+                catch (Exception ex)
                 {
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Rooms }))
-                        results.AddRange(AccessibleToiletChecker.Check(doc, elem));
-                }
-                else if (item.RuleCode == "BCR-120")
-                {
-                    foreach (var elem in scanner.ScanCategories(new List<BuiltInCategory> { BuiltInCategory.OST_Parking }))
-                        results.AddRange(ParkingChecker.Check(doc, elem));
-                }
-
-                // fallback: 如果沒有特定檢核結果，按 RuleConfig 的 ApplicableCategories 掃描
-                if (!results.Any())
-                {
-                    var ruleConfig = ruleEngine.RuleConfigs.FirstOrDefault(r => r.RuleCode == item.RuleCode);
-                    if (ruleConfig?.ApplicableCategories?.Any() == true)
+                    results.Add(new ReviewResult
                     {
-                        var categories = ruleConfig.ApplicableCategories
-                            .Select(catName =>
-                            {
-                                if (Enum.TryParse<BuiltInCategory>(catName, out var bic)) return bic;
-                                if (!catName.StartsWith("OST_") && Enum.TryParse<BuiltInCategory>("OST_" + catName, out var bic2)) return bic2;
-                                return BuiltInCategory.INVALID;
-                            })
-                            .Where(c => c != BuiltInCategory.INVALID)
-                            .ToList();
-
-                        if (categories.Any())
-                        {
-                            foreach (var elem in scanner.ScanCategories(categories))
-                                results.Add(new ReviewResult
-                                {
-                                    Passed = true,
-                                    Message = item.Type == ReviewType.Auto ? "自動檢核通過，元件規格符合法規限制。" : "[人工檢核] 適用元件，請人工查核是否合規。",
-                                    ElementId = elem.ElementId,
-                                    LevelName = elem.LevelName,
-                                    Location = XYZPoint.FromXYZ(elem.Location)
-                                });
-                        }
-                    }
+                        Passed = false,
+                        Message = $"💥 [系統錯誤] 無法執行此項法規檢討。原因：{ex.Message}\n堆疊資訊：{ex.StackTrace}",
+                        ElementId = "Error_System",
+                        LevelName = "無"
+                    });
                 }
 
                 item.Results = results;

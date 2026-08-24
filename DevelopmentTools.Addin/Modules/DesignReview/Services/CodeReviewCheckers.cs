@@ -43,7 +43,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 results.Add(new ReviewResult
                 {
                     Passed = false,
-                    Message = $"[{roleType}] 級高為 {riser:F1}mm，不符合法規要求 (應 <= {limitRiser:F0}mm)。",
+                    Message = $"[{roleType}] 級高為 {riser:F1}mm，不符合法規要求 (應 <= {limitRiser:F0}mm)。\n💡 調整建議：請進入樓梯類型參數，降低最大級高設定，或增加梯級數以平緩坡度。",
                     ElementId = stair.ElementId,
                     LevelName = stair.LevelName,
                     Location = XYZPoint.FromXYZ(stair.Location)
@@ -54,7 +54,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 results.Add(new ReviewResult
                 {
                     Passed = false,
-                    Message = $"[{roleType}] 級深為 {tread:F1}mm，不符合法規要求 (應 >= {limitTread:F0}mm)。",
+                    Message = $"[{roleType}] 級深為 {tread:F1}mm，不符合法規要求 (應 >= {limitTread:F0}mm)。\n💡 調整建議：請進入樓梯類型參數，增加最小級深設定，或調整梯段長度與踏步尺寸。",
                     ElementId = stair.ElementId,
                     LevelName = stair.LevelName,
                     Location = XYZPoint.FromXYZ(stair.Location)
@@ -65,7 +65,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                 results.Add(new ReviewResult
                 {
                     Passed = false,
-                    Message = $"[{roleType}] 樓梯淨寬度為 {width:F1}mm，不符合法規要求 (應 >= {limitWidth:F0}mm)。",
+                    Message = $"[{roleType}] 樓梯淨寬度為 {width:F1}mm，不符合法規要求 (應 >= {limitWidth:F0}mm)。\n💡 調整建議：請調大樓梯的「實際梯段寬度」參數，以符合法定的避難寬度要求。",
                     ElementId = stair.ElementId,
                     LevelName = stair.LevelName,
                     Location = XYZPoint.FromXYZ(stair.Location)
@@ -85,22 +85,30 @@ namespace DevelopmentTools.Modules.DesignReview.Services
             if (element.CategoryName.Contains("房間") || element.CategoryName.Contains("Room"))
             {
                 string name = element.ElementName ?? string.Empty;
-                if (name.Contains("走廊") || name.Contains("走道") || name.Contains("Corridor") || name.Contains("Hallway"))
+                double width = element.GetDoubleParameter("廊道淨寬") ?? element.GetDoubleParameter("寬度") ?? element.GetDoubleParameter("Width") ?? 0;
+                double length = element.GetDoubleParameter("長度") ?? element.GetDoubleParameter("Length") ?? 0;
+
+                // 狹長空間語意推定：若長寬比大於 3.0，且名稱包含「通道/走道/走廊/過道」或無命名時，推定為走廊
+                bool isCorridor = name.Contains("走廊") || name.Contains("走道") || name.Contains("通道") || name.Contains("過道") ||
+                                  name.Contains("Corridor") || name.Contains("Hallway") ||
+                                  ((width > 0 && length / width > 3.0 || length > 0 && width / length > 3.0) && string.IsNullOrEmpty(name));
+
+                if (isCorridor)
                 {
-                    double width = element.GetDoubleParameter("廊道淨寬") ?? element.GetDoubleParameter("寬度") ?? element.GetDoubleParameter("Width") ?? 0;
-                    
                     double limitWidth = 1200.0;
                     string sideType = "單側有居室";
                     bool isDoubleSide = name.Contains("雙側") || name.Contains("兩側") || name.Contains("Double");
 
                     if (buildingType.Contains("學校") || buildingType.Contains("公眾") || buildingType.Contains("Public"))
                     {
-                        limitWidth = isDoubleSide ? 2400.0 : 1800.0; // 供公眾使用更嚴格
+                        double defaultLimit = isDoubleSide ? 2400.0 : 1800.0;
+                        limitWidth = LocalRegulationDatabase.GetLimit(isDoubleSide ? "BCR-CorridorWidth-Public-Double" : "BCR-CorridorWidth-Public-Single", defaultLimit);
                         sideType = isDoubleSide ? "雙側有居室(供公眾)" : "單側有居室(供公眾)";
                     }
                     else
                     {
-                        limitWidth = isDoubleSide ? 1600.0 : 1200.0;
+                        double defaultLimit = isDoubleSide ? 1600.0 : 1200.0;
+                        limitWidth = LocalRegulationDatabase.GetLimit(isDoubleSide ? "BCR-CorridorWidth-Double" : "BCR-CorridorWidth-Single", defaultLimit);
                         sideType = isDoubleSide ? "雙側有居室" : "單側有居室";
                     }
 
@@ -109,7 +117,7 @@ namespace DevelopmentTools.Modules.DesignReview.Services
                         results.Add(new ReviewResult
                         {
                             Passed = false,
-                            Message = $"走廊「{name}」({sideType}) 淨寬為 {width:F1}mm，低於法規標準 (應 >= {limitWidth:F0}mm)。",
+                            Message = $"走廊「{name}」({sideType}) 淨寬為 {width:F1}mm，低於動態法規標準 (應 >= {limitWidth:F0}mm)。\n💡 調整建議：請調整通道旁牆體邊界線，將走廊（廊道淨寬）實體寬度拓寬至少 {(limitWidth - width):F0}mm，或變更居室配置方向以縮減雙側居室長度。",
                             ElementId = element.ElementId,
                             LevelName = element.LevelName,
                             Location = XYZPoint.FromXYZ(element.Location)

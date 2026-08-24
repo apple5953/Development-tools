@@ -127,6 +127,10 @@ namespace DevelopmentTools.Core
             AddTranslation("Ribbon_Btn_SheetTransfer", "跨專案圖紙轉移", "Sheet Transfer", "シート転送");
             AddTranslation("Ribbon_TT_SheetTransfer", "將其他 Revit 專案中的圖紙、詳圖、圖例、明細表快速轉移至目前專案。", "Transfer sheets, drafting views, legends, and schedules from another Revit project to the current project.", "他のRevitプロジェクトからシート、ドラフトビュー、凡例、集計表を現在のプロジェクトに転送します。");
 
+            // Project Compare & Copy
+            AddTranslation("Ribbon_Btn_ProjectCompareCopy", "專案參數比對複製", "Compare & Copy Parameters", "プロジェクトパラメータ比較・コピー");
+            AddTranslation("Ribbon_TT_ProjectCompareCopy", "比對兩個專案間的參數、材質、線型與型別設定，並同步有差異的屬性值。", "Compare and sync project parameters, materials, line styles, and family symbol settings between two projects.", "プロジェクトパラメータ、マテリアル、線種、ファミリーシンボル設定を比較し同期します。");
+
             // Google Login
             AddTranslation("TileSys_InstallWallPattern", "安裝[牆粉刷線]至此專案", "Install Wall Pattern", "壁パターンをインストール");
             AddTranslation("Ribbon_Btn_Login", "Google 登入", "Google Login", "Google ログイン");
@@ -326,10 +330,80 @@ namespace DevelopmentTools.Core
             AddTranslation("SheetDuplicator_PreviewPrompt", "請於左側樹狀圖選擇一張圖紙或視圖", "Please select a sheet or view from the tree on the left", "左側のツリーからシートまたはビューを選択してください");
             AddTranslation("Ribbon_Btn_SheetPlacer", "圖紙排版", "Sheet Placer", "シート配置");
             AddTranslation("Ribbon_TT_SheetPlacer", "快速將視圖排列至圖紙", "Quickly arrange views on sheets", "シートにビューをすばやく配置");
+            AddTranslation("Ribbon_Btn_FastDependentViews", "快速從屬視圖", "Dependent Views", "従属ビュー作成");
+            AddTranslation("Ribbon_TT_FastDependentViews", "依房間、空間或樓板邊界批次建立從屬視圖並自動裁剪。", "Batch-create dependent views from room, space, or floor boundaries with automatic crop regions.", "部屋、スペース、床の境界から従属ビューを一括作成し、自動でクロップします。");
             AddTranslation("Ribbon_Btn_SheetDuplicator", "圖紙逐層量化", "Sheet Duplicator", "シート複製ツール");
             AddTranslation("Ribbon_TT_SheetDuplicator", "自動分析標準圖紙的內容並複製到多個目標樓層。", "Automatically analyze standard sheet content and duplicate to multiple target levels.", "標準シートの内容を自動分析し、複数の対象レベルに複製します。");
             AddTranslation("Ribbon_Btn_QuickDim", "快速標註", "Quick Dimension", "クイック寸法");
             AddTranslation("Ribbon_TT_QuickDim", "快速建立尺寸標註", "Quickly create dimensions", "すばやく寸法を作成");
+            AddTranslation("Ribbon_Btn_AutoBoundary", "自動邊界與標籤", "Auto Boundary", "自動境界とタグ");
+            AddTranslation("Ribbon_TT_AutoBoundary", "依目前平面視圖牆體自動建立分隔線，並放置房間、空間或區域範圍。", "Automatically create separation lines from walls in the active plan and place rooms, spaces, or areas.", "現在の平面ビューの壁から境界線を自動作成し、部屋、スペース、エリアを配置します。");
+            AddTranslation("FastDep_Title", "快速建立從屬視圖", "Create Dependent Views", "従属ビューを作成");
+            AddTranslation("FastDep_Version", "v1.0.0 整合版", "v1.0.0 Integrated", "v1.0.0 統合版");
+            AddTranslation("FastDep_CurrentView", "目前作用中視圖", "Active View", "現在のアクティブビュー");
+            AddTranslation("FastDep_FilterGroup", "區分依據", "Group By", "分類基準");
+            AddTranslation("FastDep_Rooms", "房間 (Rooms)", "Rooms", "部屋 (Rooms)");
+            AddTranslation("FastDep_Spaces", "空間 (Spaces)", "Spaces", "スペース (Spaces)");
+            AddTranslation("FastDep_Floors", "樓板 (Floors)", "Floors", "床 (Floors)");
+            AddTranslation("FastDep_BoundaryLocation", "邊界位置：", "Boundary location:", "境界位置：");
+            AddTranslation("FastDep_WallFinish", "粉刷面 (Wall Finish)", "Wall Finish", "仕上げ面 (Wall Finish)");
+            AddTranslation("FastDep_CoreCenter", "核心中心線 (Core Center)", "Core Center", "コア中心線 (Core Center)");
+            AddTranslation("FastDep_NamingGroup", "從屬視圖命名規則", "Dependent View Naming", "従属ビュー命名規則");
+            AddTranslation("FastDep_InsertTagsHint", "點擊下方標籤快速插入：", "Click a token to insert:", "下のタグをクリックして挿入：");
+            AddTranslation("FastDep_PreviewLabel", "預覽命名：", "Name preview:", "名前プレビュー：");
+            AddTranslation("FastDep_SelectAll", "全選", "Select all", "すべて選択");
+            AddTranslation("FastDep_VisibleOnly", "僅限目前視圖可見", "Visible in current view only", "現在のビューに表示されるもののみ");
+            AddTranslation("FastDep_SearchPlaceholder", "搜尋名稱或編號...", "Search name or number...", "名前または番号を検索...");
+            AddTranslation("FastDep_ColNumber", "編號", "Number", "番号");
+            AddTranslation("FastDep_ColName", "名稱", "Name", "名前");
+            AddTranslation("FastDep_ColId", "ID", "ID", "ID");
+            AddTranslation("FastDep_ColStatus", "狀態", "Status", "状態");
+            AddTranslation("FastDep_Ready", "準備就緒，請選擇要複製的對象。", "Ready. Select items to duplicate.", "準備完了。複製する項目を選択してください。");
+            AddTranslation("FastDep_Cancel", "取消", "Cancel", "キャンセル");
+            AddTranslation("FastDep_Start", "開始建立", "Create", "作成開始");
+            AddTranslation("FastDep_ItemReady", "就緒", "Ready", "準備完了");
+            AddTranslation("FastDep_InvalidBoundary", "無有效邊界", "No valid boundary", "有効な境界なし");
+            AddTranslation("FastDep_ResultCount", "已搜尋到 {0} 個項目 (已勾選 {1} 個)", "{0} items found ({1} selected)", "{0} 件見つかりました（{1} 件選択）");
+            AddTranslation("FastDep_Processing", "正在處理 {0} / {1}：{2}...", "Processing {0} / {1}: {2}...", "{0} / {1} を処理中：{2}...");
+            AddTranslation("FastDep_DoneStatus", "建立完成！成功: {0}，失敗: {1}", "Done. Success: {0}, Failed: {1}", "完了。成功: {0}、失敗: {1}");
+            AddTranslation("FastDep_SuccessStatus", "建立成功", "Created", "作成成功");
+            AddTranslation("FastDep_FailedStatus", "失敗: {0}", "Failed: {0}", "失敗: {0}");
+            AddTranslation("FastDep_SelectWarning", "請至少選擇一個具有有效邊界的項目進行複製！", "Select at least one item with a valid boundary.", "有効な境界を持つ項目を1つ以上選択してください。");
+            AddTranslation("FastDep_NamingWarning", "命名規則不可為空！", "The naming pattern cannot be empty.", "命名規則は空にできません。");
+            AddTranslation("FastDep_CompleteMessage", "已成功建立 {0} 個從屬視圖！", "{0} dependent views were created.", "{0} 個の従属ビューを作成しました。");
+            AddTranslation("FastDep_CompleteTitle", "建立完成", "Creation Complete", "作成完了");
+            AddTranslation("FastDep_ErrorTitle", "快速建立從屬視圖 - 執行錯誤", "Dependent Views - Error", "従属ビュー作成 - エラー");
+            AddTranslation("FastDep_UnexpectedError", "發生未預期的錯誤：\n{0}", "An unexpected error occurred:\n{0}", "予期しないエラーが発生しました：\n{0}");
+            AddTranslation("FastDep_UnsupportedView", "目前的作用中視圖不支援建立從屬視圖。\n\n請切換至樓層平面圖、天花板平面圖或區域平面圖後再執行。", "The active view does not support dependent views.\n\nSwitch to a floor plan, reflected ceiling plan, or area plan and try again.", "現在のビューでは従属ビューを作成できません。\n\n平面図、天井伏図、またはエリアプランに切り替えて再実行してください。");
+            AddTranslation("Common_NoOpenProject", "沒有開啟任何 Revit 專案。", "No Revit project is open.", "Revitプロジェクトが開かれていません。");
+            AddTranslation("AutoBoundary_Title", "牆中心線自動邊界與空間放置工具", "Wall Centerline Boundary Tool", "壁中心線境界ツール");
+            AddTranslation("AutoBoundary_Eyebrow", "WALL CENTERLINE AUTO BOUNDARY", "WALL CENTERLINE AUTO BOUNDARY", "WALL CENTERLINE AUTO BOUNDARY");
+            AddTranslation("AutoBoundary_Subtitle", "自動建立邊界與範圍工具", "Create boundaries and spatial elements", "境界と空間要素を自動作成");
+            AddTranslation("AutoBoundary_ModeTitle", "1. 選擇生成要素模式", "1. Choose target mode", "1. 作成モードを選択");
+            AddTranslation("AutoBoundary_RoomMode", "房間模式 (Rooms)", "Rooms", "部屋 (Rooms)");
+            AddTranslation("AutoBoundary_SpaceMode", "空間模式 (Spaces)", "Spaces", "スペース (Spaces)");
+            AddTranslation("AutoBoundary_AreaMode", "區域模式 (Areas)", "Areas", "エリア (Areas)");
+            AddTranslation("AutoBoundary_Hint1", "* 本外掛將自動從牆體提取閉合邊界，並放置房間 / 空間 / 區域範圍。", "* The tool extracts closed wall boundaries and places rooms, spaces, or areas.", "* 壁境界から閉じた輪郭を抽出し、部屋、スペース、エリアを配置します。");
+            AddTranslation("AutoBoundary_Hint2", "* 生成完成後，請使用 Revit 內建「標註所有未標註的」放置自訂標籤。", "* After creation, use Revit's built-in tag-all-untagged command for your tags.", "* 作成後はRevit標準の未タグ要素をすべてタグ付けでタグを配置してください。");
+            AddTranslation("AutoBoundary_StatusReady", "就緒", "Ready", "準備完了");
+            AddTranslation("AutoBoundary_Optimize", "優化現有邊界", "Optimize Boundaries", "既存境界を最適化");
+            AddTranslation("AutoBoundary_Start", "開始繪製與放置", "Create and Place", "作成して配置");
+            AddTranslation("AutoBoundary_ViewError", "請切換至平面圖、天花板平面圖或區域平面圖視圖，然後再執行此工具。", "Switch to a floor plan, reflected ceiling plan, or area plan before running this tool.", "平面図、天井伏図、またはエリアプランに切り替えてから実行してください。");
+            AddTranslation("AutoBoundary_LevelError", "目前視圖無關聯的樓層，無法執行此操作。", "The active view has no associated level.", "現在のビューには関連レベルがないため実行できません。");
+            AddTranslation("AutoBoundary_AreaViewError", "區域模式必須在「區域平面圖」視圖中執行。請先切換至區域平面圖。", "Area mode must be run in an area plan. Switch to an area plan first.", "エリアモードはエリアプランで実行してください。");
+            AddTranslation("AutoBoundary_NoWalls", "目前視圖中沒有找到任何牆體。", "No walls were found in the active view.", "現在のビューに壁が見つかりません。");
+            AddTranslation("AutoBoundary_DoneStatus", "完成！已繪製 {0} 段邊界線，放置 {1} 個{2}範圍。", "Done. Created {0} boundary segments and placed {1} {2}.", "完了。{0} 本の境界線を作成し、{1} 個の{2}を配置しました。");
+            AddTranslation("AutoBoundary_DoneMessage", "執行完成！\n\n- 繪製邊界線段數: {0}\n- 放置{1}範圍數: {2}\n\n* 請接著使用 Revit 內建的「標註所有未標註的」放置標籤。", "Completed.\n\n- Boundary segments: {0}\n- Placed {1}: {2}\n\n* Next, use Revit's built-in tag-all-untagged command.", "完了しました。\n\n- 境界線数: {0}\n- 配置した{1}: {2}\n\n* 次にRevit標準の未タグ要素をすべてタグ付けを使用してください。");
+            AddTranslation("AutoBoundary_ModeRoom", "房間", "rooms", "部屋");
+            AddTranslation("AutoBoundary_ModeSpace", "空間", "spaces", "スペース");
+            AddTranslation("AutoBoundary_ModeArea", "區域", "areas", "エリア");
+            AddTranslation("AutoBoundary_NoBoundaryLines", "目前視圖中沒有找到任何現有的邊界線。", "No existing boundary lines were found in the active view.", "現在のビューに既存の境界線が見つかりません。");
+            AddTranslation("AutoBoundary_CurveError", "無法提取現有邊界線的幾何資訊。", "Could not extract geometry from existing boundary lines.", "既存境界線から形状情報を取得できません。");
+            AddTranslation("AutoBoundary_OptimizeDoneStatus", "已將現有 {0} 段邊界線優化並對接為 {1} 段線。", "Optimized {0} existing boundary segments into {1} segments.", "既存の {0} 本の境界線を {1} 本に最適化しました。");
+            AddTranslation("AutoBoundary_OptimizeDoneMessage", "優化現有邊界線完成！\n\n- 原有線段數: {0}\n- 優化後線段數: {1}\n\n所有端點縫隙已自動進行修剪對接（TR/閉合）。", "Boundary optimization complete.\n\n- Original segments: {0}\n- Optimized segments: {1}\n\nEndpoint gaps were trimmed and joined automatically.", "境界線の最適化が完了しました。\n\n- 元の線分数: {0}\n- 最適化後の線分数: {1}\n\n端点の隙間を自動でトリム、接続しました。");
+            AddTranslation("Common_Error", "錯誤", "Error", "エラー");
+            AddTranslation("Common_Info", "提示", "Info", "情報");
+            AddTranslation("Common_Success", "成功", "Success", "成功");
             AddTranslation("Ribbon_Btn_LangDropdown", "語言切換", "Language", "言語切替");
             AddTranslation("Ribbon_TT_LangDropdown", "切換介面語言", "Switch Interface Language", "インターフェース言語を切り替え");
             AddTranslation("Ribbon_Panel_CodeReview", "法規檢討", "Code Review", "法規チェック");
@@ -730,6 +804,128 @@ namespace DevelopmentTools.Core
                                      "   - 選択されたプロジェクト内のシート、製図ビュー、凡例、集計表がリストアップされます。現在のプロジェクトに読み込みたい項目にチェックを入れます。\n" +
                                      "3. [転送の実行]：\n" +
                                      "   - 「転送開始」をクリックすると、タイトルブロックのサイズやレイアウトを維持したまま、シート上の製図ビューや集計表などを現在のプロジェクトに一括コピーします。手動での書き出し・読み込みの手間を大幅に削減できます。");
+
+            // 10. 快速從屬視圖 (FastDependentViews)
+            AddTranslation("Tut_FastDependentViews_Title", "快速從屬視圖 - 新手指南", "Dependent Views - Guide", "従属ビュー作成 - ガイド");
+            AddTranslation("Tut_FastDependentViews_Content", "【使用前確認】\n" +
+                                     "1. 本工具需要先完成 Google 登入授權，未登入時會自動跳出登入提示。\n" +
+                                     "2. 請先切到可建立從屬視圖的樓層平面圖、天花板平面圖或區域平面圖。\n\n" +
+                                     "【基本流程】\n" +
+                                     "1. [選擇區分依據]：\n" +
+                                     "   - 房間：依房間邊界建立一張一張從屬視圖，適合室內平面或裝修分區出圖。\n" +
+                                     "   - 空間：依 MEP Space 邊界建立從屬視圖，適合機電空間檢討。\n" +
+                                     "   - 樓板：依樓板頂面外框裁切從屬視圖，適合樓板分區或局部平面。\n" +
+                                     "2. [設定邊界位置]：\n" +
+                                     "   - 房間/空間可選粉刷面或核心中心線。一般出圖建議使用粉刷面；若要對齊結構核心，可切成核心中心線。\n" +
+                                     "3. [設定命名規則]：\n" +
+                                     "   - 預設為 {ParentView} - {Name}。可插入 {Number}、{Id} 避免重名。\n" +
+                                     "   - 若名稱已存在，系統會自動加 _1、_2，避免 Revit 報錯。\n" +
+                                     "4. [篩選與勾選]：\n" +
+                                     "   - 可用搜尋框找房名、房號或元素 ID。\n" +
+                                     "   - 顯示「無有效邊界」的項目不會被建立，請先回模型修正邊界閉合。\n" +
+                                     "5. [開始建立]：\n" +
+                                     "   - 按「開始建立」後，系統會批次複製目前視圖為從屬視圖，並依每個元素邊界設定 Crop Shape。\n\n" +
+                                     "【常見狀況】\n" +
+                                     "- 若清單為空，請確認目前視圖是否真的看得到房間/空間/樓板，或取消「僅限目前視圖可見」。\n" +
+                                     "- 若裁剪失敗，多半是邊界含有不閉合、自交或過短線段，請先修正模型邊界。\n" +
+                                     "- 建立後可用 Revit 一次 Undo 回復整批操作。",
+                                     "【Before You Start】\n" +
+                                     "1. This tool requires Google sign-in authorization. If you are not signed in, the sign-in prompt opens automatically.\n" +
+                                     "2. Switch to a floor plan, reflected ceiling plan, or area plan that supports dependent views.\n\n" +
+                                     "【Workflow】\n" +
+                                     "1. [Choose grouping]:\n" +
+                                     "   - Rooms: create one dependent view per room for interior or finish plans.\n" +
+                                     "   - Spaces: create dependent views from MEP spaces.\n" +
+                                     "   - Floors: crop dependent views from floor top boundaries.\n" +
+                                     "2. [Boundary location]:\n" +
+                                     "   - Use Wall Finish for normal documentation. Use Core Center when structural core alignment is required.\n" +
+                                     "3. [Naming pattern]:\n" +
+                                     "   - Default: {ParentView} - {Name}. Add {Number} or {Id} to avoid duplicates.\n" +
+                                     "   - Existing names are handled automatically with _1, _2 suffixes.\n" +
+                                     "4. [Filter and select]:\n" +
+                                     "   - Search by name, number, or element ID.\n" +
+                                     "   - Items marked No valid boundary are skipped until the model boundary is fixed.\n" +
+                                     "5. [Create]:\n" +
+                                     "   - The tool duplicates the active view as dependent views and applies each element boundary as crop shape.\n\n" +
+                                     "【Tips】\n" +
+                                     "- If the list is empty, check visibility in the active view or turn off Visible in current view only.\n" +
+                                     "- Crop failures usually come from open, self-intersecting, or too-short boundary segments.\n" +
+                                     "- The batch can be reverted with a single Revit Undo.",
+                                     "【使用前の確認】\n" +
+                                     "1. このツールはGoogleログイン認証が必要です。未ログインの場合は自動でログイン案内が表示されます。\n" +
+                                     "2. 従属ビューを作成できる平面図、天井伏図、またはエリアプランに切り替えてください。\n\n" +
+                                     "【基本手順】\n" +
+                                     "1. [分類基準を選択]：部屋、スペース、床から境界の元になる要素を選びます。\n" +
+                                     "2. [境界位置を設定]：通常は仕上げ面、構造芯に合わせたい場合はコア中心線を使います。\n" +
+                                     "3. [命名規則を設定]：{ParentView} - {Name} を基本に、{Number} や {Id} を追加できます。\n" +
+                                     "4. [検索と選択]：名前、番号、IDで検索し、有効な境界を持つ項目を選択します。\n" +
+                                     "5. [作成開始]：現在のビューを従属ビューとして複製し、各要素の境界でクロップします。\n\n" +
+                                     "【ヒント】\n" +
+                                     "- リストが空の場合はビュー表示設定、または現在ビュー限定のチェックを確認してください。\n" +
+                                     "- クロップ失敗は未閉合、自己交差、短すぎる境界線が原因であることが多いです。\n" +
+                                     "- 作成結果はRevitのUndoで一括取消できます。");
+
+            // 11. 自動邊界與標籤 (AutoBoundary)
+            AddTranslation("Tut_AutoBoundary_Title", "自動邊界與標籤 - 新手指南", "Auto Boundary - Guide", "自動境界とタグ - ガイド");
+            AddTranslation("Tut_AutoBoundary_Content", "【使用前確認】\n" +
+                                     "1. 本工具需要先完成 Google 登入授權，未登入時會自動跳出登入提示。\n" +
+                                     "2. 請先切到樓層平面圖、天花板平面圖或區域平面圖。\n" +
+                                     "3. 若使用區域模式，必須在 Revit 的區域平面圖中執行。\n\n" +
+                                     "【主要用途】\n" +
+                                     "- 依目前視圖牆體與既有房間邊界，自動建立房間分隔線、空間分隔線或區域邊界線。\n" +
+                                     "- 自動放置房間、空間或區域範圍，減少逐格點選放置的時間。\n" +
+                                     "- 可優化既有邊界線，協助端點對接與閉合。\n\n" +
+                                     "【基本流程】\n" +
+                                     "1. [選擇模式]：\n" +
+                                     "   - 房間模式：建立 Room Separation Lines 並放置 Rooms。\n" +
+                                     "   - 空間模式：建立 MEP Space Separation Lines 並放置 Spaces。\n" +
+                                     "   - 區域模式：建立 Area Boundary Lines 並放置 Areas。\n" +
+                                     "2. [開始繪製與放置]：\n" +
+                                     "   - 工具會先刪除目前視圖中同類型的舊分隔線，再依分析結果重新繪製。\n" +
+                                     "   - 完成後會顯示建立的邊界線段數與放置數量。\n" +
+                                     "3. [優化現有邊界]：\n" +
+                                     "   - 若你已經有分隔線但端點沒有完全接上，可先選模式，再按「優化現有邊界」。\n" +
+                                     "   - 系統會嘗試修剪與對接端點，讓閉合更穩定。\n" +
+                                     "4. [放置標籤]：\n" +
+                                     "   - 本工具建立範圍後，請接著使用 Revit 內建「標註所有未標註的」套用公司自訂標籤。\n\n" +
+                                     "【注意事項】\n" +
+                                     "- 目前視圖看不到牆體時，工具無法建立邊界。\n" +
+                                     "- 如果專案使用工作集，名稱包含「精裝修」的牆會暫時排除 Room Bounding 分析，以降低裝修牆造成的錯誤分割。\n" +
+                                     "- 建議先在複製視圖或測試檔執行一次，確認分隔線符合公司出圖邏輯。",
+                                     "【Before You Start】\n" +
+                                     "1. This tool requires Google sign-in authorization. If you are not signed in, the sign-in prompt opens automatically.\n" +
+                                     "2. Switch to a floor plan, reflected ceiling plan, or area plan.\n" +
+                                     "3. Area mode must be run in an area plan.\n\n" +
+                                     "【Purpose】\n" +
+                                     "- Create room separation lines, MEP space separation lines, or area boundary lines from the active view.\n" +
+                                     "- Place rooms, spaces, or areas automatically.\n" +
+                                     "- Optimize existing boundary lines by trimming and joining endpoints.\n\n" +
+                                     "【Workflow】\n" +
+                                     "1. [Choose mode]: Rooms, Spaces, or Areas.\n" +
+                                     "2. [Create and Place]: the tool deletes old same-type separation lines in the active view, redraws boundaries, and places elements.\n" +
+                                     "3. [Optimize Boundaries]: use this when existing boundary endpoints do not close cleanly.\n" +
+                                     "4. [Tagging]: after placement, use Revit's built-in tag-all-untagged command with your company tag families.\n\n" +
+                                     "【Notes】\n" +
+                                     "- The tool needs visible walls in the active view.\n" +
+                                     "- In workshared files, walls on worksets containing 精裝修 are temporarily excluded from room-bounding analysis.\n" +
+                                     "- Try it once in a copied view or test model to confirm the boundary logic.",
+                                     "【使用前の確認】\n" +
+                                     "1. このツールはGoogleログイン認証が必要です。未ログインの場合は自動でログイン案内が表示されます。\n" +
+                                     "2. 平面図、天井伏図、またはエリアプランに切り替えてください。\n" +
+                                     "3. エリアモードはエリアプランで実行してください。\n\n" +
+                                     "【主な用途】\n" +
+                                     "- 現在のビューから部屋分割線、スペース分割線、エリア境界線を自動作成します。\n" +
+                                     "- 部屋、スペース、エリアを自動配置します。\n" +
+                                     "- 既存境界線の端点をトリム、接続して閉合しやすくします。\n\n" +
+                                     "【基本手順】\n" +
+                                     "1. [モード選択]：部屋、スペース、エリアを選びます。\n" +
+                                     "2. [作成して配置]：同じ種類の既存分割線を削除し、境界を再作成して要素を配置します。\n" +
+                                     "3. [既存境界を最適化]：端点が閉じていない境界線の修正に使います。\n" +
+                                     "4. [タグ配置]：作成後はRevit標準の未タグ要素をすべてタグ付けを使ってタグを配置してください。\n\n" +
+                                     "【注意】\n" +
+                                     "- 現在のビューに壁が表示されている必要があります。\n" +
+                                     "- ワークセット名に「精裝修」を含む壁は解析時に一時的に除外されます。\n" +
+                                     "- 最初は複製ビューまたはテストモデルで結果を確認してください。");
         }
 
         private void AddTranslation(string key, string zh, string en, string ja)

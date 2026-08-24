@@ -601,6 +601,17 @@ namespace DevelopmentTools
                 viewCreateBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_QuickView"];
                 sheetPanel.AddItem(viewCreateBtn);
 
+                PushButtonData fastDependentViewsBtn = new PushButtonData(
+                    "FastDependentViews", LanguageManager.Instance["Ribbon_Btn_FastDependentViews"],
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_FastDependentViews");
+                fastDependentViewsBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_FastDependentViews"];
+                fastDependentViewsBtn.LongDescription = "【快速建立從屬視圖】\n\n" +
+                                                        "■ 依目前作用中視圖批次建立從屬視圖。\n" +
+                                                        "■ 可依房間、空間或樓板邊界自動套用裁剪範圍。\n" +
+                                                        "■ 支援命名樣板與批次勾選，適合大量分區出圖。";
+                fastDependentViewsBtn.LargeImage = CreateDynamicIcon("🧩", "#0078D4", "#FFFFFF");
+                sheetPanel.AddItem(fastDependentViewsBtn);
+
                 PushButtonData viewPlaceBtn = new PushButtonData(
                     "SheetViewPlacer", LanguageManager.Instance["Ribbon_Btn_SheetPlacer"],
                     assemblyPath, "DevelopmentTools.Commands.Cmd_SheetViewPlacer");
@@ -644,6 +655,28 @@ namespace DevelopmentTools
                 quickDimBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_QuickDim"];
                 tagPanel.AddItem(quickDimBtn);
 
+                PushButtonData autoBoundaryBtn = new PushButtonData(
+                    "AutoBoundary", LanguageManager.Instance["Ribbon_Btn_AutoBoundary"],
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_AutoBoundary");
+                autoBoundaryBtn.ToolTip = LanguageManager.Instance["Ribbon_TT_AutoBoundary"];
+                autoBoundaryBtn.LongDescription = "【自動邊界與標籤】\n\n" +
+                                                  "■ 依目前平面視圖牆體邊界建立房間、空間或區域分隔線。\n" +
+                                                  "■ 可優化既有邊界線端點，協助閉合分區。\n" +
+                                                  "■ 完成後可接續使用 Revit 內建標註工具放置標籤。";
+                autoBoundaryBtn.LargeImage = CreateDynamicIcon("🏷", "#111318", "#FFFFFF");
+                tagPanel.AddItem(autoBoundaryBtn);
+
+                PushButtonData recordAnnotationBtn = new PushButtonData(
+                    "RecordAnnotationLogic", "記錄標註邏輯",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_RecordViewAnnotations");
+                recordAnnotationBtn.ToolTip = "【記錄標註邏輯 - 快速指南】\n\n" +
+                                              "1. 切換至目標平面或天花板視圖。\n" +
+                                              "2. 點擊此按鈕，設定該視圖預期使用的自動標註邏輯（如柱中心標註、偏移量等）。\n" +
+                                              "3. 點擊「儲存」，設定會加密儲存於視圖中。\n" +
+                                              "4. 後續執行跨專案圖紙移轉時，系統會自動在目標視圖重做相同的標註。";
+                recordAnnotationBtn.LargeImage = CreateDynamicIcon("🏷", "#A6E3A1", "#1E1E2E");
+                tagPanel.AddItem(recordAnnotationBtn);
+
                 // Panel 7: AI 助手
                 RibbonPanel aiPanel = application.CreateRibbonPanel(tabName, LanguageManager.Instance["Ribbon_Panel_AI"]);
 
@@ -685,7 +718,18 @@ namespace DevelopmentTools
                 codeReviewPanel.AddItem(bcrProjectBtn);
                 codeReviewPanel.AddItem(bcrExportBtn);
 
+                // Panel 10: 鋼筋工具
+                RibbonPanel rebarPanel = application.CreateRibbonPanel(tabName, "DT｜鋼筋工具");
 
+                PushButtonData autoRebarBtn = new PushButtonData(
+                    "AutoRebar", "自動配置鋼筋",
+                    assemblyPath, "DevelopmentTools.Commands.Cmd_AutoRebar");
+                autoRebarBtn.ToolTip = "【自動配置鋼筋 - 快速指南】\n\n" +
+                                       "1. 點擊按鈕，會自動彈出鋼筋規格設定視窗。\n" +
+                                       "2. 選擇你要的頂筋、底筋、箍筋號數與間距。\n" +
+                                       "3. 在專案中點選混凝土樑或柱，系統將自動長出符合台灣 CNS 560 與耐震規範的 3D 鋼筋籠。";
+                autoRebarBtn.LargeImage = CreateDynamicIcon("⛓", "#E67E22", "#FFFFFF");
+                rebarPanel.AddItem(autoRebarBtn);
 
                 // 3. 註冊 DMU Updater
                 _updater = new TileUpdater(application.ActiveAddInId);
