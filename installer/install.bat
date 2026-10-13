@@ -8,6 +8,40 @@ echo ====================================================
 set TARGET_DIR=%LOCALAPPDATA%\DevelopmentTools
 set ADDIN_NAME=DevelopmentTools.addin
 
+echo 0. Validating extracted package...
+if not exist "DevelopmentTools.Addin.dll" (
+    echo.
+    echo [ERROR] Missing DevelopmentTools.Addin.dll.
+    echo Please right-click the ZIP file, choose "Extract All", then run install.bat from the extracted folder.
+    echo.
+    pause
+    exit /b 1
+)
+if not exist "DevelopmentTools.Updater.exe" (
+    echo.
+    echo [ERROR] Missing DevelopmentTools.Updater.exe.
+    echo Please extract the full ZIP package before running install.bat.
+    echo.
+    pause
+    exit /b 1
+)
+if not exist "Resources\RibbonIcons" (
+    echo.
+    echo [ERROR] Missing Resources folder.
+    echo Please extract the full ZIP package before running install.bat.
+    echo.
+    pause
+    exit /b 1
+)
+if not exist "Runtime\Worker\v0001\BEAI.QueryWorker.exe" (
+    echo.
+    echo [ERROR] Missing Runtime worker.
+    echo Please extract the full ZIP package before running install.bat.
+    echo.
+    pause
+    exit /b 1
+)
+
 echo 1. Creating target directories...
 if not exist "%TARGET_DIR%\App" mkdir "%TARGET_DIR%\App"
 if not exist "%TARGET_DIR%\Config" mkdir "%TARGET_DIR%\Config"
@@ -27,6 +61,13 @@ xcopy /Y /E /Q "Resources\RibbonIcons\*" "%TARGET_DIR%\App\Resources\RibbonIcons
 xcopy /Y /E /Q "Resources\Templates\*" "%TARGET_DIR%\App\Resources\Templates\" >nul
 if exist "Rules" (
     xcopy /Y /E /Q "Rules\*" "%TARGET_DIR%\App\Rules\" >nul
+)
+if exist "Config" (
+    if not exist "%TARGET_DIR%\App\Config" mkdir "%TARGET_DIR%\App\Config"
+    xcopy /Y /E /Q "Config\*" "%TARGET_DIR%\App\Config\" >nul
+)
+if exist "Runtime" (
+    xcopy /Y /E /Q "Runtime\*" "%TARGET_DIR%\App\Runtime\" >nul
 )
 
 echo   Cleaning conflicting system DLLs from App folder...
@@ -79,11 +120,11 @@ for %%V in (2024 2025 2026) do (
         if exist "%REVIT_ADDINS_BASE%\%%V\RoomTileSystem.addin" (
             del /F "%REVIT_ADDINS_BASE%\%%V\RoomTileSystem.addin"
         )
-        
-        rem Clean legacy system-wide addin if exists to prevent double loading
-        if exist "C:\ProgramData\Autodesk\Revit\Addins\%%V\DevelopmentTools.addin" (
-            del /F "C:\ProgramData\Autodesk\Revit\Addins\%%V\DevelopmentTools.addin" >nul 2>nul
+        rem BEAI is embedded in Development Tools; remove the old standalone registration.
+        if exist "%REVIT_ADDINS_BASE%\%%V\BEAI.QueryHost.addin" (
+            del /F "%REVIT_ADDINS_BASE%\%%V\BEAI.QueryHost.addin"
         )
+        
     )
 )
 

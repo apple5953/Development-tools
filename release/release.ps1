@@ -3,7 +3,8 @@ param(
     [string]$Version,
     [string]$Channel = "stable",
     [string]$Owner = "apple5953",
-    [string]$Repo = "Development-tools"
+    [string]$Repo = "Development-tools",
+    [switch]$NoPublish
 )
 
 $ErrorActionPreference = "Stop"
@@ -80,6 +81,12 @@ Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\TileJointS
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\platform_config.json") -Destination $zipTempDir
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\appsettings.json") -Destination $zipTempDir -ErrorAction SilentlyContinue
 
+# Copy optional client configuration files. Keep the folder shape because runtime
+# and future bridge features may look for configuration below Config.
+if (Test-Path (Join-Path $parentRoot "DevelopmentTools.Addin\Config")) {
+    Copy-Item -Path (Join-Path $parentRoot "DevelopmentTools.Addin\Config") -Destination $zipTempDir -Recurse
+}
+
 # Copy all dependent DLLs from the Addin build (excluding the un-obfuscated main DLL)
 Copy-Item -Path (Join-Path $releaseDir "*.dll") -Destination $zipTempDir -Exclude "DevelopmentTools.Addin.dll"
 
@@ -95,6 +102,11 @@ Copy-Item -Path (Join-Path $parentRoot "DevelopmentTools.Addin\Resources") -Dest
 # Copy Rules folder to ZIP
 if (Test-Path (Join-Path $parentRoot "DevelopmentTools.Addin\Rules")) {
     Copy-Item -Path (Join-Path $parentRoot "DevelopmentTools.Addin\Rules") -Destination $zipTempDir -Recurse
+}
+
+# Copy the embedded read-only model query runtime.
+if (Test-Path (Join-Path $releaseDir "Runtime")) {
+    Copy-Item -Path (Join-Path $releaseDir "Runtime") -Destination $zipTempDir -Recurse
 }
 
 # Copy install.bat to ZIP
@@ -156,21 +168,25 @@ if (Get-Command ISCC.exe -ErrorAction SilentlyContinue) {
 }
 
 # 7. Push release changes to Git
-Write-Host "[RTS] Committing and pushing tag to GitHub..."
-git add (Join-Path $parentRoot "update_manifest.json")
-git commit -m "release: v$Version remote update manifest"
-git push
-
-git tag "v$Version"
-git push origin "v$Version"
-
-# 8. Create GitHub Release using gh CLI
-if (Get-Command gh -ErrorAction SilentlyContinue) {
-    Write-Host "[RTS] Creating GitHub Release using gh CLI..."
-    $exePath = Join-Path $distDir "DevelopmentTools_Setup.exe"
-    gh release create "v$Version" $zipPath $exePath --title "v$Version" --notes "Auto release v$Version"
+if ($NoPublish) {
+    Write-Host "[RTS] NoPublish mode: skipped git commit, tag, push, and GitHub Release creation."
 } else {
-    Write-Warning "gh CLI is not installed. Please upload the ZIP file manually to: https://github.com/$Owner/$Repo/releases/tag/v$Version"
+    Write-Host "[RTS] Committing and pushing tag to GitHub..."
+    git add (Join-Path $parentRoot "update_manifest.json")
+    git commit -m "release: v$Version remote update manifest"
+    git push
+
+    git tag "v$Version"
+    git push origin "v$Version"
+
+    # 8. Create GitHub Release using gh CLI
+    if (Get-Command gh -ErrorAction SilentlyContinue) {
+        Write-Host "[RTS] Creating GitHub Release using gh CLI..."
+        $exePath = Join-Path $distDir "DevelopmentTools_Setup.exe"
+        gh release create "v$Version" $zipPath $exePath --title "v$Version" --notes "Auto release v$Version"
+    } else {
+        Write-Warning "gh CLI is not installed. Please upload the ZIP file manually to: https://github.com/$Owner/$Repo/releases/tag/v$Version"
+    }
 }
 
 Write-Host "[RTS] Release process successfully completed!"
