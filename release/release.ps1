@@ -88,12 +88,16 @@ if (Test-Path (Join-Path $parentRoot "DevelopmentTools.Addin\Config")) {
 
 # Copy all dependent DLLs from the Addin build (excluding the un-obfuscated main DLL)
 # Own DLLs (main add-in + built-in modules) always come from the Obfuscated folder
-$ownDlls = @("DevelopmentTools.Addin.dll", "RevitPerspectiveMinimap.Core.dll", "OpeningDetailCore.dll", "BIMDrawingFactory.UI.dll", "DevelopmentTools.ProjectStandards.dll")
+$ownedDllListPath = Join-Path $parentRoot "DevelopmentTools.Addin\obj\Release\module-platform\owned-dlls.json"
+if (-not (Test-Path $ownedDllListPath)) { throw "Owned DLL inventory not found: $ownedDllListPath" }
+$ownDlls = @(Get-Content -LiteralPath $ownedDllListPath -Raw | ConvertFrom-Json)
 foreach ($d in $ownDlls) {
     $obf = Join-Path $releaseDir "Obfuscated\$d"
     if (-not (Test-Path $obf)) { throw "Obfuscated DLL not found: $obf" }
 }
-Copy-Item -Path (Join-Path $releaseDir "Obfuscated\*.dll") -Destination $zipTempDir -Force
+foreach ($d in $ownDlls) {
+    Copy-Item -LiteralPath (Join-Path $releaseDir "Obfuscated\$d") -Destination $zipTempDir -Force
+}
 Copy-Item -Path (Join-Path $releaseDir "*.dll") -Destination $zipTempDir -Exclude $ownDlls
 
 # Copy Updater and all dependency DLLs into ZIP so it acts as both AutoUpdate package and Portable Green package

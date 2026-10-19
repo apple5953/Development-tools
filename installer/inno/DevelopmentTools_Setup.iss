@@ -1,3 +1,5 @@
+#include "..\..\DevelopmentTools.Addin\obj\Release\module-platform\owned-dlls.iss"
+
 [Setup]
 AppName=Room Tile System v3
 AppVersion=3.2.7
@@ -19,11 +21,11 @@ Name: "{app}\Modules"
 
 [Files]
 ; 複製主程式與依賴 DLL
-Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\Obfuscated\*.dll"; DestDir: "{app}\App"; Flags: ignoreversion
+#include "..\..\DevelopmentTools.Addin\obj\Release\module-platform\owned-files.iss"
 Source: "..\..\DevelopmentTools.Addin\TileJointSharedParam.txt"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\version.json"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Addin\platform_config.json"; DestDir: "{app}\App"; Flags: ignoreversion
-Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\*.dll"; DestDir: "{app}\App"; Excludes: "DevelopmentTools.Addin.dll,RevitPerspectiveMinimap.Core.dll,OpeningDetailCore.dll,BIMDrawingFactory.UI.dll,DevelopmentTools.ProjectStandards.dll"; Flags: ignoreversion
+Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\*.dll"; DestDir: "{app}\App"; Excludes: "{#OwnedDllExcludes}"; Flags: ignoreversion
 ; 複製設定檔 (若使用者原本已有則不覆蓋)
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\appsettings.json"; DestDir: "{app}\Config"; Flags: onlyifdoesntexist
 ; 複製 Resources 資料夾

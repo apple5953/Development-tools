@@ -1,0 +1,35 @@
+# Revit 2024 本機測試紀錄與操作
+
+測試日期：2026-10-19。測試分支：`codex/module-platform`。這是 Debug 候選版，不是正式 Release。
+
+## 已完成的自動檢查
+
+- 已使用本機 Revit 2024 API 與官方 net48 參考組件建置整個 `DevelopmentTools.sln`：0 錯誤、293 警告。
+- 警告包含既有 `System.Text.Json` 8.0.3 的 NuGet 安全性警示；本次尚未升級該相依套件。
+- 已建置獨立 `host-poc`：0 錯誤、0 警告。
+- `module-platform` 的 5 項驗證器測試通過；範例模組描述檔驗證通過。
+- Debug 輸出含 `DevelopmentTools.Addin.dll`、`ExampleAgent.dll`、原有四個模組 DLL、`BEAI.QueryHost.dll`、Resources 與 Runtime Worker。
+- 已測試 Revit `.addin` 清單切換及還原，再切回測試版；正式 `%LOCALAPPDATA%\DevelopmentTools\App` 未覆寫。
+
+## 目前本機載入狀態
+
+使用者已回報在 Revit 2024 測試數個功能正常，未提供逐項按鈕或授權結果。測試後已執行
+`stop-test.ps1`，`.addin` 清單已還原為原本 D: 工作區的 Debug DLL，Revit 已關閉。
+
+## 手動驗收步驟
+
+1. 開啟 Revit 2024，使用**測試模型或模型副本**。確認沒有外掛載入失敗訊息，且 RTS 頁籤與原有分類仍在。
+2. 在「檢討與管理」尋找「範例模組」。確認原有按鈕名稱、順序及 BIM MCP 入口仍在。
+3. 點「範例模組」。未授權時應先走原授權流程，且不能執行命令。若授權後端已核准 `DT_ExampleAgent`，應出現 `Template command is installed.` 對話框。未核准此 ToolId 時，命令成功路徑**無法驗收**；不要改動正式憑證來略過授權。
+4. 測試一個已知可用的原有命令及原有 BEAI 唯讀查詢，確認未受新模組影響。模型修改類命令只在測試模型執行。
+5. 關閉 Revit。執行 `& .\module-platform\local-test\stop-test.ps1` 還原原載入清單。再次開啟 Revit，確認原版本正常載入。
+
+若須重新開始測試，先關閉 Revit 並還原，再執行 `& .\module-platform\local-test\start-test.ps1`。
+
+## 尚未通過或未執行
+
+- 使用者回報數個 Revit 功能正常；具體按鈕、範例模組授權成功路徑及完整既有功能回歸未留有逐項證據。
+- Release 解決方案建置成功（0 錯誤、294 警告）。`-NoPublish` 候選 ZIP 中六個自有 DLL 各出現一次，SHA256 均與混淆輸出一致；Inno 安裝程式編譯成功並包含 ExampleAgent.dll。
+- Updater 真正升級及失敗後整包回退尚未實際測試。`-NoPublish` 未推送、標記或建立正式 Release；其生成的 `update_manifest.json` 已還原。
+- Revit 2025／2026 未驗證。
+- 候選分支以遠端 `main` 為基礎；本機原工作區及已安裝 3.2.6 可能含未提交修改。此候選版的舊功能與已安裝版不能直接視為完全相同。

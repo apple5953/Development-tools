@@ -1,0 +1,29 @@
+name: Module manifest check
+
+on:
+  pull_request:
+    paths:
+      - 'DevelopmentTools.Modules/**'
+      - 'module-platform/**'
+      - 'DevelopmentTools.Addin/GeneratedModules/**'
+      - 'DevelopmentTools.Addin/Core/RibbonCatalog.cs'
+      - '.github/workflows/module-manifest.yml'
+
+permissions: {}
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate module metadata
+        run: python module-platform/validate.py
+      - name: Run validator tests
+        run: python -m unittest discover -s module-platform -p 'test_*.py' -v
+      - name: Generate registration from submitted folders
+        run: python module-platform/generate.py
