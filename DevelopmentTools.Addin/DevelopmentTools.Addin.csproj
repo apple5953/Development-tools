@@ -37,11 +37,15 @@
   <ItemGroup>
     <ProjectReference Include="..\BEAI\RealityBridge\BEAI.QueryHost\BEAI.QueryHost.csproj" />
     <!-- 內建功能模組 -->
-    <ProjectReference Include="..\DevelopmentTools.Modules\PerspectiveMinimap\RevitPerspectiveMinimap.Core.csproj" />
-    <ProjectReference Include="..\DevelopmentTools.Modules\OpeningDetail\OpeningDetailCore.csproj" />
-    <ProjectReference Include="..\DevelopmentTools.Modules\DrawingFactory\BIMDrawingFactory.UI.csproj" />
-    <ProjectReference Include="..\DevelopmentTools.Modules\ProjectStandards\DevelopmentTools.ProjectStandards.csproj" />
+    <ProjectReference Include="..\DevelopmentTools.Modules\*\*.csproj" />
   </ItemGroup>
+
+  <Target Name="ValidateModuleManifests" BeforeTargets="ResolveProjectReferences">
+    <Exec Command="python &quot;$(MSBuildProjectDirectory)\..\module-platform\validate.py&quot;" />
+  </Target>
+  <Target Name="GenerateModuleRegistration" BeforeTargets="CoreCompile" DependsOnTargets="ValidateModuleManifests">
+    <Exec Command="python &quot;$(MSBuildProjectDirectory)\..\module-platform\generate.py&quot;" />
+  </Target>
 
 
   <ItemGroup>

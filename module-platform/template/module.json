@@ -1,0 +1,13 @@
+{
+  "id": "example-agent",
+  "version": "0.1.0",
+  "hostVersion": "3.0.0",
+  "RevitVersion": ["2024"],
+  "assembly": "ExampleAgent.dll",
+  "entryClass": "ExampleAgent.Commands.OpenCommand",
+  "ToolId": "DT_ExampleAgent",
+  "Ribbon": {"name": "ExampleAgent", "text": "範例模組", "category": "review"},
+  "permissions": ["ribbon-command"],
+  "dependencies": [],
+  "tests": ["Revit 2024 button, authorization, command and rollback acceptance"]
+}

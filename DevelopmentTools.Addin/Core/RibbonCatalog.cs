@@ -17,7 +17,7 @@ namespace DevelopmentTools.Core
     ///   3. 同一功能只放一個入口；新舊版並存時，舊版命令保留在程式中但不上 Ribbon。
     ///   4. 每個按鈕獨立建立，一個失敗不影響其他按鈕。
     /// </summary>
-    internal static class RibbonCatalog
+    internal static partial class RibbonCatalog
     {
         // ───── 頁籤（只有一個；Id 即顯示名稱，切換語言時以 Key 更新標題） ─────
         public const string TabMain = "RTS";
@@ -71,7 +71,7 @@ namespace DevelopmentTools.Core
         /// </summary>
         public static List<PanelDef> Layout()
         {
-            return new List<PanelDef>
+            var panels = new List<PanelDef>
             {
                 Panel(TabMain, "Ribbon_Panel_Main", "RTS 工具",
                     // ═════════════ 出圖：開圖 ─ 圖紙 ─ 標註 ─ Word 文件 ═════════════
@@ -152,6 +152,8 @@ namespace DevelopmentTools.Core
                         Mcp("McpOperationsPane", "Ui.ShowOperationsPaneCommand", "操作窗格", "📋", "#1A5276", "開啟操作窗格：佇列、已套用的動作與變更內容。"),
                         Mcp("McpAdvanced", "AdvancedOptionsCommand", "進階選項", "⚙", "#7F8C8D", "BIM MCP 進階選項。")))),
             };
+            AddGeneratedModules(panels);
+            return panels;
         }
 
         // ───── 外部外掛：BIM MCP ─────
