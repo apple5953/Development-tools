@@ -1,6 +1,6 @@
 # DevelopmentTools.Modules
 
-主外掛（DevelopmentTools.Addin / Room Tile System v3）內建的功能模組。每個模組是一個獨立的 net48 類別庫，由主外掛以 `ProjectReference` 引用，建置時 DLL 會自動複製到主外掛輸出資料夾，`release.ps1` 與 Inno Setup 已用 `*.dll` 打包，不需另外設定。
+主外掛（DevelopmentTools.Addin / Room Tile System v3）內建的功能模組。既有四個模組保留原有整合；新模組使用 `module.json`、自動 ProjectReference 與產生的授權 Ribbon 包裝命令。請先讀 [Agent 模組開發與交付手冊](../docs/AGENT_MODULE_DEVELOPER_GUIDE.zh-TW.md)。Release ZIP 與 Inno 安裝程式使用經驗證的自有 DLL 清單，並非任意收進資料夾中的 DLL。
 
 | 資料夾 | 組件 | Ribbon 位置 | 授權 ToolId | 來源 |
 |---|---|---|---|---|
@@ -12,9 +12,9 @@
 
 ## 運作方式
 
-- Ribbon 按鈕都指向主外掛裡的包裝命令（`DevelopmentTools.Addin/Commands/Cmd_IntegratedModules.cs`），先跑 `CommandAccessGuard.EnsureAuthorized`，通過後才呼叫模組原本的命令。
+- 既有四個模組的 Ribbon 按鈕指向 `DevelopmentTools.Addin/Commands/Cmd_IntegratedModules.cs`；新模組則由 `module-platform/generate.py` 產生包裝命令。兩者都先走 `CommandAccessGuard.EnsureAuthorized`。
 - 共用設定（net48、WPF、Revit 2024 API 參考）在 `Directory.Build.props`。
-- Release 建置時主外掛與 4 個模組 DLL 都經 Obfuscar 混淆（`DevelopmentTools.Addin/obfuscar.xml`）。模組保留型別、屬性、事件與列舉名稱（WPF 繫結與存檔依名稱運作），私有方法與欄位改名、字串加密。`release.ps1` 與安裝程式只打包 `Obfuscated\` 裡的版本。
+- Release 建置時主外掛、四個既有模組與經審核的新模組 DLL 都經 Obfuscar 混淆。`module-platform/prepare_release.py` 從描述檔產生自有 DLL 清單，供混淆、ZIP 與安裝程式使用。新模組的其他資源及第三方相依仍需逐項核對。
 
 ## 從原始版本改了什麼
 
@@ -47,4 +47,4 @@
 - 量化開圖的圖號換算假設「系列-序號」格式（例如 `S5-01` → `S6-01`）；樓層寫在圖號中段的格式（例如 `A-101` → `A-201`）尚未支援。
 - 樓層代碼解析與部分判斷依台灣常用圖名用語（`1FL`、`B1F`、`RF`、「見上軀體圖」「索引圖」「柱牆圖」等）。
 - 讀取 Revit 失敗時，量化開圖部分畫面會退回範例資料（已改為中性名稱），應視為錯誤狀態。
-- 尚未在 Revit 2024 實際建置與測試。
+- 新模組試點已有本機 Revit 2024 部分功能回報正常；具體逐項驗收、Updater 實際升級及失敗回退仍未完成，詳見 `docs/LOCAL_REVIT_2024_TEST.md`。

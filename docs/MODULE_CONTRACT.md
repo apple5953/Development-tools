@@ -1,5 +1,7 @@
 # BEAI Module Contract v0.1
 
+新模組的實際建置與提交流程，請先讀 [Agent 模組開發與交付手冊](AGENT_MODULE_DEVELOPER_GUIDE.zh-TW.md)。下列清單亦涵蓋需要另行審查的核心相容性變更；一般新模組不需人工修改 App.cs、RibbonCatalog.cs 或主專案引用。
+
 This is an integration checklist, not a claim that all existing modules already satisfy a common runtime plugin interface. Do not invent or insert a new loader.
 
 ## Per-task boundaries
@@ -10,8 +12,8 @@ Each issue/PR must document: module name; owner; feature branch; purpose; direct
 2. Prefer a separate `DevelopmentTools.Modules/<PascalCaseName>/` SDK-style .NET Framework 4.8 class library, with a distinct namespace.
 3. Reuse common props and existing dependencies where compatible; do not duplicate Revit Bridge, authentication, ribbon bootstrap, or update subsystem.
 4. Prepare a module README defining contracts, exposed command classes, permissions and manual Revit acceptance steps.
-5. If a ribbon entry is required, propose an intentionally small integration change to the central wrapper and App.cs, with owner approval, and use `CommandAccessGuard.EnsureAuthorized` (or the approved equivalent) before execution. Do not bypass Google Sheets/Apps Script authorization.
-6. Propose a unique ToolId following `DT_<ModuleName>`. Check the entire repo for collisions. Keep an explicit mapping to ribbon display name and authorization registration/config, subject to owner approval.
+5. For a new template module, provide `module.json`; the build generates the Ribbon wrapper, which calls `CommandAccessGuard.EnsureAuthorized` before the module command. Core changes outside this path require separate maintainer review. Do not bypass Google Sheets/Apps Script authorization.
+6. Propose a unique ToolId following `DT_<ModuleName>`. Check the entire repo for collisions and include it in `module.json` and the PR. Authorization registration/config is subject to owner approval.
 7. Any Revit API work triggered by modeless UI or external requests must reach the Revit UI thread through the approved ExternalEvent pattern. Respect Transaction rules and the read-only RealityBridge v0.1 boundary.
 8. Keep computation independent of Revit API where feasible to allow unit tests without Revit.
 9. UI/WPF and mixed-mode constraints must match existing net48 modules. Avoid writing machine-specific paths or secrets.
@@ -34,7 +36,7 @@ tests:
   live_revit: manual signoff required
 ```
 
-This YAML is a **documentation example**, not a runtime manifest supported by the current add-in.
+This YAML is a **documentation example**, not the runtime manifest. The supported manifest is `module.json` under the new module folder.
 
 ## Protected interfaces
 Do not change `App.cs`, solution/project references, `BEAI/RealityBridge`, licensing, updater, installer, or release tooling as an incidental edit. Propose such changes explicitly and isolate them for maintainer review. Preserve existing settings/contracts/data formats and release rollback compatibility.
