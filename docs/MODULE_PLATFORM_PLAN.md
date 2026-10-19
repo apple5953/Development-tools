@@ -79,5 +79,25 @@ module-only rollback must remove newly added files as well.
 - UNVERIFIED: Revit 2025 and 2026.
 - BLOCKED: PR workflow on a shared self-hosted Revit runner was rejected by
   automatic approval review due to untrusted PR code execution and artifact
-  exposure. Use an isolated runner with no production credentials before adding
-  it. No workflow was added in this branch.
+  exposure. A separate credential-free GitHub-hosted workflow now checks only
+  manifests and generated registration; it never builds or runs a module DLL.
+  Use an isolated Windows runner with no production credentials before adding
+  the Revit build and candidate artifact job.
+
+## Proposed release packaging change for separate approval
+
+The current Release build uses absolute paths in `obfuscar.xml`, and
+`release.ps1` and Inno Setup each enumerate the four original owned DLLs.
+To package colleague modules without editing these files per module, generate
+a portable Obfuscar configuration and owned-DLL inventory after manifest
+validation. Release builds must require every owned DLL to appear in the
+obfuscated output. Both ZIP and installer must use the same inventory to
+exclude raw owned DLLs and include their obfuscated counterparts. In a dry run,
+compare the package file list against the existing four-module package plus
+the approved pilot. Preserve the previous full ZIP for rollback. Do not alter
+`update_manifest.json`, push tags, or create a GitHub Release in the candidate
+path. Revert the packaging script changes and restore the previous ZIP if the
+Revit 2024 smoke test or rollback check fails.
+
+The automatic approval review rejected a direct change to formal release and
+installer inclusion/exclusion logic pending separate approval of this plan.

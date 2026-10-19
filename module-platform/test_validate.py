@@ -2,8 +2,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from validate import validate_one
+from validate import manifest_paths, validate_one
 
 TEMPLATE = Path(__file__).parent / "template"
 
@@ -38,6 +39,11 @@ class ModuleValidationTests(unittest.TestCase):
         self.data["hostVersion"] = "99.0.0"
         with self.assertRaisesRegex(ValueError, "requires host"):
             self.check()
+
+    def test_new_project_without_manifest_rejected(self):
+        with patch("validate.MODULES", Path(self.tmp.name)):
+            with self.assertRaisesRegex(ValueError, "requires module.json"):
+                manifest_paths()
 
 if __name__ == "__main__":
     unittest.main()

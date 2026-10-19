@@ -9,9 +9,21 @@ from xml.etree import ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = ROOT / "DevelopmentTools.Modules"
 SCHEMA = json.loads((Path(__file__).parent / "module.schema.json").read_text(encoding="utf-8"))
-RESERVED_NAMES = set(re.findall(r'Btn\("([A-Za-z0-9_]+)"|Mcp\("([A-Za-z0-9_]+)"', (ROOT / "DevelopmentTools.Addin/Core/RibbonCatalog.cs").read_text(encoding="utf-8")))
+RESERVED_NAMES = set(re.findall(r'(?:Btn|Mcp|Menu)\("([A-Za-z0-9_]+)"|Name\s*=\s*"([A-Za-z0-9_]+)"', (ROOT / "DevelopmentTools.Addin/Core/RibbonCatalog.cs").read_text(encoding="utf-8")))
 RESERVED_NAMES = {name for pair in RESERVED_NAMES for name in pair if name}
-RESERVED_TOOLS = set(re.findall(r'Run\("(DT_[A-Za-z0-9_]+)"', (ROOT / "DevelopmentTools.Addin/Commands/Cmd_IntegratedModules.cs").read_text(encoding="utf-8")))
+RESERVED_TOOLS = set()
+for source in (ROOT / "DevelopmentTools.Addin").rglob("*.cs"):
+    if "GeneratedModules" not in source.parts:
+        RESERVED_TOOLS.update(re.findall(r'"(DT_[A-Za-z0-9_]+)"', source.read_text(encoding="utf-8-sig", errors="replace")))
+
+LEGACY_MODULES = {"PerspectiveMinimap", "OpeningDetail", "DrawingFactory", "ProjectStandards"}
+
+def manifest_paths():
+    paths = sorted(MODULES.glob("*/module.json"))
+    for project in MODULES.glob("*/*.csproj"):
+        if project.parent.name not in LEGACY_MODULES and not (project.parent / "module.json").is_file():
+            raise ValueError(f"{project}: new module project requires module.json")
+    return paths
 
 def validate_one(path):
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -62,7 +74,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=Path, help="validate one template or module manifest")
     args = parser.parse_args()
-    paths = [args.manifest] if args.manifest else sorted(MODULES.glob("*/module.json"))
+    paths = [args.manifest] if args.manifest else manifest_paths()
     seen_ids, seen_names, seen_tools = set(), set(), set()
     modules = []
     for path in paths:

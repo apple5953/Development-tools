@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 
-from validate import MODULES, ROOT, validate_one
+from validate import ROOT, manifest_paths, validate_one
 
 OUT = ROOT / "DevelopmentTools.Addin/GeneratedModules"
 
@@ -12,7 +12,7 @@ def cs(value):
 
 def generate():
     manifests = []
-    for path in sorted(MODULES.glob("*/module.json")):
+    for path in manifest_paths():
         data, project = validate_one(path)
         manifests.append((data, project))
     ids = {data["id"] for data, _ in manifests}
