@@ -1,0 +1,71 @@
+name: BEAI PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy-static:
+    name: Policy and static checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check patch whitespace and conflict markers
+        shell: bash
+        run: |
+          git diff --check
+          if git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' -- '*.cs' '*.md' '*.json' '*.yml' '*.yaml'; then
+            echo "Unresolved merge conflict markers detected."
+            exit 1
+          fi
+      - name: Validate JSON files
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, subprocess, pathlib, sys
+          paths=subprocess.check_output(['git','ls-files','-z','--','*.json']).decode().split('\0')
+          failures=[]
+          for p in filter(None,paths):
+              try:
+                  with open(p,encoding='utf-8-sig') as f: json.load(f)
+              except Exception as e: failures.append(f'{p}: {e}')
+          if failures: print('\n'.join(failures)); sys.exit(1)
+          print(f'JSON parse PASS: {len(list(filter(None,paths)))} files')
+          PY
+      - name: Assert shared governance docs exist
+        shell: bash
+        run: |
+          for f in AGENTS.md CLAUDE.md docs/CONTRIBUTING.md docs/ARCHITECTURE.md docs/MODULE_CONTRACT.md docs/TEAM_AI_PLAYBOOK.md; do
+            test -s "$f" || { echo "Missing/empty: $f"; exit 1; }
+          done
+      - name: Core-change disclosure
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          python3 - <<'PY'
+          import os,subprocess,sys
+          base=os.environ['BASE_SHA']; head=os.environ['HEAD_SHA']
+          files=subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines()
+          protected=('DevelopmentTools.Addin/App.cs','DevelopmentTools.Addin/DevelopmentTools.Addin.csproj','DevelopmentTools.Addin/Core/','DevelopmentTools.Addin/Commands/Cmd_IntegratedModules.cs','DevelopmentTools.Modules/Directory.Build.props','DevelopmentTools.sln','BEAI/','DevelopmentTools.Updater/','release/','installer/','AGENTS.md','CLAUDE.md','.github/')
+          changed=[p for p in files if any(p==prefix or p.startswith(prefix) for prefix in protected)]
+          if changed:
+              print('Protected changes (require maintainer review):\n'+'\n'.join(changed))
+              body=os.environ.get('PR_BODY','')
+              if '核心變更已揭露' not in body:
+                  print('Add phrase 核心變更已揭露 and a rationale/rollback in the PR body.')
+                  sys.exit(1)
+          print('Core disclosure check PASS')
+          PY
+      - name: Explain unverified Revit scope
+        run: |
+          echo "Static policy check only; no .NET Framework 4.8 build or Revit live testing executed."
