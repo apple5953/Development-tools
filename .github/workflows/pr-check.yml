@@ -15,10 +15,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Check patch whitespace and conflict markers
         shell: bash
         run: |
-          git diff --check
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
+          else
+            git diff --check
+          fi
           if git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' -- '*.cs' '*.md' '*.json' '*.yml' '*.yaml'; then
             echo "Unresolved merge conflict markers detected."
             exit 1
@@ -51,7 +57,6 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
           python3 - <<'PY'
           import os,subprocess,sys
           base=os.environ['BASE_SHA']; head=os.environ['HEAD_SHA']
