@@ -1,0 +1,102 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Views.SetupWizardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:controls="clr-namespace:BIMDrawingFactory.UI.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="900">
+    <Grid Margin="32">
+        <Border Style="{StaticResource StandardCardStyle}" Padding="32" MaxWidth="700" VerticalAlignment="Center">
+            <StackPanel>
+                <!-- Title & Welcome -->
+                <TextBlock Text="歡迎使用 BIM Drawing Factory"
+                           FontSize="{StaticResource FontSizeHeadline}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="0,0,0,8"/>
+
+                <TextBlock Text="這個工具可以根據已完成的標準圖說，批次建立其他樓層圖紙。完成一次專案設定後，日常出圖僅需選擇『棟別 + 樓層』。"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,24"/>
+
+                <!-- Step Progress -->
+                <TextBlock Text="{Binding StepTitle}"
+                           FontSize="{StaticResource FontSizeSubhead}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource PrimaryAccentBrush}"
+                           Margin="0,0,0,10"/>
+
+                <ProgressBar Height="8"
+                             Value="{Binding CurrentStep}"
+                             Maximum="{Binding TotalSteps}"
+                             Background="{StaticResource SurfaceSubtleBrush}"
+                             Foreground="{StaticResource PrimaryAccentBrush}"
+                             BorderThickness="0"
+                             Margin="0,0,0,24"/>
+
+                <!-- Step Content Card -->
+                <Border Background="{StaticResource SurfaceSubtleBrush}"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        Padding="20"
+                        MinHeight="180"
+                        Margin="0,0,0,24">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="系統正在檢查專案既有圖說結構..."
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   Margin="0,0,0,8"/>
+                        
+                        <TextBlock Text="已自動辨識標準圖組：S5 (A棟 1FL 基準圖說)"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,0,0,4"/>
+
+                        <TextBlock Text="已自動辨識目標棟別：A棟 (11 Floors)、B棟 (11 Floors)"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Navigation Buttons -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0"
+                            Style="{StaticResource GhostButtonStyle}"
+                            Command="{Binding CancelWizardCommand}"
+                            Content="取消"/>
+
+                    <Button Grid.Column="2"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding PreviousStepCommand}"
+                            IsEnabled="{Binding CanGoPrevious}"
+                            Content="&lt; 上一步"
+                            Margin="0,0,12,0"/>
+
+                    <Button Grid.Column="3"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding NextStepCommand}"
+                            Visibility="{Binding IsLastStep, Converter={x:Static controls:VisibilityConverters.InverseBoolToVisibilityConverter}}"
+                            Content="下一步 >"
+                            MinWidth="120"/>
+
+                    <Button Grid.Column="3"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding FinishWizardCommand}"
+                            Visibility="{Binding IsLastStep, Converter={x:Static controls:VisibilityConverters.BoolToVisibilityConverter}}"
+                            Content="完成專案設定"
+                            MinWidth="140"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

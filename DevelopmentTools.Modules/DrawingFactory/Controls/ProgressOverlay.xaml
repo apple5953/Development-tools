@@ -1,0 +1,86 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Controls.ProgressOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="500" d:DesignWidth="800">
+    <Grid Background="#7F000000">
+        <Border Style="{StaticResource StandardCardStyle}"
+                Background="{StaticResource SurfaceBackgroundBrush}"
+                CornerRadius="{StaticResource RadiusLarge}"
+                Width="480"
+                Padding="28"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <StackPanel HorizontalAlignment="Center" Width="420">
+                
+                <!-- Main Header -->
+                <TextBlock Text="正在批次建立圖紙"
+                           FontSize="{StaticResource FontSizeHeadline}"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="0,0,0,8"/>
+
+                <!-- Progress Counter (e.g. 8 / 13) -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
+                    <TextBlock Text="{Binding Progress.CurrentIndex, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Mode=OneWay}"
+                               FontSize="{StaticResource FontSizeHero}"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource PrimaryAccentBrush}"/>
+                    <TextBlock Text=" / "
+                               FontSize="{StaticResource FontSizeHeadline}"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Progress.TotalCount, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Mode=OneWay}"
+                               FontSize="{StaticResource FontSizeHeadline}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text=" 張"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               Margin="4,0,0,0"/>
+                </StackPanel>
+
+                <!-- Modern Fluent Progress Bar -->
+                <ProgressBar Height="10"
+                             Value="{Binding Progress.Percentage, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Mode=OneWay}"
+                             Maximum="100"
+                             Background="{StaticResource SurfaceSubtleBrush}"
+                             Foreground="{StaticResource PrimaryAccentBrush}"
+                             BorderThickness="0"
+                             Margin="0,0,0,16"/>
+
+                <!-- Current Item Processing -->
+                <Border Background="{StaticResource SurfaceSubtleBrush}"
+                        CornerRadius="{StaticResource RadiusSmall}"
+                        Padding="12,10"
+                        Margin="0,0,0,20">
+                    <StackPanel>
+                        <TextBlock Text="正在處理："
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{StaticResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding Progress.CurrentItemName, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Mode=OneWay}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="0,2,0,4"/>
+                        <TextBlock Text="{Binding Progress.CurrentStepDescription, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Mode=OneWay}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{StaticResource PrimaryAccentBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Safe Stop Button -->
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding CancelCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                        Content="停止後續工作（目前安全步驟完成即停止）"
+                        HorizontalAlignment="Center"
+                        Padding="20,8"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

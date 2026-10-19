@@ -37,4 +37,24 @@
     <Type name="DevelopmentTools.Core.UpdateManifest" skip="true" />
     <Type name="DevelopmentTools.Core.PendingUpdateInfo" skip="true" />
   </Module>
+
+  <!-- 內建功能模組（DevelopmentTools.Modules）。
+       保留型別、屬性與事件名稱：WPF XAML 繫結、資源路徑（依型別名稱計算）、JSON 存檔都依名稱運作，改名會壞。
+       其餘私有方法、欄位改名，字串加密。 -->
+  <Module file="D:\Room Tile Local 3 System\DevelopmentTools.Addin\bin\Release\net48\RevitPerspectiveMinimap.Core.dll">
+    <SkipType name="*" skipProperties="true" skipEvents="true" />
+    <SkipEnums value="true" />
+  </Module>
+  <Module file="D:\Room Tile Local 3 System\DevelopmentTools.Addin\bin\Release\net48\OpeningDetailCore.dll">
+    <SkipType name="*" skipProperties="true" skipEvents="true" />
+    <SkipEnums value="true" />
+  </Module>
+  <Module file="D:\Room Tile Local 3 System\DevelopmentTools.Addin\bin\Release\net48\BIMDrawingFactory.UI.dll">
+    <SkipType name="*" skipProperties="true" skipEvents="true" />
+    <SkipEnums value="true" />
+  </Module>
+  <Module file="D:\Room Tile Local 3 System\DevelopmentTools.Addin\bin\Release\net48\DevelopmentTools.ProjectStandards.dll">
+    <SkipType name="*" skipProperties="true" skipEvents="true" />
+    <SkipEnums value="true" />
+  </Module>
 </Obfuscator>

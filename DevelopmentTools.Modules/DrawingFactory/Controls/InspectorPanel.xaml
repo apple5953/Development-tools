@@ -1,0 +1,132 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Controls.InspectorPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:controls="clr-namespace:BIMDrawingFactory.UI.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="320">
+    <Border Background="{StaticResource SurfaceBackgroundBrush}"
+            BorderBrush="{StaticResource BorderLightBrush}"
+            BorderThickness="1,0,0,0"
+            Padding="16">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <!-- Title & Close -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Text="詳細檢查資訊"
+                               FontSize="{StaticResource FontSizeSubhead}"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+
+                    <Button Grid.Column="1"
+                            Style="{StaticResource GhostButtonStyle}"
+                            Command="{Binding CloseInspectorCommand}"
+                            Padding="4">
+                        <Path Data="{StaticResource IconClose}"
+                              Fill="{StaticResource TextMutedBrush}"
+                              Width="12" Height="12"
+                              Stretch="Uniform"/>
+                    </Button>
+                </Grid>
+
+                <!-- Empty state if no item selected -->
+                <TextBlock Text="請在清單中選取任一圖紙以檢視詳細設定"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           Visibility="{Binding HasSelection, Converter={x:Static controls:VisibilityConverters.InverseBoolToVisibilityConverter}}"/>
+
+                <!-- Content when item is selected -->
+                <StackPanel Visibility="{Binding HasSelection, Converter={x:Static controls:VisibilityConverters.BoolToVisibilityConverter}}">
+                    
+                    <!-- Section 1: Sheet Information -->
+                    <Border Style="{StaticResource StandardCardStyle}" Background="{StaticResource SurfaceSubtleBrush}" Padding="12" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="圖紙 (Sheet)" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}" Margin="0,0,0,8"/>
+                            
+                            <TextBlock Text="圖號：" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding SelectedSheet.SheetNumber}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+
+                            <TextBlock Text="圖紙名稱：" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding SelectedSheet.SheetName}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+                            <TextBlock Text="基準圖框 → 目標圖框：" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding SelectedSheet.SourceTitleBlockName}" FontSize="10" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedSheet.ResolvedTitleBlockName, StringFormat='→ {0}'}" FontWeight="SemiBold" Foreground="{StaticResource PrimaryAccentBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Section 2: Complete per-sheet migration plan -->
+                    <Border Style="{StaticResource StandardCardStyle}" Background="{StaticResource SurfaceSubtleBrush}" Padding="12" Margin="0,0,0,12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Text="量化搬移計畫" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}"/>
+                                <TextBlock Text="{Binding SelectedSheet.PlannedViewsCountText, StringFormat='  ·  {0}'}" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding SelectedSheet.PlannedViews}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="White" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1"
+                                                CornerRadius="4" Padding="8" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                    <Border Background="{StaticResource PrimarySubtleBrush}" CornerRadius="3" Padding="5,1" Margin="0,0,6,0">
+                                                        <TextBlock Text="{Binding ViewType}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding TargetViewName}" FontWeight="Bold" TextWrapping="Wrap"/>
+                                                </StackPanel>
+
+                                                <TextBlock Text="{Binding ViewName, StringFormat='來源：{0}'}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                                <TextBlock Text="{Binding ViewDirectionDescription}" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource PrimaryAccentBrush}" FontWeight="Bold"/>
+                                                <TextBlock Text="{Binding ResolvedLevelName, StringFormat='目標樓層：{0}'}" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource PrimaryAccentBrush}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding ElevationSummary}" FontSize="{StaticResource FontSizeCaption}" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding ViewRangeSummary, StringFormat='View Range：{0}'}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding AnnotationSummary, StringFormat='來源內容：{0}'}" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding ViewTemplateName, StringFormat='視圖樣板：{0}'}" FontSize="{StaticResource FontSizeCaption}" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding ViewportTypeName, StringFormat='基準視埠：{0}'}" FontSize="{StaticResource FontSizeCaption}" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding ResolvedViewportTypeName, StringFormat='目標視埠：{0}'}" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource PrimaryAccentBrush}" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding ScopeBoxName, StringFormat='範圍框：{0}'}" FontSize="{StaticResource FontSizeCaption}" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Scale, StringFormat='比例：{0}'}" FontSize="{StaticResource FontSizeCaption}"/>
+                                                <TextBlock Text="{Binding PlacementCoord, StringFormat='圖紙位置：{0}'}" FontSize="{StaticResource FontSizeCaption}"/>
+                                                <TextBlock Text="{Binding MigrationAction}" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Section 3: Standard Source Comparison -->
+                    <Border Style="{StaticResource StandardCardStyle}" Background="{StaticResource SurfaceSubtleBrush}" Padding="12" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="來源標準與規則" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}" Margin="0,0,0,8"/>
+
+                            <TextBlock Text="來源標準圖紙：" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding SelectedSheet.SourceStandardSheet}" FontWeight="SemiBold" Margin="0,0,0,6" TextWrapping="Wrap"/>
+
+                            <TextBlock Text="樓層綁定規則：" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding SelectedSheet.LevelRuleDescription}" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Quick Navigation Actions -->
+                    <Button Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding OpenStandardSheetCommand}"
+                            Content="在 Revit 中開啟標準圖紙"
+                            Margin="0,0,0,8"/>
+
+                    <Button Style="{StaticResource GhostButtonStyle}"
+                            Command="{Binding OpenSourceViewCommand}"
+                            Content="查看來源視圖定義"
+                            HorizontalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

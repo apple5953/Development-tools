@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -47,12 +48,52 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
         private readonly Window _window;
         private readonly ExternalEvent _externalEvent;
 
-        // 標註模式：0 = 柱中心, 1 = 牆中心, 2 = 開口邊到邊
+        public List<QuickAnnotationProfileDefinition> AvailableProfiles { get; }
+        public ObservableCollection<QuickAnnotationModeDefinition> AvailableModes { get; } = new ObservableCollection<QuickAnnotationModeDefinition>();
+
+        private QuickAnnotationProfileDefinition _selectedProfile;
+        public QuickAnnotationProfileDefinition SelectedProfile
+        {
+            get => _selectedProfile;
+            set
+            {
+                if (_selectedProfile == value) return;
+                _selectedProfile = value;
+                OnPropertyChanged();
+                ReloadAvailableModes(null);
+            }
+        }
+
+        private QuickAnnotationModeDefinition _selectedModeDefinition;
+        public QuickAnnotationModeDefinition SelectedModeDefinition
+        {
+            get => _selectedModeDefinition;
+            set
+            {
+                if (_selectedModeDefinition == value) return;
+                _selectedModeDefinition = value;
+                _selectedMode = value?.TaggingMode ?? 0;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(SelectedMode));
+                UpdateStatusText();
+            }
+        }
+
+        // 舊版 UI/設定相容：0 = 柱中心, 1 = 牆中心, 2 = 牆邊, 3 = 開口
         private int _selectedMode = 0;
         public int SelectedMode
         {
             get => _selectedMode;
-            set { _selectedMode = value; OnPropertyChanged(); UpdateStatusText(); }
+            set
+            {
+                if (_selectedMode == value) return;
+                _selectedMode = value;
+                _selectedModeDefinition = AvailableModes.FirstOrDefault(m => m.TaggingMode == value)
+                    ?? QuickAnnotationModeRegistry.GetModeByLegacyId(value);
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(SelectedModeDefinition));
+                UpdateStatusText();
+            }
         }
 
         // 尺寸標註樣式
@@ -98,11 +139,17 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             td.Show();
         }
 
-        public QuickDimensionViewModel(Document doc, Window window)
+        public QuickDimensionViewModel(Document doc, Window window, View initialView = null)
         {
             _doc = doc;
             _window = window;
             _externalEvent = ExternalEvent.Create(new QuickDimensionEventHandler(this));
+
+            QuickAnnotationModeRegistry.EnsureInitialized();
+            AvailableProfiles = QuickAnnotationModeRegistry.GetProfiles().ToList();
+            _selectedProfile = QuickAnnotationModeRegistry.GetProfileForView(initialView)
+                ?? AvailableProfiles.FirstOrDefault();
+            ReloadAvailableModes(initialView);
 
             // 1. 取得專案內所有的 DimensionType
             DimensionTypes = new FilteredElementCollector(_doc)
@@ -125,18 +172,30 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             UpdateStatusText();
         }
 
+        private void ReloadAvailableModes(View view)
+        {
+            QuickAnnotationModeDefinition previous = SelectedModeDefinition;
+            AvailableModes.Clear();
+
+            foreach (var mode in QuickAnnotationModeRegistry.GetModesForProfile(SelectedProfile, view, manualOnly: true))
+            {
+                AvailableModes.Add(mode);
+            }
+
+            SelectedModeDefinition = AvailableModes.FirstOrDefault(m => previous != null && m.ModeKey == previous.ModeKey)
+                ?? AvailableModes.FirstOrDefault();
+        }
+
         private void UpdateStatusText()
         {
-            if (SelectedMode == 0)
-                StatusText = "提示：點擊「開始標註」後選取多個柱子，自動標註柱中心到中心。";
-            else if (SelectedMode == 1)
-                StatusText = "提示：點擊「開始標註」後選取多道平行牆體，自動標註牆中心到中心。";
-            else if (SelectedMode == 2)
-                StatusText = "提示：點擊「開始標註」後選取多道平行牆體，自動標註牆邊到牆邊的淨距與厚度。";
-            else if (SelectedMode == 3)
-                StatusText = "提示：點擊「開始標註」後選取一道牆體，自動標註該牆上的所有門、窗與開口邊界。";
+            if (SelectedModeDefinition != null)
+            {
+                StatusText = $"提示：{SelectedModeDefinition.Description}";
+            }
             else
+            {
                 StatusText = "提示：點擊「開始標註」後選取目標元素進行快速標註。";
+            }
         }
 
         /// <summary>
@@ -158,22 +217,22 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
 
             try
             {
-                if (SelectedMode == 0)
+                QuickAnnotationModeDefinition mode = SelectedModeDefinition
+                    ?? QuickAnnotationModeRegistry.GetModeByLegacyId(SelectedMode);
+
+                if (mode == null || !mode.CanRunManually)
                 {
-                    TagColumns(uidoc, activeView);
+                    MessageBox.Show("目前沒有可執行的快速標註模式。", "標註提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
-                else if (SelectedMode == 1)
+
+                if (!mode.AppliesTo(activeView))
                 {
-                    TagWalls(uidoc, activeView);
+                    MessageBox.Show("此標註模式不適用於目前視圖，請切換圖說類型或標註模式。", "標註提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
-                else if (SelectedMode == 2)
-                {
-                    TagWallEdges(uidoc, activeView);
-                }
-                else
-                {
-                    TagWallOpenings(uidoc, activeView);
-                }
+
+                mode.ManualExecute(this, uidoc, activeView);
             }
             catch (Autodesk.Revit.Exceptions.OperationCanceledException)
             {
@@ -196,7 +255,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
         }
 
         // --- 柱中心到柱中心標註 ---
-        private void TagColumns(UIDocument uidoc, View view)
+        internal void TagColumns(UIDocument uidoc, View view)
         {
             var selFilter = new ElementSelectionFilter<FamilyInstance>(e => 
                 e.Category.Id.IntegerValue == (int)BuiltInCategory.OST_StructuralColumns || 
@@ -295,7 +354,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
         }
 
         // --- 牆中心到牆中心標註 ---
-        private void TagWalls(UIDocument uidoc, View view)
+        internal void TagWalls(UIDocument uidoc, View view)
         {
             var selFilter = new ElementSelectionFilter<Wall>(e => true);
             IList<Reference> pickedRefs = uidoc.Selection.PickObjects(
@@ -438,7 +497,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
         }
 
         // --- 牆邊到牆邊標註 ---
-        private void TagWallEdges(UIDocument uidoc, View view)
+        internal void TagWallEdges(UIDocument uidoc, View view)
         {
             var selFilter = new ElementSelectionFilter<Wall>(e => true);
             IList<Reference> pickedRefs = uidoc.Selection.PickObjects(
@@ -521,7 +580,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
         }
 
         // --- 沿牆邊開口自動標註 ---
-        private void TagWallOpenings(UIDocument uidoc, View view)
+        internal void TagWallOpenings(UIDocument uidoc, View view)
         {
             var selFilter = new ElementSelectionFilter<Wall>(e => true);
             Reference pickedRef = null;
@@ -618,6 +677,106 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             }
         }
 
+
+        // --- 梁邊到梁邊標註 ---
+        internal void TagBeams(UIDocument uidoc, View view)
+        {
+            var selFilter = new ElementSelectionFilter<FamilyInstance>(e =>
+                e.Category != null && e.Category.Id.IntegerValue == (int)BuiltInCategory.OST_StructuralFraming);
+
+            IList<Reference> pickedRefs = uidoc.Selection.PickObjects(
+                ObjectType.Element,
+                selFilter,
+                "請選取多支平行梁以建立梁邊標註："
+            );
+
+            if (pickedRefs.Count < 2) return;
+
+            var beams = pickedRefs
+                .Select(r => _doc.GetElement(r.ElementId) as FamilyInstance)
+                .Where(b => b != null)
+                .ToList();
+
+            ReferenceArray refArray = new ReferenceArray();
+            List<XYZ> pts = new List<XYZ>();
+            Options geomOptions = new Options { ComputeReferences = true, View = view };
+
+            foreach (var beam in beams.Take(2))
+            {
+                GeometryElement geomElem = beam.get_Geometry(geomOptions);
+                if (geomElem != null)
+                {
+                    foreach (var obj in geomElem)
+                    {
+                        if (obj is Solid solid)
+                        {
+                            foreach (Face face in solid.Faces)
+                            {
+                                if (face.Reference != null)
+                                {
+                                    refArray.Append(face.Reference);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (beam.Location is LocationCurve lc && lc.Curve is Line line)
+                {
+                    pts.Add(line.Evaluate(0.5, true));
+                }
+            }
+
+            if (refArray.Size < 2 || pts.Count < 2)
+            {
+                MessageBox.Show("未能提取出足夠的梁邊參照，無法建立標註。", "標註提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            XYZ avgPt = new XYZ(pts.Average(p => p.X), pts.Average(p => p.Y), pts.Average(p => p.Z));
+            XYZ beamDir = XYZ.BasisX;
+            if (beams[0].Location is LocationCurve lc0 && lc0.Curve is Line line0)
+            {
+                beamDir = line0.Direction.Normalize();
+            }
+
+            XYZ normal = new XYZ(-beamDir.Y, beamDir.X, 0).Normalize();
+            double offsetFeet = OffsetDistance / 304.8;
+            XYZ offsetVec = normal * offsetFeet;
+            Line dimLine = Line.CreateBound(avgPt + offsetVec, avgPt + offsetVec + beamDir * 10.0);
+
+            using (Transaction trans = new Transaction(_doc, "快速標註-梁邊到梁邊"))
+            {
+                trans.Start();
+                try
+                {
+                    Dimension dim = _doc.Create.NewDimension(view, dimLine, refArray);
+                    if (dim != null && SelectedDimensionType != null)
+                    {
+                        dim.DimensionType = SelectedDimensionType;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"無法建立梁邊標註，可能是因為梁不平行或族參照不足。\n詳細資訊：{ex.Message}", "標註失敗", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                trans.Commit();
+            }
+        }
+
+        // --- 房間標籤自動放置 ---
+        internal void PlaceRoomTags(UIDocument uidoc, View view)
+        {
+            var config = new ViewAnnotationConfig
+            {
+                TaggingMode = 100,
+                ModeKey = "rooms.tags",
+                OffsetDistance = OffsetDistance
+            };
+
+            AutoDimensionHelper.AutoPlaceRoomTags(_doc, view, SelectedDimensionType, config);
+        }
+
         // 輔助方法：獲取牆兩端的端面 (End Cap Faces) PlanarFace 參照
         private List<Reference> GetWallEndFacesReferences(Wall wall, XYZ wallDir)
         {
@@ -707,3 +866,4 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
         }
     }
 }
+

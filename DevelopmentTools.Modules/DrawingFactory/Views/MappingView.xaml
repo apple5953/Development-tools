@@ -1,0 +1,93 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Views.MappingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:controls="clr-namespace:BIMDrawingFactory.UI.Controls"
+             xmlns:models="clr-namespace:BIMDrawingFactory.UI.Models"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="900">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock Text="對應設定 (Resource Mapping)"
+                           FontSize="{StaticResource FontSizeHeadline}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Text="對齊標準圖說系統名稱與當前 Revit 模型之實體 Level、範圍框與樣板。"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding RunAutoMappingCommand}"
+                        Content="智慧自動比對 (Auto-mapping)"
+                        Margin="0,0,8,0"/>
+
+                <Button Style="{StaticResource PrimaryButtonStyle}"
+                        Command="{Binding SaveMappingsCommand}"
+                        Content="儲存對應設定"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Tab Selector -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
+            <Button Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding SelectTabCommand}"
+                    CommandParameter="{x:Static models:ResourceMappingType.Level}"
+                    Content="樓層對應 (Levels)"
+                    Margin="0,0,8,0"/>
+
+            <Button Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding SelectTabCommand}"
+                    CommandParameter="{x:Static models:ResourceMappingType.ScopeBox}"
+                    Content="範圍框 (Scope Boxes)"
+                    Margin="0,0,8,0"/>
+
+            <Button Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding SelectTabCommand}"
+                    CommandParameter="{x:Static models:ResourceMappingType.ViewTemplate}"
+                    Content="視圖樣板 (Templates)"
+                    Margin="0,0,8,0"/>
+        </StackPanel>
+
+        <!-- Mapping DataGrid -->
+        <Border Grid.Row="2" Style="{StaticResource StandardCardStyle}" Padding="0" Margin="0,0,0,16">
+            <DataGrid ItemsSource="{Binding Mappings}" BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="系統辨識名稱" Binding="{Binding SystemName}" Width="180" FontWeight="SemiBold" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Revit 實際資源名稱" Binding="{Binding RevitActualName}" Width="200" IsReadOnly="False"/>
+                    <DataGridTemplateColumn Header="對應狀態" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <controls:StatusBadge Status="{Binding Status}" CustomText="{Binding StatusText}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="可信度" Binding="{Binding ConfidenceScore, StringFormat='{}{0:P0}'}" Width="90" IsReadOnly="True"/>
+                    <DataGridCheckBoxColumn Header="鎖定" Binding="{Binding IsLocked}" Width="60"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Bottom Summary -->
+        <Border Grid.Row="3" Background="{StaticResource SurfaceSubtleBrush}" CornerRadius="4" Padding="12,8">
+            <TextBlock Text="{Binding AutoMappingSummary}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource FontSizeCaption}"/>
+        </Border>
+    </Grid>
+</UserControl>

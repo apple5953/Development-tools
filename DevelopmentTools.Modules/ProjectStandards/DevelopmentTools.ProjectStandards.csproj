@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 專案標準比對與轉移。來源：ai (2)\ai\專案圖說轉移\DevelopmentTools.ProjectStandards（不含 Loader 與測試專案） -->
+  <PropertyGroup>
+    <AssemblyName>DevelopmentTools.ProjectStandards</AssemblyName>
+    <RootNamespace>DevelopmentTools.ProjectStandards</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Extensions" />
+  </ItemGroup>
+</Project>

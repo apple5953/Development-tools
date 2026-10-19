@@ -1,0 +1,33 @@
+{
+  "category": "Doors",
+  "version": "1.0",
+  "description": "Standard validation and query rules for Doors",
+  "requiredParameters": [
+    "Mark",
+    "Fire Rating",
+    "Comments"
+  ],
+  "rules": [
+    {
+      "parameter": "Fire Rating",
+      "required": true,
+      "description": "Doors must have fire rating specified"
+    },
+    {
+      "parameter": "Mark",
+      "required": true,
+      "description": "Door Mark must not be empty"
+    }
+  ],
+  "defaultQuery": {
+    "includeInstanceParameters": true,
+    "includeTypeParameters": true,
+    "highlightParameters": [
+      "Mark",
+      "Fire Rating",
+      "Comments",
+      "Head Height",
+      "Sill Height"
+    ]
+  }
+}

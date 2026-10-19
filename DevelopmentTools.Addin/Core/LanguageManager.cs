@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -926,6 +926,110 @@ namespace DevelopmentTools.Core
                                      "- 現在のビューに壁が表示されている必要があります。\n" +
                                      "- ワークセット名に「精裝修」を含む壁は解析時に一時的に除外されます。\n" +
                                      "- 最初は複製ビューまたはテストモデルで結果を確認してください。");
+
+            // ===== Ribbon 依工作流程重排（2026-10-17）：新頁籤、新面板與按鈕文字；放在最後以覆寫舊值 =====
+            AddTranslation("Ribbon_Tab_Drawing", "RTS｜施工圖", "RTS | Drawings", "RTS｜施工図");
+            AddTranslation("Ribbon_Tab_Manage", "RTS｜裝修與管理", "RTS | Finishes & Manage", "RTS｜仕上げ・管理");
+            AddTranslation("Ribbon_Panel_Production", "出圖量產", "Sheet Production", "図面量産");
+            AddTranslation("Ribbon_Panel_SheetLayout", "圖紙整理", "Sheet Layout", "シート整理");
+            AddTranslation("Ribbon_Panel_Tag", "標註", "Annotation", "注釈");
+            AddTranslation("Ribbon_Panel_ViewNav", "視圖導覽", "View Navigation", "ビューナビ");
+            AddTranslation("Ribbon_Panel_Rebar", "鋼筋結構", "Rebar & Structure", "鉄筋・構造");
+            AddTranslation("Ribbon_Panel_FinishTile", "裝修磁磚", "Finishes & Tiles", "仕上げ・タイル");
+            AddTranslation("Ribbon_Panel_Family", "族群", "Families", "ファミリ");
+            AddTranslation("Ribbon_Panel_DocTools", "文件與標準", "Documents & Standards", "文書・標準");
+            AddTranslation("Ribbon_Panel_Review", "檢討與 AI", "Review & AI", "チェック・AI");
+            AddTranslation("Ribbon_Panel_Admin", "系統", "System", "システム");
+            AddTranslation("Ribbon_Btn_RoomConfig", "裝修配置\n與粉刷", "Room Finishes", "部屋仕上げ・塗装");
+            AddTranslation("Ribbon_TT_RoomConfig", "設定各房間的地板、牆面、天花板裝修，並依房間自動生成粉刷層（自動扣除門窗洞口）。", "Set floor, wall and ceiling finishes per room and generate finish layers (openings are deducted).", "部屋ごとに床・壁・天井の仕上げを設定し、仕上げ層を自動生成します（開口部は控除）。");
+            AddTranslation("Ribbon_Btn_SheetDuplicator", "逐層複製\n圖紙", "Copy Sheets to Levels", "シートを各階へ複製");
+            AddTranslation("Ribbon_TT_SheetDuplicator", "把一組已完成的圖紙複製到其他樓層（簡單、快速）。要以標準圖說為範本、一次量產多棟多樓層整套圖紙，請用「量化開圖」。", "Copy a finished set of sheets to other levels (quick). To mass-produce full sets for several buildings and levels from a standard set, use Drawing Factory.", "完成済みのシートを他の階へ複製します（簡易）。標準図から複数棟・複数階を一括作成するには「図面量産」を使います。");
+            AddTranslation("Ribbon_TT_SheetTransfer", "把另一個專案的圖紙（含視圖與標註）搬到目前專案。要搬的是樣板、線型等設定，請用「專案標準比對」；要同步參數值，請用「參數比對複製」。", "Move sheets (with views and annotations) from another project into this one. For templates and line styles use Project Standards; for parameter values use Compare & Copy.", "別プロジェクトのシート（ビュー・注釈含む）を現在のプロジェクトへ移します。テンプレート等は「標準比較」、パラメータ値は「比較コピー」を使います。");
+            AddTranslation("Ribbon_Btn_ProjectCompareCopy", "參數比對\n複製", "Compare & Copy", "比較コピー");
+            AddTranslation("Ribbon_Btn_DrawingFactory", "量化開圖", "Drawing Factory", "図面量産");
+            AddTranslation("Ribbon_TT_DrawingFactory", "以已完成的標準圖說為範本，批次建立多棟、多樓層的整套圖紙、視圖與標註。棟別、圖號系列與自動標註規則可在 %APPDATA%\\DevelopmentTools\\DrawingFactory\\conventions.json 調整。", "Mass-produce complete sheet sets (views and annotations) for buildings and levels from a finished standard set. Conventions: %APPDATA%\\DevelopmentTools\\DrawingFactory\\conventions.json.", "標準図を元に、複数棟・複数階のシート一式を一括作成します。規則は %APPDATA%\\DevelopmentTools\\DrawingFactory\\conventions.json で調整します。");
+            AddTranslation("Ribbon_Btn_ProjectStandards", "專案標準\n比對", "Project Standards", "標準比較");
+            AddTranslation("Ribbon_TT_ProjectStandards", "比對兩個專案的視圖樣板、線型、填充樣式、參數等設定，並把選定項目同步到目前專案（搬設定，不搬圖紙）。", "Compare view templates, line styles, fill patterns and parameters between two projects and sync selected items (settings, not sheets).", "2つのプロジェクトのビューテンプレート・線種・塗り潰しパターン等を比較し、選択項目を同期します（設定のみ）。");
+            AddTranslation("Ribbon_Btn_PerspectiveMinimap", "透視圖\n索引面板", "Perspective Map", "パース索引");
+            AddTranslation("Ribbon_TT_PerspectiveMinimap", "在平面小地圖上檢視與調整所有透視圖的相機位置與視角。", "View and adjust every perspective camera on a plan mini-map.", "平面ミニマップ上で全パースのカメラ位置と視角を確認・調整します。");
+            AddTranslation("Ribbon_Btn_TileFourViews", "一鍵\n4 視圖", "Tile 4 Views", "4ビュー並べ");
+            AddTranslation("Ribbon_TT_TileFourViews", "在透視 3D 視圖中執行：自動開啟對應的平面、剖面等視圖並平鋪成 4 格。", "Run in a perspective 3D view: opens the matching plan and section views and tiles them in four.", "パース3Dビューで実行：対応する平面・断面ビューを開き4分割で並べます。");
+            AddTranslation("Ribbon_Btn_OpeningDetail", "開口\n剖面圖", "Opening Sections", "開口断面図");
+            AddTranslation("Ribbon_TT_OpeningDetail", "依牆上的開口元件（如百葉開口），自動產生各樓層牆剖面圖、索引平面與 A3 圖紙。", "Generate wall sections, key plans and A3 sheets for wall openings (e.g. louvres) on each level.", "壁の開口要素（ルーバー等）について各階の壁断面図・キープラン・A3シートを自動作成します。");
+            AddTranslation("Ribbon_Btn_BatchDoorUpdater", "門族群\n批量深化", "Batch Door Families", "ドア一括処理");
+            AddTranslation("Ribbon_TT_BatchDoorUpdater", "選擇門族群資料夾與共用參數檔，批次加入共用參數、公式並另存。", "Pick a folder of door families and a shared parameter file to add parameters and formulas in batch.", "ドアファミリのフォルダと共有パラメータファイルを選び、パラメータと式を一括追加します。");
+            AddTranslation("Ribbon_Btn_AutoRebar", "自動配置\n鋼筋", "Auto Rebar", "自動配筋");
+            AddTranslation("Ribbon_TT_AutoRebar", "選取一支混凝土梁或柱，設定主筋、箍筋、保護層與接頭方式後產生 3D 鋼筋。目前為單一構件配筋，請依結構圖與規範自行複核（彎鉤與耐震細部尚在改版中）。", "Pick one concrete beam or column, set bars, stirrups, cover and splices, then generate 3D rebar. Single member only; verify against structural drawings and codes.", "コンクリートの梁または柱を1本選び、主筋・帯筋・かぶり・継手を設定して3D鉄筋を作成します。単一部材のみ。構造図・規準で確認してください。");
+            AddTranslation("Ribbon_Btn_FastRebar", "快速\n配筋", "Fast\nRebar", "クイック\n配筋");
+            AddTranslation("Ribbon_TT_FastRebar", "一次選多支混凝土梁柱，套用樣板建立鋼筋：主筋分層、穿柱或錨定、U 形箍＋繫筋或閉合箍（135° 耐震彎鉤）、加密區與梁柱接頭區箍距。建立後自動修正彎鉤朝向並檢核。樣板可存檔重複使用；正式配筋請依結構圖確認。", "Select many concrete beams/columns and rebar them from a preset: layered main bars, through or anchored at supports, U-stirrups with cap ties or closed hoops (135° seismic hooks), confinement and joint zones. Hooks are auto-corrected and the result is checked. Verify against structural drawings.", "複数のコンクリート梁・柱をプリセットで一括配筋（主筋の段、通し／定着、U形あばら筋＋キャップタイまたは閉鎖形、135°フック、端部密配置）。フック向きを自動修正し、作成後にチェックします。構造図で確認してください。");
+            AddTranslation("Ribbon_Btn_RebarCheck", "鋼筋\n檢核", "Rebar\nCheck", "鉄筋\nチェック");
+            AddTranslation("Ribbon_TT_RebarCheck", "檢查選取構件（不選＝整個模型）的鋼筋：重疊鋼筋、同構件箍筋號數混用、箍筋無彎鉤、箍筋超出主體、主筋淨距不足。只讀，不修改模型，結果可選取並匯出 CSV。", "Check rebar in the selection (or the whole model): duplicates, mixed stirrup sizes, missing hooks, ties outside host, insufficient clear spacing. Read-only; results can be selected and exported to CSV.", "選択（未選択＝モデル全体）の鉄筋をチェック：重複、あばら筋径の混在、フックなし、ホスト外、主筋のあき不足。読み取り専用、CSV出力可。");
+            AddTranslation("Ribbon_Btn_CodeCheckAll", "全條文\n法規檢討", "Full Code\nCheck", "全条文\n法規チェック");
+            AddTranslation("Ribbon_TT_CodeCheckAll", "收錄建築技術規則（總則、設計施工、構造、設備）、建築物無障礙設施設計規範、各類場所消防安全設備設置標準、建築法等 1,400 餘條官方條文。模型量得到的項目自動檢討（樓梯、走廊、淨高、門寬、步行距離、停車、消防設備間距…），需專案資訊者半自動計算，其餘列為人工檢討清單並可記錄結果，匯出 HTML／CSV 報告。正式送審以主管機關審查為準。", "Over 1,400 official articles (Building Technical Regulations, accessibility code, fire equipment standard, Building Act). Measurable items are checked from the model, others become a tracked manual checklist; exports HTML/CSV.", "建築技術規則・バリアフリー規範・消防設備基準など 1,400 条超を収録。モデルで測れる項目は自動チェック、その他は手動チェックリストとして記録・出力。");
+            AddTranslation("Ribbon_Btn_CodeReviewMenu", "舊版\n法規檢討", "Legacy\nCode Review", "旧版\n法規チェック");
+            AddTranslation("Ribbon_TT_CodeReviewMenu", "舊版法規檢討專案與報告（55 條，保留供既有專案使用）。新專案請用「建築法規檢討」。", "Legacy code-review project and report (55 rules). Use Building Code Review for new projects.", "旧版の法規チェック（55項目）。新規は「建築法規チェック」を使用してください。");
+            AddTranslation("Ribbon_Btn_BuildingCodeReview", "建築法規\n檢討", "Building\nCode Review", "建築法規\nチェック");
+            AddTranslation("Ribbon_TT_BuildingCodeReview", "建築技術規則全部 720 條（總則、設計施工、構造、設備編）逐條檢討：可由模型量測者自動判定（樓梯、欄杆、走廊、淨高、防火門、停車位、步行距離、高度限制等），其餘列為人工檢核清單並可標記結果。條文取自全國法規資料庫，需人工與缺資料項目不計為通過。", "Review all 720 articles of the Building Technical Regulations: model-measurable items are checked automatically, the rest become a manual checklist you can sign off. Manual and missing-data items never count as passed.", "建築技術規則全720条をチェック。モデルから計測できる項目は自動判定、その他は手動チェックリストとして記録できます。");
+
+            // ===== Ribbon 三頁籤分類（2026-10-17 第二次整理，見 Core\RibbonCatalog.cs）；放在最後以覆寫舊值 =====
+            AddTranslation("Ribbon_Tab_Drawing", "RTS｜出圖", "RTS | Drawings", "RTS｜図面");
+            AddTranslation("Ribbon_Tab_Model", "RTS｜建模", "RTS | Modeling", "RTS｜モデリング");
+            AddTranslation("Ribbon_Tab_Review", "RTS｜檢討與管理", "RTS | Review & Manage", "RTS｜チェック・管理");
+            AddTranslation("Ribbon_Panel_Views", "開圖", "Create Views", "ビュー作成");
+            AddTranslation("Ribbon_Panel_Sheets", "圖紙", "Sheets", "シート");
+            AddTranslation("Ribbon_Panel_Tag", "標註", "Annotation", "注釈");
+            AddTranslation("Ribbon_Panel_Word", "Word 文件", "Word Documents", "Word 文書");
+            AddTranslation("Ribbon_Panel_FinishTile", "裝修磁磚", "Finishes & Tiles", "仕上げ・タイル");
+            AddTranslation("Ribbon_Panel_Rebar", "鋼筋結構", "Rebar & Structure", "鉄筋・構造");
+            AddTranslation("Ribbon_Panel_Family", "族群", "Families", "ファミリ");
+            AddTranslation("Ribbon_Panel_ViewNav", "3D 與視圖", "3D & Views", "3D・ビュー");
+            AddTranslation("Ribbon_Panel_CodeReview", "法規檢討", "Code Check", "法規チェック");
+            AddTranslation("Ribbon_Panel_Standards", "專案標準", "Project Standards", "プロジェクト標準");
+            AddTranslation("Ribbon_Panel_AI", "AI 助手", "AI Assistant", "AIアシスト");
+            AddTranslation("Ribbon_Panel_Admin", "系統", "System", "システム");
+
+            // 大按鈕文字分兩行，面板較窄、不易被 Revit 收合
+            AddTranslation("Ribbon_Btn_QuickView", "快速開圖\n套樣板", "Quick\nViews", "クイック\nビュー");
+            AddTranslation("Ribbon_Btn_FastDependentViews", "快速\n從屬視圖", "Dependent\nViews", "従属\nビュー");
+            AddTranslation("Ribbon_Btn_SheetPlacer", "圖紙\n排版", "Sheet\nPlacer", "シート\n配置");
+            AddTranslation("Ribbon_Btn_SheetRename", "圖紙\n批次更名", "Batch\nRename", "シート\n一括リネーム");
+            AddTranslation("Ribbon_Btn_SheetTransfer", "跨專案\n圖紙轉移", "Sheet\nTransfer", "シート\n転送");
+            AddTranslation("Ribbon_Btn_QuickDim", "快速\n尺寸標註", "Quick\nDimension", "クイック\n寸法");
+            AddTranslation("Ribbon_Btn_AutoBoundary", "自動\n邊界", "Auto\nBoundary", "自動\n境界");
+            AddTranslation("Ribbon_Btn_RecordAnnotationLogic", "記錄\n標註邏輯", "Record\nAnnotations", "注釈ロジック\n記録");
+            AddTranslation("Ribbon_TT_RecordAnnotationLogic", "記錄目前視圖要使用的自動標註邏輯（例如柱中心標註、偏移量），跨專案圖紙轉移時會在目標視圖自動重做相同標註。", "Record the auto-annotation logic for this view; Sheet Transfer re-creates the same annotations in the target project.", "このビューの自動注釈ロジックを記録し、シート転送時に転送先で同じ注釈を再作成します。");
+            AddTranslation("Ribbon_Btn_LinkWordCommand", "連結\nWord", "Link\nWord", "Word\nリンク");
+            AddTranslation("Ribbon_TT_LinkWordCommand", "連結 Word 文件 (.docx) 到目前的圖紙。", "Link a Word document (.docx) to the current sheet.", "Word 文書 (.docx) を現在のシートにリンクします。");
+            AddTranslation("Ribbon_Btn_WordManageDropdown", "Word\n連結管理", "Word\nLinks", "Word\nリンク管理");
+            AddTranslation("Ribbon_TT_WordManageDropdown", "更新、開啟或重新指定圖紙中的 Word 連結。", "Refresh, open or relink Word links on sheets.", "シート上の Word リンクを更新・開く・再指定します。");
+            AddTranslation("Ribbon_Btn_RefreshSelectedCommand", "更新選取連結", "Refresh Selected", "選択リンクを更新");
+            AddTranslation("Ribbon_Btn_RefreshAllCommand", "更新全部連結", "Refresh All", "すべて更新");
+            AddTranslation("Ribbon_Btn_OpenWordCommand", "開啟原始 Word", "Open Source Word", "元の Word を開く");
+            AddTranslation("Ribbon_Btn_RelinkWordCommand", "重新指定來源", "Relink Source", "リンク元を再指定");
+            AddTranslation("Ribbon_Btn_TileSystem", "磁磚\n鋪設系統", "Tile\nSystem", "タイル\nシステム");
+            AddTranslation("Ribbon_Btn_FloorSnap", "樓板\n貼房間", "Floor\nto Room", "床を\n部屋に合わせる");
+            AddTranslation("Ribbon_Btn_Elevation", "展開圖\n生成", "Interior\nElevations", "展開図\n作成");
+            AddTranslation("Ribbon_Btn_AdaptiveRegion", "智慧\n剖面框", "Adaptive\nSection Box", "スマート\n断面ボックス");
+            AddTranslation("Ribbon_Btn_AI", "AI\n模型分析", "AI\nAnalysis", "AI\nモデル分析");
+            AddTranslation("Ribbon_Btn_BEAIQueryStatus", "查詢\n狀態", "Query\nStatus", "照会\n状態");
+            AddTranslation("Ribbon_TT_BEAIQueryStatus", "確認唯讀模型查詢服務與目前模型是否可供 ChatGPT 使用。", "Check whether the read-only model query service is available to ChatGPT.", "読み取り専用モデル照会サービスが ChatGPT から利用可能か確認します。");
+            AddTranslation("Ribbon_Btn_SheetDuplicator", "逐層\n複製圖紙", "Copy Sheets\nto Levels", "シートを\n各階へ複製");
+
+            // ===== 單一頁籤＋三個分類下拉（2026-10-17 第三次整理）=====
+            AddTranslation("Ribbon_Tab_Main", "RTS", "RTS", "RTS");
+            AddTranslation("Ribbon_Panel_Main", "RTS 工具", "RTS Tools", "RTS ツール");
+            AddTranslation("Ribbon_Btn_CatDrawing", "出圖", "Drawings", "図面");
+            AddTranslation("Ribbon_TT_CatDrawing", "開圖、圖紙排版與更名、標註、Word 文件連結。", "Views, sheets, annotation and Word links.", "ビュー作成、シート、注釈、Word リンク。");
+            AddTranslation("Ribbon_Btn_CatModel", "建模", "Modeling", "モデリング");
+            AddTranslation("Ribbon_TT_CatModel", "裝修磁磚、鋼筋結構、族群、3D 與視圖工具。", "Finishes and tiles, rebar, families, 3D and view tools.", "仕上げ・タイル、鉄筋、ファミリ、3D・ビュー。");
+            AddTranslation("Ribbon_Btn_CatReview", "檢討與\n管理", "Review &\nManage", "チェック・\n管理");
+            AddTranslation("Ribbon_TT_CatReview", "法規檢討、專案標準、AI 助手、登入、更新與語言。", "Code check, project standards, AI, sign-in, updates and language.", "法規チェック、標準、AI、ログイン、更新、言語。");
+            AddTranslation("Ribbon_Btn_BEAIQueryStatus", "AI 查詢狀態", "AI Query Status", "AI 照会状態");
+            AddTranslation("Ribbon_Btn_RefreshSelectedCommand", "更新選取 Word 連結", "Refresh Selected Word Links", "選択した Word リンクを更新");
+            AddTranslation("Ribbon_Btn_RefreshAllCommand", "更新全部 Word 連結", "Refresh All Word Links", "すべての Word リンクを更新");
+            AddTranslation("Ribbon_Btn_RelinkWordCommand", "重新指定 Word 來源", "Relink Word Source", "Word リンク元を再指定");
+            AddTranslation("Ribbon_Btn_FinishBuildUp", "降梁降板增築", "Slab Drop & Build-up", "梁下げ・床下げ・増打ち");
+            AddTranslation("Ribbon_TT_FinishBuildUp", "依裝修表比對每間房的面層底與結構頂：建立板上／梁上增築，或找出需要降板、降梁的結構。", "Compare finish bottoms (from the finish schedule) with structural tops per room: create build-ups over slabs and beams, or flag slabs/beams to lower.", "仕上表に基づき各室の仕上げ下端と躯体天端を比較し、増打ちを作成、または床下げ・梁下げが必要な躯体を抽出します。");
         }
 
         private void AddTranslation(string key, string zh, string en, string ja)

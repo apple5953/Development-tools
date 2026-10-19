@@ -112,10 +112,7 @@ namespace DevelopmentTools.Core
                 bool downloadSuccess = await DownloadManager.DownloadFileAsync(manifest.release_url, destinationZip).ConfigureAwait(false);
                 if (!downloadSuccess)
                 {
-                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        TaskDialog.Show("更新提示", "下載新版更新檔案失敗。詳細資料請見 Logs。");
-                    }));
+                    App.ShowDialogOnUi("更新提示", "下載新版更新檔案失敗。詳細資料請見 Logs。");
                     return false;
                 }
 
@@ -123,10 +120,7 @@ namespace DevelopmentTools.Core
                 if (!DownloadManager.VerifySha256(destinationZip, manifest.sha256))
                 {
                     UpdateLogger.Log($"SHA256 驗證失敗。檔案: {destinationZip}");
-                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        TaskDialog.Show("更新提示", "下載的檔案損壞（SHA256 校驗失敗），已取消更新。");
-                    }));
+                    App.ShowDialogOnUi("更新提示", "下載的檔案損壞（SHA256 校驗失敗），已取消更新。");
                     return false;
                 }
 
@@ -150,10 +144,7 @@ namespace DevelopmentTools.Core
 
                 if (!File.Exists(updaterExe))
                 {
-                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        TaskDialog.Show("更新提示", $"找不到更新主程式：{updaterExe}");
-                    }));
+                    App.ShowDialogOnUi("更新提示", $"找不到更新主程式：{updaterExe}");
                     return false;
                 }
 
@@ -166,19 +157,13 @@ namespace DevelopmentTools.Core
                 };
 
                 Process.Start(startInfo);
-                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    TaskDialog.Show("更新提示", "更新程式已啟動。請關閉 Revit 以完成更新安裝。");
-                }));
+                App.ShowDialogOnUi("更新提示", "更新程式已啟動。請關閉 Revit 以完成更新安裝。");
                 return true;
             }
             catch (Exception ex)
             {
                 UpdateLogger.Log("啟動更新程序失敗", ex);
-                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    TaskDialog.Show("更新錯誤", "啟動更新流程時發生錯誤: " + ex.Message);
-                }));
+                App.ShowDialogOnUi("更新錯誤", "啟動更新流程時發生錯誤: " + ex.Message);
                 return false;
             }
         }

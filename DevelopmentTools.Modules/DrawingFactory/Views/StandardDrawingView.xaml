@@ -1,0 +1,43 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Views.StandardDrawingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="900">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="標準圖說分析 (Standard Master Drawing)"
+                       FontSize="{StaticResource FontSizeHeadline}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="檢視已剖析之標準圖紙群組 (S5) 特徵與視圖結構。"
+                       FontSize="{StaticResource FontSizeBody}"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Padding="24">
+            <StackPanel>
+                <TextBlock Text="目前標準圖組：S5" FontSize="{StaticResource FontSizeTitle}" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}" Margin="0,0,0,12"/>
+                <TextBlock Text="{Binding Profile.SourceDocumentName, StringFormat='來源專案檔案：{0}'}" Margin="0,0,0,6"/>
+                <TextBlock Text="{Binding Profile.LastAnalysisTime, StringFormat='最後分析時間：{0}'}" Margin="0,0,0,16"/>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding ReanalyzeCommand}"
+                            Content="重新分析標準圖說"
+                            Margin="0,0,12,0"/>
+                    <Button Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding ExportAnalysisCommand}"
+                            Content="匯出分析特徵"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,55 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Views.HistoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="900">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="執行紀錄與物件管理 (Generation History)"
+                       FontSize="{StaticResource FontSizeHeadline}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}"/>
+            <TextBlock Text="檢視此外掛產製之圖紙紀錄，支援安全刪除產製內容（人工建立內容不受影響）。"
+                       FontSize="{StaticResource FontSizeBody}"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Padding="0">
+            <DataGrid ItemsSource="{Binding HistoryItems}" BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="產製時間" Binding="{Binding Timestamp}" Width="150" FontWeight="SemiBold" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="目標棟別" Binding="{Binding BuildingName}" Width="100" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="產製樓層" Binding="{Binding FloorsSummary}" Width="120" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="圖紙數" Binding="{Binding SheetsCount}" Width="80" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="視圖數" Binding="{Binding ViewsCount}" Width="80" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="狀態" Binding="{Binding Status}" Width="80" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="操作" Width="180">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource GhostButtonStyle}"
+                                            Content="查看報告"
+                                            Command="{Binding DataContext.ViewReportCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                            CommandParameter="{Binding}"
+                                            Margin="0,0,8,0"/>
+                                    <Button Style="{StaticResource DangerButtonStyle}"
+                                            Content="刪除產生物件"
+                                            Command="{Binding DataContext.DeleteHistoryItemCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                            CommandParameter="{Binding}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</UserControl>

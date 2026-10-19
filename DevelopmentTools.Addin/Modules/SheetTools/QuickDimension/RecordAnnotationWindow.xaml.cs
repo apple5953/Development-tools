@@ -107,7 +107,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
                                 {
                                     foreach (var savedLogic in config.Logics)
                                     {
-                                        var matched = viewItem.Logics.FirstOrDefault(l => l.TaggingMode == savedLogic.TaggingMode);
+                                        var matched = viewItem.Logics.FirstOrDefault(l => IsSameLogic(l, savedLogic));
                                         if (matched != null)
                                         {
                                             matched.IsEnabled = savedLogic.IsEnabled;
@@ -155,6 +155,16 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             }
         }
 
+
+        private static bool IsSameLogic(AnnotationLogicItem current, AnnotationLogicItem saved)
+        {
+            if (current == null || saved == null) return false;
+            if (!string.IsNullOrWhiteSpace(current.ModeKey) && !string.IsNullOrWhiteSpace(saved.ModeKey))
+            {
+                return string.Equals(current.ModeKey, saved.ModeKey, StringComparison.OrdinalIgnoreCase);
+            }
+            return current.TaggingMode == saved.TaggingMode;
+        }
         private void OnTreeViewSelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             if (e.NewValue is ViewItem viewItem)
@@ -220,6 +230,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
                                 Logics = viewItem.Logics.Select(l => new AnnotationLogicItem
                                 {
                                     TaggingMode = l.TaggingMode,
+                                    ModeKey = l.ModeKey,
                                     Name = l.Name,
                                     IsEnabled = l.IsEnabled,
                                     DimensionTypeName = l.DimensionTypeName,
@@ -322,6 +333,21 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
                     }
                 }
 
+                var roomTags = new FilteredElementCollector(_doc, item.ViewElement.Id)
+                    .OfCategory(BuiltInCategory.OST_RoomTags)
+                    .WhereElementIsNotElementType()
+                    .Any();
+                if (roomTags)
+                {
+                    var logic = item.Logics.FirstOrDefault(l => string.Equals(l.ModeKey, "rooms.tags", StringComparison.OrdinalIgnoreCase) || l.TaggingMode == 100);
+                    if (logic != null && !logic.IsEnabled)
+                    {
+                        logic.IsEnabled = true;
+                        detectedAny = true;
+                        detectedLogString += "房間標籤、";
+                    }
+                }
+
                 if (detectedAny)
                 {
                     item.DetectedMode = 99; // 代表偵測到多重邏輯
@@ -355,6 +381,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
                             Logics = viewItem.Logics.Select(l => new AnnotationLogicItem
                             {
                                 TaggingMode = l.TaggingMode,
+                                ModeKey = l.ModeKey,
                                 Name = l.Name,
                                 IsEnabled = l.IsEnabled,
                                 DimensionTypeName = l.DimensionTypeName,
@@ -459,8 +486,19 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
 
     public class ViewItem : INotifyPropertyChanged
     {
-        public View ViewElement { get; set; }
-        public string ViewName => ViewElement.Name;
+        private View _viewElement;
+        public View ViewElement
+        {
+            get => _viewElement;
+            set
+            {
+                _viewElement = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ViewName));
+                InitializeLogicsForView();
+            }
+        }
+        public string ViewName => ViewElement?.Name ?? string.Empty;
 
         private string _detectedLogicText = "未偵測到標註";
         public string DetectedLogicText
@@ -489,10 +527,22 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
 
         public ViewItem()
         {
-            Logics.Add(new AnnotationLogicItem { TaggingMode = 0, Name = "柱中心到中心標註" });
-            Logics.Add(new AnnotationLogicItem { TaggingMode = 1, Name = "平行牆體中心標註" });
-            Logics.Add(new AnnotationLogicItem { TaggingMode = 2, Name = "平行牆邊淨距標註" });
-            Logics.Add(new AnnotationLogicItem { TaggingMode = 3, Name = "牆面門窗開口標註" });
+            InitializeLogicsForView();
+        }
+
+        private void InitializeLogicsForView()
+        {
+            Logics.Clear();
+            QuickAnnotationProfileDefinition profile = QuickAnnotationModeRegistry.GetProfileForView(ViewElement);
+            foreach (var mode in QuickAnnotationModeRegistry.GetModesForProfile(profile, ViewElement, manualOnly: false))
+            {
+                Logics.Add(new AnnotationLogicItem
+                {
+                    TaggingMode = mode.TaggingMode,
+                    ModeKey = mode.ModeKey,
+                    Name = mode.Name
+                });
+            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -505,6 +555,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
     public class AnnotationLogicItem : INotifyPropertyChanged
     {
         public int TaggingMode { get; set; }
+        public string ModeKey { get; set; }
         public string Name { get; set; }
 
         private bool _isEnabled;
@@ -586,6 +637,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
     public class ViewAnnotationConfig
     {
         public int TaggingMode { get; set; }
+        public string ModeKey { get; set; }
         public string DimensionTypeName { get; set; }
         public double OffsetDistance { get; set; }
         public string PrefixText { get; set; }
@@ -596,3 +648,4 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
         public List<AnnotationLogicItem> Logics { get; set; }
     }
 }
+

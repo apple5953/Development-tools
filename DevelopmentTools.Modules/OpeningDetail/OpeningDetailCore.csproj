@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 開口元件剖面圖。來源：ai (2)\ai\開口元件開剖圖（不含原本的 App.cs Ribbon 與 HotReload） -->
+  <PropertyGroup>
+    <AssemblyName>OpeningDetailCore</AssemblyName>
+    <RootNamespace>OpeningDetailAddin</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+</Project>

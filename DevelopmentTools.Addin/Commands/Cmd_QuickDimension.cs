@@ -36,7 +36,7 @@ namespace DevelopmentTools.Commands
                 }
 
                 // 2. 以 Modeless 模式開啟快速標註視窗
-                QuickDimensionWindow window = new QuickDimensionWindow(doc);
+                QuickDimensionWindow window = new QuickDimensionWindow(doc, uidoc.ActiveView);
                 
                 // 設定 Owner 為 Revit 主視窗以防視窗掉到 Revit 後面
                 var helper = new System.Windows.Interop.WindowInteropHelper(window);
@@ -54,3 +54,4 @@ namespace DevelopmentTools.Commands
         }
     }
 }
+

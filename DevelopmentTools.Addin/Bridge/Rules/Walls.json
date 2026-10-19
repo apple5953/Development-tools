@@ -1,0 +1,17 @@
+{
+  "category": "Walls",
+  "version": "1.0",
+  "description": "Standard validation and query rules for Walls",
+  "requiredParameters": [
+    "Type Name",
+    "Unconnected Height",
+    "Base Constraint"
+  ],
+  "rules": [
+    {
+      "parameter": "Unconnected Height",
+      "minValue": 1.0,
+      "description": "Wall unconnected height must be greater than 1.0 meter"
+    }
+  ]
+}

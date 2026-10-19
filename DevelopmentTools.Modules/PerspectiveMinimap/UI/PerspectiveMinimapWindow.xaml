@@ -1,0 +1,387 @@
+<Window x:Class="RevitPerspectiveMinimap.UI.PerspectiveMinimapWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:controls="clr-namespace:RevitPerspectiveMinimap.UI.Controls"
+        xmlns:conv="clr-namespace:RevitPerspectiveMinimap.UI.Converters"
+        mc:Ignorable="d" 
+        Title="Revit 透視圖小地圖與空間索引面板" 
+        Height="860" Width="440"
+        MinHeight="620" MinWidth="380"
+        Background="#141824"
+        Foreground="#E2E8F0"
+        FontFamily="Segoe UI"
+        WindowStartupLocation="CenterScreen"
+        KeyDown="OnWindowKeyDown"
+        Topmost="True">
+
+    <Window.Resources>
+        <conv:ColorHexToBrushConverter x:Key="ColorHexToBrush"/>
+        <conv:BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- 基礎按鈕樣式 -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#252E3E"/>
+            <Setter Property="Foreground" Value="#F7FAFC"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#374357"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.4"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 危險紅色按鈕 (刪除相機) -->
+        <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#C53030"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#9B2C2C"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 高亮切換按鈕 (例如放置相機模式中) -->
+        <Style x:Key="HighlightToggleButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#D69E2E"/>
+            <Setter Property="Foreground" Value="#1A202C"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#B7791F"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 主要藍色按鈕 -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#3182CE"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2B6CB0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 成功綠色按鈕 -->
+        <Style x:Key="SuccessButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#2F855A"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#276749"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 預設視高按鈕 -->
+        <Style x:Key="PresetButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
+            <Setter Property="Background" Value="#1A202C"/>
+            <Setter Property="Foreground" Value="#63B3ED"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#2D3748"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2D3748"/>
+                    <Setter Property="Foreground" Value="#90CDF4"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- 頂部樓層與視圖選擇列 -->
+            <RowDefinition Height="260"/>  <!-- 2D 向量小地圖畫布 -->
+            <RowDefinition Height="Auto"/> <!-- 4 視圖 & 快速空間對照按鈕 -->
+            <RowDefinition Height="*"/>    <!-- 下半部：相機參數調整 與 清單 -->
+            <RowDefinition Height="Auto"/> <!-- 底部狀態列 -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. 頂部樓層選擇與重整列 -->
+        <Border Grid.Row="0" Background="#1A202C" CornerRadius="6" Padding="8" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="🏢 當前樓層：" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#A0AEC0" Margin="0,0,6,0"/>
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding Levels}"
+                          SelectedItem="{Binding SelectedLevel}"
+                          DisplayMemberPath="DisplayName"
+                          Background="#2D3748"
+                          Foreground="#1A202C"
+                          Height="26"/>
+                <Button Grid.Column="2" Content="🔄 重新整理" Command="{Binding RefreshCommand}" Style="{StaticResource ActionButtonStyle}" Margin="6,0,0,0"/>
+            </Grid>
+        </Border>
+
+        <!-- 2. 2D 向量小地圖區塊 (含點擊放置相機工具) -->
+        <Border Grid.Row="1" Background="#0C1017" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="6" Margin="0,0,0,8" ClipToBounds="True">
+            <Grid>
+                <controls:MinimapCanvas x:Name="MinimapView"
+                                        Cameras="{Binding FilteredCameras}"
+                                        SelectedCamera="{Binding SelectedCamera, Mode=TwoWay}"
+                                        PlanGeometry="{Binding CurrentPlanGeometry}"
+                                        IsPlacingMode="{Binding IsPlacingMode, Mode=TwoWay}"/>
+                
+                <!-- 小地圖右上角浮動工具列 -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
+                    <!-- 點擊放置相機按鈕 -->
+                    <Button Content="{Binding PlacingModeButtonText}" 
+                            Command="{Binding TogglePlaceCameraModeCommand}" 
+                            Style="{StaticResource PrimaryButtonStyle}" 
+                            Padding="8,4" FontSize="11" Margin="0,0,4,0"/>
+
+                    <!-- 擷取當前 Revit 視圖 -->
+                    <Button Content="🎯 擷取 Revit 視角" 
+                            Command="{Binding SyncFromActiveViewCommand}" 
+                            Style="{StaticResource ActionButtonStyle}" 
+                            Padding="6,4" FontSize="11" Margin="0,0,4,0"/>
+
+                    <!-- 視圖置中 -->
+                    <Button Content="🔍 置中" 
+                            Command="{Binding ResetMinimapZoomCommand}" 
+                            Style="{StaticResource ActionButtonStyle}" 
+                            Padding="6,4" FontSize="11"/>
+                </StackPanel>
+
+                <!-- 小地圖底部互動引導 -->
+                <Border Background="#CC111827" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8,6" Padding="6,2">
+                    <TextBlock Text="💡 點擊放置相機 | 拖曳站點移動 | 拖曳目標旋轉 | 雙擊相機切換視圖" 
+                               Foreground="#A0AEC0" FontSize="10"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- 3. 核心空間對照與出圖按鈕卡片 (三大功能) -->
+        <Border Grid.Row="2" Background="#1A202C" CornerRadius="6" Padding="8" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <!-- 按鈕 1: 4 視圖並排 -->
+                <Button Grid.Column="0" Command="{Binding TileFourViewsCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,4,0" Padding="6,8">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="🔲 一鍵 4 視圖" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                        <TextBlock Text="透視+平面+剖面+等角" FontSize="9" Foreground="#CBD5E0" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- 按鈕 2: 一鍵出圖排版 -->
+                <Button Grid.Column="1" Command="{Binding ExportSheetCommand}" Style="{StaticResource SuccessButtonStyle}" Margin="2,0,2,0" Padding="6,8">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="📑 一鍵自動出圖" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                        <TextBlock Text="自動排版 4 視圖圖紙" FontSize="9" Foreground="#CBD5E0" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- 按鈕 3: 剖面轉向 -->
+                <Button Grid.Column="2" Command="{Binding RotateSection90Command}" Style="{StaticResource ActionButtonStyle}" Margin="4,0,0,0" Padding="6,8">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="🔄 剖面轉 90°" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding SectionDirectionLabel}" FontSize="9" Foreground="#68D391" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 4. 下半部：相機參數控制 與 透視圖清單 -->
+        <TabControl Grid.Row="3" Background="#1A202C" BorderBrush="#2D3748">
+            <!-- 分頁 1：相機即時參數微調 (預設主頁) -->
+            <TabItem Header="相機高度與視角微調" Foreground="#1A202C" FontWeight="SemiBold">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="4">
+                    <StackPanel Margin="6">
+                        <!-- 當前選中視圖標題 -->
+                        <Grid Margin="0,0,0,8">
+                            <TextBlock Text="{Binding SelectedCamera.ViewName, FallbackValue='請先在小地圖選取透視圖'}" 
+                                       FontWeight="Bold" FontSize="14" Foreground="#63B3ED" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding SelectedCamera.DetectedSource}" 
+                                       Foreground="#A0AEC0" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- 自訂樓層基準標高與人眼視高設定卡片 -->
+                        <Border Background="#1E2638" BorderBrush="#2B6CB0" BorderThickness="1" CornerRadius="6" Padding="8,8" Margin="0,0,0,10">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,6">
+                                    <TextBlock Text="📐 樓層基準標高 (FL) 與 視高設定" FontWeight="Bold" Foreground="#63B3ED" FontSize="12"/>
+                                    <Button Content="🎯 帶入選取樓層標高" 
+                                            Command="{Binding ResetBaseElevationFromLevelCommand}" 
+                                            Style="{StaticResource PresetButtonStyle}" 
+                                            HorizontalAlignment="Right" 
+                                            Padding="6,2" FontSize="10"/>
+                                </Grid>
+
+                                <!-- 1. 當層基準標高自訂輸入 -->
+                                <Grid Margin="0,2,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="135"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="30"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="當層樓板基準 (FL)：" VerticalAlignment="Center" Foreground="#CBD5E0" FontSize="11" FontWeight="SemiBold"/>
+                                    <TextBox Grid.Column="1" 
+                                             Text="{Binding CustomBaseElevationMm, UpdateSourceTrigger=LostFocus, StringFormat='{}{0:F0}'}" 
+                                             Height="24" Background="#111827" Foreground="#F9FAFB" BorderBrush="#4A5568"
+                                             TextAlignment="Center" VerticalContentAlignment="Center" FontSize="12" FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="2" Text="mm" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="#A0AEC0" FontSize="11"/>
+                                </Grid>
+
+                                <!-- 2. 人眼視線高度預設按鈕群 -->
+                                <TextBlock Text="人眼視線高度（離當層樓板）：" Foreground="#CBD5E0" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="🚶 站姿 1.5m" Command="{Binding PresetHeightStandCommand}" Style="{StaticResource PresetButtonStyle}" Margin="0,0,2,0"/>
+                                    <Button Grid.Column="1" Content="🧍 視線 1.6m" Command="{Binding PresetHeightEyeLevelCommand}" Style="{StaticResource PresetButtonStyle}" Margin="2,0,2,0"/>
+                                    <Button Grid.Column="2" Content="🪑 坐姿 1.1m" Command="{Binding PresetHeightSitCommand}" Style="{StaticResource PresetButtonStyle}" Margin="2,0,2,0"/>
+                                    <Button Grid.Column="3" Content="🦅 俯瞰 2.8m" Command="{Binding PresetHeightAerialCommand}" Style="{StaticResource PresetButtonStyle}" Margin="2,0,0,0"/>
+                                </Grid>
+
+                                <!-- 視高數值與滑桿 -->
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider Minimum="0" Maximum="3500" Value="{Binding InputEyeHeightMm, Mode=TwoWay}" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="{Binding InputEyeHeightMm, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:F0} mm'}" Margin="6,0,0,0" VerticalAlignment="Center" Height="24" TextAlignment="Center" Background="#111827" Foreground="#F9FAFB" BorderBrush="#4A5568"/>
+                                </Grid>
+
+                                <!-- 即時相機絕對 Z 標高結果 -->
+                                <Border Background="#111827" CornerRadius="4" Padding="6,4" Margin="0,2,0,0">
+                                    <Grid>
+                                        <TextBlock Text="📷 相機空間總標高 (FL + 視高)：" Foreground="#A0AEC0" FontSize="10" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding TotalCameraElevationDisplay}" Foreground="#48BB78" FontWeight="Bold" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 2. 水平方位角 Yaw -->
+                        <TextBlock Text="水平視線方向 Yaw (° 角度)：" Foreground="#CBD5E0" FontWeight="SemiBold"/>
+                        <Grid Margin="0,4,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider Minimum="0" Maximum="360" Value="{Binding InputYawDegrees, Mode=TwoWay}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding InputYawDegrees, StringFormat='{}{0:F1}°'}" Margin="6,0,0,0" VerticalAlignment="Center" Height="24" TextAlignment="Center"/>
+                        </Grid>
+
+                        <!-- 3. 俯仰角 Pitch -->
+                        <TextBlock Text="視線俯仰角 Pitch (° 角度)：" Foreground="#CBD5E0" FontWeight="SemiBold"/>
+                        <Grid Margin="0,4,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider Minimum="-60" Maximum="60" Value="{Binding InputPitchDegrees, Mode=TwoWay}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding InputPitchDegrees, StringFormat='{}{0:F1}°'}" Margin="6,0,0,0" VerticalAlignment="Center" Height="24" TextAlignment="Center"/>
+                        </Grid>
+
+                        <!-- 4. 水平視野 FOV -->
+                        <TextBlock Text="鏡頭視野 FOV (° 廣角度數)：" Foreground="#CBD5E0" FontWeight="SemiBold"/>
+                        <Grid Margin="0,4,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider Minimum="30" Maximum="110" Value="{Binding InputFovDegrees, Mode=TwoWay}" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding InputFovDegrees, StringFormat='{}{0:F0}°'}" Margin="6,0,0,0" VerticalAlignment="Center" Height="24" TextAlignment="Center"/>
+                        </Grid>
+
+                        <!-- 5. 雙向連動開關 -->
+                        <CheckBox IsChecked="{Binding IsLiveSyncEnabled, Mode=TwoWay}" Foreground="#E2E8F0" Content="⚡ 啟用雙向即時連動 (Live Bidirectional Sync)" Margin="0,4,0,10"/>
+
+                        <!-- 6. 刪除當前選取透視圖按鈕 -->
+                        <Button Content="🗑️ 刪除此透視圖" 
+                                Command="{Binding DeleteCameraCommand}" 
+                                Style="{StaticResource DangerButtonStyle}" 
+                                HorizontalAlignment="Right" 
+                                Padding="12,6" Margin="0,4,0,4"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 分頁 2：透視圖清單 -->
+            <TabItem Header="透視圖清單" Foreground="#1A202C" FontWeight="SemiBold">
+                <Grid Margin="4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <ListBox Grid.Row="0"
+                             ItemsSource="{Binding FilteredCameras}"
+                             SelectedItem="{Binding SelectedCamera, Mode=TwoWay}"
+                             MouseDoubleClick="OnCameraListItemDoubleClicked"
+                             Background="#12161F"
+                             BorderThickness="0"
+                             Margin="0,0,0,4">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1E2638" CornerRadius="5" Padding="8,6" Margin="0,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="12"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Grid.Column="0" Fill="{Binding ColorHex, Converter={StaticResource ColorHexToBrush}}" Width="4" HorizontalAlignment="Left" RadiusX="2" RadiusY="2"/>
+                                        <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                            <TextBlock Text="{Binding ViewName}" FontWeight="Bold" Foreground="#F7FAFC" FontSize="13"/>
+                                            <TextBlock Text="{Binding DetectedSource}" Foreground="#A0AEC0" FontSize="11"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="2" Background="#2D3748" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding EyeHeightDisplay}" Foreground="#63B3ED" FontWeight="SemiBold" FontSize="11"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- 清單底部刪除按鈕 -->
+                    <Button Grid.Row="1" 
+                            Content="🗑️ 刪除選取的透視圖 (可按 Delete 鍵)" 
+                            Command="{Binding DeleteCameraCommand}" 
+                            Style="{StaticResource DangerButtonStyle}" 
+                            Padding="8,6" Margin="0,4,0,0"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- 5. 底部狀態列 -->
+        <Border Grid.Row="4" Background="#0C1017" CornerRadius="4" Padding="8,4" Margin="0,6,0,0">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="#94A3B8" FontSize="11"/>
+        </Border>
+    </Grid>
+</Window>

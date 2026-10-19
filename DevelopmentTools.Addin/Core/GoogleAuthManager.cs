@@ -129,7 +129,9 @@ namespace DevelopmentTools.Core
         {
             if (!IsAuthEnabled()) return true;
 
-            var uiDispatcher = System.Windows.Application.Current?.Dispatcher;
+            // Revit 內通常沒有 WPF Application.Current；改用啟動時記下的 Revit 主執行緒 Dispatcher，
+            // 避免在背景執行緒直接呼叫 TaskDialog（會丟例外，使用者看不到登入提示）
+            var uiDispatcher = System.Windows.Application.Current?.Dispatcher ?? DevelopmentTools.App.UiDispatcher;
             string token = CurrentUserAccessToken;
 
             if (string.IsNullOrEmpty(token))

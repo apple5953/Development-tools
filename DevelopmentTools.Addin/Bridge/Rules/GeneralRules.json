@@ -1,0 +1,7 @@
+{
+  "version": "1.0",
+  "environment": "Development",
+  "strictLevelValidation": true,
+  "allowUnpinnedElements": true,
+  "maxBatchQueryLimit": 500
+}

@@ -104,14 +104,22 @@ echo     ^<Name^>Development Tools^</Name^>
 echo     ^<Assembly^>%TARGET_DIR%\App\DevelopmentTools.Addin.dll^</Assembly^>
 echo     ^<FullClassName^>DevelopmentTools.App^</FullClassName^>
 echo     ^<ClientId^>c2d5d85c-4d33-4f9e-a89e-21ef1ea3b361^</ClientId^>
-echo     ^<VendorId^>DeepMind^</VendorId^>
-echo     ^<VendorDescription^>Google DeepMind Advanced Agentic Coding Team^</VendorDescription^>
+echo     ^<VendorId^>RoomTileSystem^</VendorId^>
+echo     ^<VendorDescription^>Room Tile System v3^</VendorDescription^>
 echo   ^</AddIn^>
 echo ^</RevitAddIns^>
 ) > "%TEMP%\%ADDIN_NAME%"
 
 set REVIT_ADDINS_BASE=%APPDATA%\Autodesk\Revit\Addins
-for %%V in (2024 2025 2026) do (
+rem The add-in is built for Revit 2024 (.NET Framework 4.8). Revit 2025+ runs on .NET 8 and cannot load it,
+rem so remove any registration left there by older installers.
+for %%V in (2025 2026) do (
+    if exist "%REVIT_ADDINS_BASE%\%%V\%ADDIN_NAME%" (
+        del /F "%REVIT_ADDINS_BASE%\%%V\%ADDIN_NAME%"
+        echo   [Removed] Revit %%V registration - not supported
+    )
+)
+for %%V in (2024) do (
     if exist "%REVIT_ADDINS_BASE%\%%V" (
         copy /Y "%TEMP%\%ADDIN_NAME%" "%REVIT_ADDINS_BASE%\%%V\" >nul
         echo   [Registered] Revit %%V Addin

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -27,6 +27,20 @@
       <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\System.Net.Http\v4.0\System.Net.Http.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Microsoft.Office.Interop.Word">
+      <HintPath>lib\Microsoft.Office.Interop.Word.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BEAI\RealityBridge\BEAI.QueryHost\BEAI.QueryHost.csproj" />
+    <!-- 內建功能模組 -->
+    <ProjectReference Include="..\DevelopmentTools.Modules\PerspectiveMinimap\RevitPerspectiveMinimap.Core.csproj" />
+    <ProjectReference Include="..\DevelopmentTools.Modules\OpeningDetail\OpeningDetailCore.csproj" />
+    <ProjectReference Include="..\DevelopmentTools.Modules\DrawingFactory\BIMDrawingFactory.UI.csproj" />
+    <ProjectReference Include="..\DevelopmentTools.Modules\ProjectStandards\DevelopmentTools.ProjectStandards.csproj" />
   </ItemGroup>
 
 
@@ -46,6 +60,9 @@
     <None Update="version.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Config\feature-flags.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\RibbonIcons\*.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -54,6 +71,21 @@
     </None>
     <None Update="Rules\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Rules\CodeCheck\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Bridge\Worker\BEAI.QueryWorker.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>Runtime\Worker\v0001\BEAI.QueryWorker.exe</TargetPath>
+    </None>
+    <None Update="Bridge\Worker\Newtonsoft.Json.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>Runtime\Worker\v0001\Newtonsoft.Json.dll</TargetPath>
+    </None>
+    <None Update="Bridge\Rules\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>Runtime\Rules\%(Filename)%(Extension)</TargetPath>
     </None>
   </ItemGroup>
 

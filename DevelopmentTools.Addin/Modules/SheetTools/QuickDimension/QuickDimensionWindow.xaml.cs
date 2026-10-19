@@ -11,11 +11,11 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
     /// </summary>
     public partial class QuickDimensionWindow : Window
     {
-        public QuickDimensionWindow(Document doc)
+        public QuickDimensionWindow(Document doc, View initialView = null)
         {
             InitializeComponent();
             
-            var viewModel = new QuickDimensionViewModel(doc, this);
+            var viewModel = new QuickDimensionViewModel(doc, this, initialView);
             this.DataContext = viewModel;
         }
     }
@@ -47,3 +47,4 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
         }
     }
 }
+

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DevelopmentTools.Modules.SheetTools.QuickDimension"
         xmlns:core="clr-namespace:DevelopmentTools.Core"
-        Title="{Binding [QuickDim_Title], Source={x:Static core:LanguageManager.Instance}}" Height="380" Width="330"
+        Title="{Binding [QuickDim_Title], Source={x:Static core:LanguageManager.Instance}}" Height="430" Width="360"
         Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Segoe UI"
         WindowStartupLocation="CenterScreen" ShowInTaskbar="True" 
         Topmost="True" ResizeMode="NoResize">
@@ -152,21 +152,28 @@
 
         <!-- 2. 模式選擇 -->
         <StackPanel Grid.Row="1" Margin="0,0,0,12">
-            <TextBlock Text="{Binding [QuickDim_ModeTitle], Source={x:Static core:LanguageManager.Instance}}" Style="{StaticResource SectionLabel}"/>
-            <Border Background="#181825" BorderBrush="#313244" BorderThickness="1" CornerRadius="6" Padding="10,6">
+            <TextBlock Text="圖說類型與標註策略" Style="{StaticResource SectionLabel}"/>
+            <Border Background="#181825" BorderBrush="#313244" BorderThickness="1" CornerRadius="6" Padding="10,8">
                 <StackPanel>
-                    <RadioButton Content="{Binding [QuickDim_ModeColCol], Source={x:Static core:LanguageManager.Instance}}" 
-                                 IsChecked="{Binding SelectedMode, Converter={x:Static local:CheckedInIndexedConverter.Instance}, ConverterParameter=0}"/>
-                    <RadioButton Content="{Binding [QuickDim_ModeWallWall], Source={x:Static core:LanguageManager.Instance}}" 
-                                 IsChecked="{Binding SelectedMode, Converter={x:Static local:CheckedInIndexedConverter.Instance}, ConverterParameter=1}"/>
-                    <RadioButton Content="{Binding [QuickDim_ModeWallEdge], Source={x:Static core:LanguageManager.Instance}}" 
-                                 IsChecked="{Binding SelectedMode, Converter={x:Static local:CheckedInIndexedConverter.Instance}, ConverterParameter=2}"/>
-                    <RadioButton Content="{Binding [QuickDim_ModeOpening], Source={x:Static core:LanguageManager.Instance}}" 
-                                 IsChecked="{Binding SelectedMode, Converter={x:Static local:CheckedInIndexedConverter.Instance}, ConverterParameter=3}"/>
+                    <TextBlock Text="圖說類型" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox ItemsSource="{Binding AvailableProfiles}"
+                              SelectedItem="{Binding SelectedProfile}"
+                              DisplayMemberPath="Name"
+                              Margin="0,2,0,8"/>
+
+                    <TextBlock Text="標註/標籤模式" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox ItemsSource="{Binding AvailableModes}"
+                              SelectedItem="{Binding SelectedModeDefinition}"
+                              DisplayMemberPath="Name"
+                              Margin="0,2,0,6"/>
+                    <TextBlock Text="{Binding SelectedModeDefinition.Description}"
+                               Foreground="#A6ADC8"
+                               FontSize="10"
+                               TextWrapping="Wrap"
+                               LineHeight="14"/>
                 </StackPanel>
             </Border>
         </StackPanel>
-
         <!-- 3. 參數設定 -->
         <StackPanel Grid.Row="2" Margin="0,0,0,14">
             <TextBlock Text="{Binding [QuickDim_ParamTitle], Source={x:Static core:LanguageManager.Instance}}" Style="{StaticResource SectionLabel}"/>
@@ -197,7 +204,7 @@
                         VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <TextBlock Text="{Binding OffsetDistance}" Foreground="#A6E3A1" FontSize="10" FontWeight="SemiBold"/>
-                    <TextBlock Text="m" Foreground="#6C7086" FontSize="8" VerticalAlignment="Bottom" Margin="1,0,0,0"/>
+                    <TextBlock Text="mm" Foreground="#6C7086" FontSize="8" VerticalAlignment="Bottom" Margin="1,0,0,0"/>
                 </StackPanel>
             </Grid>
         </StackPanel>
@@ -227,3 +234,4 @@
         </Border>
     </Grid>
 </Window>
+

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
@@ -33,43 +33,28 @@ namespace DevelopmentTools.Commands
 
         public static void UpdateRibbonTexts()
         {
+            var lm = LanguageManager.Instance;
+
+            // 1. 面板標題：App 建立面板時記下了每個面板對應的語系字串鍵
+            foreach (var entry in App.TrackedPanels)
+            {
+                try { entry.Key.Title = lm[entry.Value]; } catch { }
+            }
+
+            // 2. 頁籤標題與按鈕文字
             try
             {
-                var lm = LanguageManager.Instance;
                 foreach (var tab in ComponentManager.Ribbon.Tabs)
                 {
-                    if (tab.Title != null && tab.Title.Contains("DT｜") || tab.Title.Contains("Development tools"))
-                    {
-                        foreach (var panel in tab.Panels)
-                        {
-                            // 嘗試根據目前的 Title 或是內部 Id 辨識 Panel，並更新 Title
-                            if (panel.Source.Id.Contains("Admin") || panel.Source.Id.Contains("系統管理") || panel.Source.Title == "管理面板" || panel.Source.Title == "系統管理" || panel.Source.Title == "Admin" || panel.Source.Title == "管理パネル")
-                                panel.Source.Title = lm["Ribbon_Panel_Admin"];
-                            else if (panel.Source.Id.Contains("排版") || panel.Source.Title == "空間排版" || panel.Source.Title == "Layout" || panel.Source.Title == "空間レイアウト")
-                                panel.Source.Title = lm["Ribbon_Panel_Layout"];
-                            else if (panel.Source.Id.Contains("粉刷") || panel.Source.Title == "粉刷裝修" || panel.Source.Title == "Finishes" || panel.Source.Title == "塗装仕上げ")
-                                panel.Source.Title = lm["Ribbon_Panel_Finish"];
-                            else if (panel.Source.Id.Contains("樓板") || panel.Source.Title == "樓板工具" || panel.Source.Title == "Floors" || panel.Source.Title == "床ツール")
-                                panel.Source.Title = lm["Ribbon_Panel_Floor"];
-                            else if (panel.Source.Id.Contains("圖紙") || panel.Source.Title == "圖紙工具" || panel.Source.Title == "Sheets" || panel.Source.Title == "シートツール")
-                                panel.Source.Title = lm["Ribbon_Panel_Sheet"];
-                            else if (panel.Source.Id.Contains("標註") || panel.Source.Title == "標註工具" || panel.Source.Title == "Tags" || panel.Source.Title == "注釈ツール")
-                                panel.Source.Title = lm["Ribbon_Panel_Tag"];
-                            else if (panel.Source.Id.Contains("語言") || panel.Source.Title == "語言切換" || panel.Source.Title == "Language" || panel.Source.Title == "言語設定")
-                                panel.Source.Title = lm["Ribbon_Panel_Language"];
-                            else if (panel.Source.Id.Contains("AI") || panel.Source.Title == "AI 助手" || panel.Source.Title == "AI Assistant" || panel.Source.Title == "AIアシスト")
-                                panel.Source.Title = lm["Ribbon_Panel_AI"];
-                            else if (panel.Source.Id.Contains("Doc") || panel.Source.Title == "文件工具" || panel.Source.Title == "Document Tools" || panel.Source.Title == "ドキュメントツール")
-                                panel.Source.Title = lm["Ribbon_Panel_DocTools"];
-                            else if (panel.Source.Id.Contains("Bcr") || panel.Source.Title == "法規檢討" || panel.Source.Title == "Code Review" || panel.Source.Title == "法規チェック")
-                                panel.Source.Title = lm["Ribbon_Panel_CodeReview"];
-                            else if (panel.Source.Id.Contains("空間區域") || panel.Source.Title == "空間區域" || panel.Source.Title == "剖面框工具" || panel.Source.Title == "Section Box" || panel.Source.Title == "断面ボックスツール")
-                                panel.Source.Title = lm["Ribbon_Panel_AdaptiveRegion"];
+                    if (tab == null || tab.Id == null) continue;
+                    if (!RibbonCatalog.TabKeys.TryGetValue(tab.Id, out string tabKey)) continue;
 
-                            foreach (var item in panel.Source.Items)
-                            {
-                                UpdateRibbonItem(item, lm);
-                            }
+                    tab.Title = lm[tabKey];
+                    foreach (var panel in tab.Panels)
+                    {
+                        foreach (var item in panel.Source.Items)
+                        {
+                            try { UpdateRibbonItem(item, lm); } catch { }
                         }
                     }
                 }
@@ -77,7 +62,8 @@ namespace DevelopmentTools.Commands
             catch { }
         }
 
-        private static void UpdateRibbonItem(Autodesk.Windows.RibbonItem item, LanguageManager lm)
+
+        private static void UpdateRibbonItem(Autodesk.Windows.RibbonItem item, LanguageManager lm, bool inMenu = false)
         {
             if (item == null) return;
 
@@ -109,13 +95,29 @@ namespace DevelopmentTools.Commands
             else if (id.EndsWith("LanguageZH")) { item.Text = lm["Ribbon_Lang_ZH"];  }
             else if (id.EndsWith("LanguageEN")) { item.Text = lm["Ribbon_Lang_EN"];  }
             else if (id.EndsWith("LanguageJA")) { item.Text = lm["Ribbon_Lang_JA"];  }
+            else
+            {
+                // 其他按鈕（含日後新增者）：依 RibbonCatalog 的命名規則找 Ribbon_Btn_ / Ribbon_TT_ 字串，有翻譯才更新
+                string name = id.Substring(id.LastIndexOf('%') + 1);
+                string key = RibbonCatalog.LangKey(name);
+                string text = lm["Ribbon_Btn_" + key];
+                if (text != "Ribbon_Btn_" + key)
+                {
+                    item.Text = text;
+                    string tip = lm["Ribbon_TT_" + key];
+                    if (tip != "Ribbon_TT_" + key) item.ToolTip = new RibbonToolTip { Title = text, Content = tip };
+                }
+            }
 
+
+            // 下拉選單裡的項目用單行文字
+            if (inMenu && item.Text != null) item.Text = RibbonCatalog.OneLine(item.Text);
 
             // 用 reflection 遍歷任何帶有 Items 的容器型別（PulldownButton / SplitButton 等）
             if (item is Autodesk.Windows.RibbonSplitButton splitBtn)
             {
                 foreach (var child in splitBtn.Items)
-                    UpdateRibbonItem(child, lm);
+                    UpdateRibbonItem(child, lm, true);
             }
             else
             {
@@ -128,7 +130,7 @@ namespace DevelopmentTools.Commands
                         foreach (var child in children)
                         {
                             if (child is Autodesk.Windows.RibbonItem ribbonChild)
-                                UpdateRibbonItem(ribbonChild, lm);
+                                UpdateRibbonItem(ribbonChild, lm, true);
                         }
                     }
                 }

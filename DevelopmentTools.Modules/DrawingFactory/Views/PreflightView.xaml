@@ -1,0 +1,149 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Views.PreflightView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:controls="clr-namespace:BIMDrawingFactory.UI.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="900">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock Text="建圖前檢查 (Preflight Check)"
+                           FontSize="{StaticResource FontSizeHeadline}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Text="{Binding TargetSummary, StringFormat='目標對象：{0}'}"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <Button Grid.Column="1"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding RecheckCommand}"
+                    Content="重新檢查"/>
+        </Grid>
+
+        <!-- Summary Metric Cards -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Card 1: Success -->
+            <Border Grid.Column="0"
+                    Style="{StaticResource StandardCardStyle}"
+                    Background="{StaticResource StatusSuccessBgBrush}"
+                    BorderBrush="{StaticResource StatusSuccessBorderBrush}">
+                <StackPanel>
+                    <TextBlock Text="可以建立" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource StatusSuccessBrush}" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding SuccessCount}" FontSize="{StaticResource FontSizeHero}" FontWeight="Bold" Foreground="{StaticResource StatusSuccessBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="張圖紙可進入建立流程" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Card 2: Warning -->
+            <Border Grid.Column="2"
+                    Style="{StaticResource StandardCardStyle}"
+                    Background="{StaticResource StatusWarningBgBrush}"
+                    BorderBrush="{StaticResource StatusWarningBorderBrush}">
+                <StackPanel>
+                    <TextBlock Text="需要確認" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource StatusWarningBrush}" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding WarningCount}" FontSize="{StaticResource FontSizeHero}" FontWeight="Bold" Foreground="{StaticResource StatusWarningBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="需人工決定或將跳過" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Card 3: Error -->
+            <Border Grid.Column="4"
+                    Style="{StaticResource StandardCardStyle}"
+                    Background="{StaticResource StatusErrorBgBrush}"
+                    BorderBrush="{StaticResource StatusErrorBorderBrush}">
+                <StackPanel>
+                    <TextBlock Text="無法建立 (重大阻礙)" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource StatusErrorBrush}" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding ErrorCount}" FontSize="{StaticResource FontSizeHero}" FontWeight="Bold" Foreground="{StaticResource StatusErrorBrush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="必須先修復才能建立" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Issues List / All Clear State -->
+        <Border Grid.Row="2" Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,20">
+            <Grid>
+                <!-- Issues List when count > 0 -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12" Visibility="{Binding Issues.Count, Converter={x:Static controls:VisibilityConverters.BoolToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Text="建圖前檢查詳細項目" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Command="{Binding AutoFixAllCommand}"
+                                    Content="全部套用建議"/>
+                        </Grid>
+
+                        <ItemsControl ItemsSource="{Binding Issues}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <controls:IssueCard IssueData="{Binding}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- All Clear State -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,40,0,0"
+                                    Visibility="{Binding Issues.Count, Converter={x:Static controls:VisibilityConverters.InverseBoolToVisibilityConverter}}">
+                            <Path Data="{StaticResource IconSuccess}" Fill="{StaticResource StatusSuccessBrush}" Width="48" Height="48" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                            <TextBlock Text="檢查完成！所有圖紙與視圖皆符合專案標準" FontSize="{StaticResource FontSizeSubhead}" FontWeight="Bold" Foreground="{StaticResource StatusSuccessBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="無任何遺漏之範圍框、樣板或樓層對應問題，您可以直接進入預覽階段。" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Bottom Navigation Buttons -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding GoBackCommand}"
+                    Content="&lt; 返回重選樓層"
+                    MinWidth="140"/>
+
+            <Button Grid.Column="2"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Command="{Binding ProceedToPreviewCommand}"
+                    Content="建立預覽 (Preview) >"
+                    MinWidth="180"
+                    Padding="24,10"/>
+        </Grid>
+    </Grid>
+</UserControl>

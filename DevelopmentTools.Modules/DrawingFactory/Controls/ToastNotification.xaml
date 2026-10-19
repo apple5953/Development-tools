@@ -1,0 +1,33 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Controls.ToastNotification"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d">
+    <Border x:Name="ToastBorder"
+            Background="#0F172A"
+            CornerRadius="{StaticResource RadiusMedium}"
+            Padding="16,10"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            Margin="0,0,0,32"
+            Effect="{DynamicResource ShadowEffect}">
+        <Border.Resources>
+            <DropShadowEffect x:Key="ShadowEffect" BlurRadius="16" ShadowDepth="4" Opacity="0.25" Color="#000000"/>
+        </Border.Resources>
+        <StackPanel Orientation="Horizontal">
+            <Path x:Name="ToastIcon"
+                  Data="{StaticResource IconSuccess}"
+                  Fill="{StaticResource StatusSuccessBrush}"
+                  Width="16" Height="16"
+                  Stretch="Uniform"
+                  Margin="0,0,10,0"
+                  VerticalAlignment="Center"/>
+            <TextBlock x:Name="TxtMessage"
+                       Text="通知訊息"
+                       FontSize="{StaticResource FontSizeBody}"
+                       Foreground="White"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+    </Border>
+</UserControl>

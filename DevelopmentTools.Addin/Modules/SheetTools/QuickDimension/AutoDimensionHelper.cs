@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Architecture;
 using DevelopmentTools.Core;
 
 namespace DevelopmentTools.Modules.SheetTools.QuickDimension
@@ -60,30 +61,20 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
                     var tempConfig = new ViewAnnotationConfig
                     {
                         TaggingMode = logic.TaggingMode,
+                        ModeKey = logic.ModeKey,
                         DimensionTypeName = logic.DimensionTypeName,
                         OffsetDistance = logic.OffsetDistance,
                         PrefixText = logic.PrefixText,
                         SuffixText = logic.SuffixText
                     };
 
-                    switch (logic.TaggingMode)
+                    QuickAnnotationModeDefinition mode = QuickAnnotationModeRegistry.GetMode(logic.ModeKey, logic.TaggingMode);
+                    if (mode == null || !mode.CanRunAutomatically || !mode.AppliesTo(view))
                     {
-                        case 0:
-                            AutoTagColumns(doc, view, dimType, tempConfig);
-                            break;
-                        case 1:
-                            AutoTagWalls(doc, view, dimType, tempConfig);
-                            break;
-                        case 2:
-                            AutoTagWallEdges(doc, view, dimType, tempConfig);
-                            break;
-                        case 3:
-                            AutoTagWallOpenings(doc, view, dimType, tempConfig);
-                            break;
-                        case 4:
-                            AutoTagBeams(doc, view, dimType, tempConfig);
-                            break;
+                        continue;
                     }
+
+                    mode.AutomaticApply(doc, view, dimType, tempConfig);
                 }
             }
             catch
@@ -105,23 +96,10 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
 
             if (dimType == null) return;
 
-            switch (config.TaggingMode)
+            QuickAnnotationModeDefinition mode = QuickAnnotationModeRegistry.GetMode(null, config.TaggingMode);
+            if (mode != null && mode.CanRunAutomatically && mode.AppliesTo(view))
             {
-                case 0:
-                    AutoTagColumns(doc, view, dimType, config);
-                    break;
-                case 1:
-                    AutoTagWalls(doc, view, dimType, config);
-                    break;
-                case 2:
-                    AutoTagWallEdges(doc, view, dimType, config);
-                    break;
-                case 3:
-                    AutoTagWallOpenings(doc, view, dimType, config);
-                    break;
-                case 4:
-                    AutoTagBeams(doc, view, dimType, config);
-                    break;
+                mode.AutomaticApply(doc, view, dimType, config);
             }
         }
 
@@ -184,7 +162,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             }
         }
 
-        private static void AutoTagColumns(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
+        internal static void AutoTagColumns(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
         {
             var cols = new FilteredElementCollector(doc, view.Id)
                 .OfClass(typeof(FamilyInstance))
@@ -274,7 +252,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             return null;
         }
 
-        private static void AutoTagWalls(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
+        internal static void AutoTagWalls(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
         {
             var walls = new FilteredElementCollector(doc, view.Id)
                 .OfClass(typeof(Wall))
@@ -343,7 +321,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             }
         }
 
-        private static void AutoTagWallEdges(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
+        internal static void AutoTagWallEdges(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
         {
             var walls = new FilteredElementCollector(doc, view.Id)
                 .OfClass(typeof(Wall))
@@ -429,7 +407,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             }
         }
 
-        private static void AutoTagWallOpenings(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
+        internal static void AutoTagWallOpenings(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
         {
             var doorsAndWindows = new FilteredElementCollector(doc, view.Id)
                 .OfClass(typeof(FamilyInstance))
@@ -498,7 +476,7 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
             }
         }
 
-        private static void AutoTagBeams(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
+        internal static void AutoTagBeams(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
         {
             var beams = new FilteredElementCollector(doc, view.Id)
                 .OfCategory(BuiltInCategory.OST_StructuralFraming)
@@ -584,5 +562,40 @@ namespace DevelopmentTools.Modules.SheetTools.QuickDimension
                 });
             }
         }
+        internal static void AutoPlaceRoomTags(Document doc, View view, DimensionType dimType, ViewAnnotationConfig config)
+        {
+            if (doc == null || view == null || view.ViewType != ViewType.FloorPlan) return;
+
+            var rooms = new FilteredElementCollector(doc, view.Id)
+                .OfCategory(BuiltInCategory.OST_Rooms)
+                .WhereElementIsNotElementType()
+                .Cast<Room>()
+                .Where(r => r.Area > 0 && r.Location is LocationPoint)
+                .ToList();
+
+            if (!rooms.Any()) return;
+
+            var taggedRoomIds = new HashSet<int>(
+                new FilteredElementCollector(doc, view.Id)
+                    .OfClass(typeof(SpatialElementTag))
+                    .Cast<SpatialElementTag>()
+                    .OfType<RoomTag>()
+                    .Where(t => t.Room != null)
+                    .Select(t => t.Room.Id.IntegerValue));
+
+            RunActionInTransaction(doc, "自動放置房間標籤", () =>
+            {
+                foreach (Room room in rooms)
+                {
+                    if (taggedRoomIds.Contains(room.Id.IntegerValue)) continue;
+                    if (!(room.Location is LocationPoint lp)) continue;
+
+                    UV tagPoint = new UV(lp.Point.X, lp.Point.Y);
+                    doc.Create.NewRoomTag(new LinkElementId(room.Id), tagPoint, view.Id);
+                    taggedRoomIds.Add(room.Id.IntegerValue);
+                }
+            });
+        }
     }
 }
+

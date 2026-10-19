@@ -76,7 +76,6 @@ if (Test-Path $zipTempDir) { Remove-Item -LiteralPath $zipTempDir -Recurse -Forc
 New-Item -ItemType Directory -Path $zipTempDir | Out-Null
 
 # Copy obfuscated DLL and shared parameters
-Copy-Item -LiteralPath $obfDll -Destination $zipTempDir
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\TileJointSharedParam.txt") -Destination $zipTempDir
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\platform_config.json") -Destination $zipTempDir
 Copy-Item -LiteralPath (Join-Path $parentRoot "DevelopmentTools.Addin\appsettings.json") -Destination $zipTempDir -ErrorAction SilentlyContinue
@@ -88,7 +87,14 @@ if (Test-Path (Join-Path $parentRoot "DevelopmentTools.Addin\Config")) {
 }
 
 # Copy all dependent DLLs from the Addin build (excluding the un-obfuscated main DLL)
-Copy-Item -Path (Join-Path $releaseDir "*.dll") -Destination $zipTempDir -Exclude "DevelopmentTools.Addin.dll"
+# Own DLLs (main add-in + built-in modules) always come from the Obfuscated folder
+$ownDlls = @("DevelopmentTools.Addin.dll", "RevitPerspectiveMinimap.Core.dll", "OpeningDetailCore.dll", "BIMDrawingFactory.UI.dll", "DevelopmentTools.ProjectStandards.dll")
+foreach ($d in $ownDlls) {
+    $obf = Join-Path $releaseDir "Obfuscated\$d"
+    if (-not (Test-Path $obf)) { throw "Obfuscated DLL not found: $obf" }
+}
+Copy-Item -Path (Join-Path $releaseDir "Obfuscated\*.dll") -Destination $zipTempDir -Force
+Copy-Item -Path (Join-Path $releaseDir "*.dll") -Destination $zipTempDir -Exclude $ownDlls
 
 # Copy Updater and all dependency DLLs into ZIP so it acts as both AutoUpdate package and Portable Green package
 $updaterBinDir = Join-Path $parentRoot "DevelopmentTools.Updater\bin\Release\net48"

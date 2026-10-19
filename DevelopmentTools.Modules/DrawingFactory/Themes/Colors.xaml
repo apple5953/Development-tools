@@ -1,0 +1,95 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Neutral Background & Surfaces -->
+    <Color x:Key="AppBackground">#F3F5F8</Color>
+    <Color x:Key="SurfaceBackground">#FFFFFF</Color>
+    <Color x:Key="SurfaceSubtle">#F8F9FB</Color>
+    <Color x:Key="SurfaceCardHover">#EDF2F7</Color>
+    <Color x:Key="SurfaceSelected">#EBF3FC</Color>
+
+    <!-- Borders & Dividers -->
+    <Color x:Key="BorderLight">#E2E8F0</Color>
+    <Color x:Key="BorderDefault">#CBD5E1</Color>
+    <Color x:Key="BorderDark">#94A3B8</Color>
+
+    <!-- Typography Colors -->
+    <Color x:Key="TextPrimary">#0F172A</Color>
+    <Color x:Key="TextSecondary">#475569</Color>
+    <Color x:Key="TextMuted">#94A3B8</Color>
+    <Color x:Key="TextOnPrimary">#FFFFFF</Color>
+
+    <!-- Primary Accent (Engineering Blue) -->
+    <Color x:Key="PrimaryAccent">#0263E0</Color>
+    <Color x:Key="PrimaryAccentHover">#0252BA</Color>
+    <Color x:Key="PrimaryAccentPressed">#014299</Color>
+    <Color x:Key="PrimarySubtle">#E8F2FD</Color>
+
+    <!-- Semantic Status Colors -->
+    <!-- Success: 🟢 可以建立 / 已完成 -->
+    <Color x:Key="StatusSuccess">#107C41</Color>
+    <Color x:Key="StatusSuccessBg">#DFF6DD</Color>
+    <Color x:Key="StatusSuccessBorder">#9ED89D</Color>
+
+    <!-- Warning: 🟡 需要確認 / 更新 -->
+    <Color x:Key="StatusWarning">#C45100</Color>
+    <Color x:Key="StatusWarningBg">#FFF1DB</Color>
+    <Color x:Key="StatusWarningBorder">#FBD09F</Color>
+
+    <!-- Error: 🔴 無法建立 / 錯誤 -->
+    <Color x:Key="StatusError">#C42B1C</Color>
+    <Color x:Key="StatusErrorBg">#FDE7E9</Color>
+    <Color x:Key="StatusErrorBorder">#F4A8AC</Color>
+
+    <!-- Inactive: ⚪ 尚未建立 / 忽略 -->
+    <Color x:Key="StatusInactive">#64748B</Color>
+    <Color x:Key="StatusInactiveBg">#F1F5F9</Color>
+    <Color x:Key="StatusInactiveBorder">#CBD5E1</Color>
+
+    <!-- Completed: 🔵 已完成標準 -->
+    <Color x:Key="StatusCompleted">#0263E0</Color>
+    <Color x:Key="StatusCompletedBg">#E8F2FD</Color>
+    <Color x:Key="StatusCompletedBorder">#B8D9F9</Color>
+
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackground}"/>
+    <SolidColorBrush x:Key="SurfaceBackgroundBrush" Color="{StaticResource SurfaceBackground}"/>
+    <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="{StaticResource SurfaceSubtle}"/>
+    <SolidColorBrush x:Key="SurfaceCardHoverBrush" Color="{StaticResource SurfaceCardHover}"/>
+    <SolidColorBrush x:Key="SurfaceSelectedBrush" Color="{StaticResource SurfaceSelected}"/>
+
+    <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource BorderLight}"/>
+    <SolidColorBrush x:Key="BorderDefaultBrush" Color="{StaticResource BorderDefault}"/>
+    <SolidColorBrush x:Key="BorderDarkBrush" Color="{StaticResource BorderDark}"/>
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMuted}"/>
+    <SolidColorBrush x:Key="TextOnPrimaryBrush" Color="{StaticResource TextOnPrimary}"/>
+
+    <SolidColorBrush x:Key="PrimaryAccentBrush" Color="{StaticResource PrimaryAccent}"/>
+    <SolidColorBrush x:Key="PrimaryAccentHoverBrush" Color="{StaticResource PrimaryAccentHover}"/>
+    <SolidColorBrush x:Key="PrimaryAccentPressedBrush" Color="{StaticResource PrimaryAccentPressed}"/>
+    <SolidColorBrush x:Key="PrimarySubtleBrush" Color="{StaticResource PrimarySubtle}"/>
+
+    <SolidColorBrush x:Key="StatusSuccessBrush" Color="{StaticResource StatusSuccess}"/>
+    <SolidColorBrush x:Key="StatusSuccessBgBrush" Color="{StaticResource StatusSuccessBg}"/>
+    <SolidColorBrush x:Key="StatusSuccessBorderBrush" Color="{StaticResource StatusSuccessBorder}"/>
+
+    <SolidColorBrush x:Key="StatusWarningBrush" Color="{StaticResource StatusWarning}"/>
+    <SolidColorBrush x:Key="StatusWarningBgBrush" Color="{StaticResource StatusWarningBg}"/>
+    <SolidColorBrush x:Key="StatusWarningBorderBrush" Color="{StaticResource StatusWarningBorder}"/>
+
+    <SolidColorBrush x:Key="StatusErrorBrush" Color="{StaticResource StatusError}"/>
+    <SolidColorBrush x:Key="StatusErrorBgBrush" Color="{StaticResource StatusErrorBg}"/>
+    <SolidColorBrush x:Key="StatusErrorBorderBrush" Color="{StaticResource StatusErrorBorder}"/>
+
+    <SolidColorBrush x:Key="StatusInactiveBrush" Color="{StaticResource StatusInactive}"/>
+    <SolidColorBrush x:Key="StatusInactiveBgBrush" Color="{StaticResource StatusInactiveBg}"/>
+    <SolidColorBrush x:Key="StatusInactiveBorderBrush" Color="{StaticResource StatusInactiveBorder}"/>
+
+    <SolidColorBrush x:Key="StatusCompletedBrush" Color="{StaticResource StatusCompleted}"/>
+    <SolidColorBrush x:Key="StatusCompletedBgBrush" Color="{StaticResource StatusCompletedBg}"/>
+    <SolidColorBrush x:Key="StatusCompletedBorderBrush" Color="{StaticResource StatusCompletedBorder}"/>
+
+</ResourceDictionary>

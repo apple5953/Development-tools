@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "standardParameters": [
+    "Mark",
+    "Comments",
+    "Fire Rating",
+    "Type Mark",
+    "Model",
+    "Manufacturer",
+    "Cost",
+    "Description"
+  ],
+  "parameterAliases": {
+    "防火時效": "Fire Rating",
+    "編號": "Mark",
+    "備註": "Comments",
+    "類型標記": "Type Mark"
+  }
+}

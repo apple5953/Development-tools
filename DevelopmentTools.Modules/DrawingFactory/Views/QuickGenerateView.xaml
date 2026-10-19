@@ -1,0 +1,404 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Views.QuickGenerateView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:controls="clr-namespace:BIMDrawingFactory.UI.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1050"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch"
+             Background="#F3F5F8">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24" Background="#F3F5F8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <StackPanel Margin="0,0,0,0">
+
+            <!-- STEP 1: A 專案基準 ➔ B 專案複製目標 對照面板 -->
+            <TextBlock Text="【STEP 1】基準圖說來源分析 (A 專案) ➔ 批次複製建置目標 (B 專案)"
+                       FontSize="{StaticResource FontSizeSubhead}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Margin="0,0,0,12"/>
+
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.2*"/>
+                    <ColumnDefinition Width="40"/>
+                    <ColumnDefinition Width="1.0*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left Card: A 專案基準圖說來源與視圖明細 -->
+                <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Background="{StaticResource SurfaceSelectedBrush}" BorderBrush="{StaticResource PrimaryAccentBrush}" BorderThickness="1.5">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Border Background="{StaticResource PrimaryAccentBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
+                                <TextBlock Text="依據基準 A" FontWeight="Bold" Foreground="White" FontSize="{StaticResource FontSizeCaption}"/>
+                            </Border>
+                            <TextBlock Text="來源標準圖說專案與圖紙視圖規格" FontWeight="Bold" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                <TextBlock Text="1. 來源專案檔案：" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox ItemsSource="{Binding SourceProjects}" SelectedItem="{Binding SelectedSourceProject}" Padding="6,4"/>
+                                    <Button Grid.Column="1"
+                                            Style="{StaticResource GhostButtonStyle}"
+                                            Command="{Binding RefreshSourceCommand}"
+                                            Content="重新掃描"
+                                            ToolTip="重新讀取目前已開啟的來源檔案與標準圖說"
+                                            Padding="8,4"
+                                            Margin="6,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                <TextBlock Text="2. 基準標準圖說系列：" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                <ComboBox ItemsSource="{Binding SourceSheetSeriesList}"
+                                          SelectedItem="{Binding SelectedSourceSheetSeries}"
+                                          DisplayMemberPath="DisplayName"
+                                          Padding="6,4"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 展開顯示基準 A 包含之具體圖紙與視圖清單 -->
+                        <Grid Margin="0,4,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="📋 基準圖說包含項目 (已依選取系列分類，自動分析圖框、樣板與視圖)："
+                                       FontSize="{StaticResource FontSizeCaption}"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Style="{StaticResource GhostButtonStyle}"
+                                        Command="{Binding SelectAllSourceSheetsCommand}"
+                                        Content="全選"
+                                        Padding="6,2"
+                                        Margin="0,0,4,0"/>
+                                <Button Style="{StaticResource GhostButtonStyle}"
+                                        Command="{Binding ClearSourceSheetsCommand}"
+                                        Content="清除"
+                                        Padding="6,2"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <DataGrid ItemsSource="{Binding SourceSheetItems}"
+                                  MaxHeight="320"
+                                  AutoGenerateColumns="False"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  Background="White"
+                                  BorderThickness="1"
+                                  BorderBrush="{StaticResource BorderLightBrush}"
+                                  EnableRowVirtualization="True"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  RowHeight="NaN">
+                            <DataGrid.Columns>
+                                <DataGridCheckBoxColumn Binding="{Binding IsChecked, UpdateSourceTrigger=PropertyChanged}" Width="40">
+                                    <DataGridCheckBoxColumn.HeaderTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="選取" FontSize="11" FontWeight="Bold"/>
+                                        </DataTemplate>
+                                    </DataGridCheckBoxColumn.HeaderTemplate>
+                                </DataGridCheckBoxColumn>
+                                <DataGridTextColumn Header="標準圖號" Binding="{Binding SourceSheetNumber}" Width="95" FontWeight="Bold" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="標準圖名" Binding="{Binding SourceSheetName}" Width="135" FontWeight="SemiBold" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="基準圖框（族：類型）" Binding="{Binding TitleBlockName}" Width="180" IsReadOnly="True"/>
+                                <DataGridTemplateColumn Header="包含視圖與樣板明細 (支援一張圖紙含多視圖)" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="2,3">
+                                                <!-- 原始基準圖紙本身也是量化來源，不能只顯示其 Viewport。 -->
+                                                <Border Background="#EFF6FF" BorderBrush="#93C5FD" BorderThickness="1" CornerRadius="4" Padding="6,4" Margin="0,0,0,3">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Background="#0263E0" CornerRadius="3" Padding="5,1" Margin="0,0,6,0">
+                                                            <TextBlock Text="原圖紙" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding SourceSheetNumber}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource PrimaryAccentBrush}" Margin="0,0,6,0"/>
+                                                            <TextBlock Text="{Binding SourceSheetName}" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="2" Text="{Binding TitleBlockName, StringFormat='圖框: {0}'}" FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="8,0,0,0"/>
+                                                    </Grid>
+                                                </Border>
+                                                <ItemsControl ItemsSource="{Binding PlacedViews}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4" Padding="6,3" Margin="0,2">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <!-- View Type & Name -->
+                                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                    <Border Background="#E0E7FF" CornerRadius="3" Padding="4,1" Margin="0,0,6,0">
+                                                                        <TextBlock Text="{Binding ViewType}" FontSize="10" FontWeight="Bold" Foreground="#3730A3"/>
+                                                                    </Border>
+                                                                    <TextBlock Text="{Binding ViewName}" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                                                </StackPanel>
+
+                                                                <!-- View Template -->
+                                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                                                    <TextBlock Text="視埠: " FontSize="10" Foreground="{StaticResource TextMutedBrush}"/>
+                                                                    <TextBlock Text="{Binding ViewportTypeName}" FontSize="10" FontWeight="Medium" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0"/>
+                                                                    <TextBlock Text="樣板: " FontSize="10" Foreground="{StaticResource TextMutedBrush}"/>
+                                                                    <TextBlock Text="{Binding ViewTemplateName}" FontSize="10" FontWeight="Medium" Foreground="{StaticResource PrimaryAccentBrush}"/>
+                                                                </StackPanel>
+
+                                                                <!-- Scale & ScopeBox -->
+                                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                    <TextBlock Text="{Binding Scale}" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,6,0"/>
+                                                                    <TextBlock Text="{Binding ScopeBoxName, StringFormat='框: {0}'}" FontSize="10" Foreground="{StaticResource TextMutedBrush}"/>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Middle Indicator Arrow -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="➔" FontSize="24" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="批次複製" FontSize="{StaticResource FontSizeCaption}" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Right Card: B 專案複製目標與圖號系列設定 -->
+                <Border Grid.Column="2" Style="{StaticResource StandardCardStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Border Background="{StaticResource PrimaryAccentBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
+                                <TextBlock Text="複製目標 B" FontWeight="Bold" Foreground="White" FontSize="{StaticResource FontSizeCaption}"/>
+                            </Border>
+                            <TextBlock Text="目標專案與量化圖號系列規劃" FontWeight="Bold" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- 1. Target Project -->
+                        <TextBlock Text="1. 目標專案檔案 (Revit 已開啟之專案)：" FontSize="{StaticResource FontSizeCaption}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,2"/>
+                        <ComboBox ItemsSource="{Binding TargetProjects}"
+                                  SelectedItem="{Binding SelectedTargetProject, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  Margin="0,0,0,10" Padding="6,4"/>
+
+                        <!-- 2. Starting Series Code -->
+                        <TextBlock Text="2. 量化開圖起始系列代碼 (依專案瀏覽器的圖號系列分類)：" FontSize="{StaticResource FontSizeCaption}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding TargetSheetSeries, UpdateSourceTrigger=PropertyChanged}" FontWeight="Bold" FontSize="{StaticResource FontSizeBody}" Padding="6,4" VerticalContentAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="輸入 SB6，各樓層將自動遞增為 SB6, SB7, SB8..." FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        </Grid>
+
+                        <!-- 3. Auto-Incremented Floor to Series Mapping Table -->
+                        <TextBlock Text="3. 各目標樓層與圖號系列對應預覽：" FontSize="{StaticResource FontSizeCaption}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,4"/>
+                        
+                        <DataGrid ItemsSource="{Binding FloorSeriesMappings}"
+                                  MaxHeight="260"
+                                  AutoGenerateColumns="False"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  Background="White"
+                                  BorderThickness="1"
+                                  BorderBrush="{StaticResource BorderLightBrush}"
+                                  CanUserAddRows="False"
+                                  IsReadOnly="True"
+                                  Margin="0,0,0,4">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="目標樓層" Binding="{Binding FloorName}" Width="80" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="分配系列代碼" Binding="{Binding TargetSeriesCode}" Width="100" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="圖號範圍" Binding="{Binding SheetNumberRange}" Width="*" FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="預計圖紙數" Binding="{Binding SheetsCount, StringFormat='{}{0} 張'}" Width="80"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <TextBlock Text="💡 勾選下方 STEP 2 樓層，將自動依序分配系列代碼 (如 2FL➔S6, 3FL➔S7...)"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- STEP 2: Floor Selection -->
+            <TextBlock Text="【STEP 2】選擇要複製建立的目標樓層 (Target Floors)"
+                       FontSize="{StaticResource FontSizeSubhead}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Margin="0,8,0,10"/>
+
+            <!-- Floor Shortcut Buttons -->
+            <WrapPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding SelectAllFloorsCommand}"
+                        Content="全部樓層"
+                        Margin="0,0,8,6"/>
+
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding SelectBasementFloorsCommand}"
+                        Content="僅地下層 (B1~B4)"
+                        Margin="0,0,8,6"/>
+
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding SelectAboveGroundFloorsCommand}"
+                        Content="僅地上層 (1F~RF)"
+                        Margin="0,0,8,6"/>
+
+                <Button Style="{StaticResource SecondaryButtonStyle}"
+                        Command="{Binding SelectUncreatedFloorsCommand}"
+                        Content="只選未建立/需更新"
+                        Margin="0,0,8,6"/>
+
+                <Button Style="{StaticResource GhostButtonStyle}"
+                        Command="{Binding ClearFloorSelectionCommand}"
+                        Content="清除選取"
+                        Margin="0,0,8,6"/>
+            </WrapPanel>
+
+            <!-- Floor Selector Grid -->
+            <controls:FloorSelector ItemsSource="{Binding CurrentFloors}"
+                                    FloorSelectionToggled="OnFloorSelectionToggled"
+                                    Margin="0,0,0,10"/>
+
+            <!-- 直接顯示目標專案實際 Level 標高與相鄰層高，供見上／見下規則核對。 -->
+            <Border Style="{StaticResource StandardCardStyle}" Padding="12" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="目標 B 專案 Level 標高與層高分析"
+                               FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="標高與層高直接讀取 Revit Level；見上使用樓下一層為基準，見下使用當層。"
+                               FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,8"/>
+                    <DataGrid ItemsSource="{Binding CurrentFloors}"
+                              MaxHeight="170" AutoGenerateColumns="False" IsReadOnly="True"
+                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                              EnableRowVirtualization="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="樓層" Binding="{Binding FloorName}" Width="90" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="主要 Revit Level" Binding="{Binding RevitLevelName}" Width="180"/>
+                            <DataGridTextColumn Header="Level 標高 (mm)" Binding="{Binding ElevationMm, StringFormat={}{0:N0}}" Width="135"/>
+                            <DataGridTextColumn Header="至上一樓層線高度 (mm)" Binding="{Binding HeightToNextMm, StringFormat={}{0:N0}}" Width="175"/>
+                            <DataGridTextColumn Header="同樓層群組內所有 Level 線" Binding="{Binding AssociatedLevelsSummary}" Width="*"/>
+                            <DataGridCheckBoxColumn Header="本次選取" Binding="{Binding IsSelected}" Width="80"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- ON-DEMAND LIVE FLOOR INSPECTION PREVIEW -->
+            <Border Style="{StaticResource StandardCardStyle}" Margin="0,0,0,16"
+                    Visibility="{Binding OnDemandPreviewItems.Count, Converter={x:Static controls:VisibilityConverters.BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🔍 【按需即時解析】選取樓層預計建立圖紙清單"
+                                       FontWeight="Bold"
+                                       FontSize="{StaticResource FontSizeBody}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Text=" (依據基準圖說規格 × 目標樓層自動對應)"
+                                       FontSize="{StaticResource FontSizeCaption}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="6,0,0,0"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding OnDemandPreviewItems.Count, StringFormat='共 {0} 張圖紙'}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource PrimaryAccentBrush}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Table of On-Demand Sheets -->
+                    <DataGrid ItemsSource="{Binding OnDemandPreviewItems}"
+                              MaxHeight="220"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="Horizontal"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              EnableRowVirtualization="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="預計圖號" Binding="{Binding SheetNumber}" Width="120" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="預計圖紙名稱" Binding="{Binding SheetName}" Width="200"/>
+                            <DataGridTextColumn Header="圖框對應" Binding="{Binding ResolvedTitleBlockName}" Width="210"/>
+                            <DataGridTextColumn Header="視圖樣板" Binding="{Binding ViewTemplateName}" Width="150"/>
+                            <DataGridTextColumn Header="套用範圍框" Binding="{Binding ScopeBoxName}" Width="150"/>
+                            <DataGridTemplateColumn Header="檢查狀態" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <controls:StatusBadge Status="{Binding Status}" CustomText="{Binding StatusMessage}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- Bottom Action Summary & Submit -->
+            <Border Background="{StaticResource SurfaceSelectedBrush}"
+                    BorderBrush="{StaticResource PrimaryAccentBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    Padding="16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="選取摘要：" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="{Binding SelectionSummaryText}"
+                                   FontSize="{StaticResource FontSizeSubhead}"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource PrimaryAccentBrush}"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding ProceedToPreflightCommand}"
+                            Content="建圖前檢查 (Step 2) >"
+                            MinWidth="180"
+                            Padding="20,10"/>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -25,3 +25,14 @@ local-data/
 CDCBIM*.xlsx
 *.tmp
 *.bak
+
+# BEAI Local MCP generated files
+BEAI/MCP/node_modules/
+BEAI/MCP/dist/
+BEAI/MCP/*.tsbuildinfo
+
+# Large local archives
+office-plugins-source.zip
+ai (2).zip
+
+build-logs/

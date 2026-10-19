@@ -1,6 +1,6 @@
 [Setup]
 AppName=Room Tile System v3
-AppVersion=1.0.0
+AppVersion=3.2.6
 DefaultDirName={localappdata}\DevelopmentTools
 DefaultGroupName=Room Tile System
 OutputDir=..\..\dist
@@ -19,16 +19,17 @@ Name: "{app}\Modules"
 
 [Files]
 ; 複製主程式與依賴 DLL
-Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\Obfuscated\DevelopmentTools.Addin.dll"; DestDir: "{app}\App"; Flags: ignoreversion
+Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\Obfuscated\*.dll"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Addin\TileJointSharedParam.txt"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\version.json"; DestDir: "{app}\App"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Addin\platform_config.json"; DestDir: "{app}\App"; Flags: ignoreversion
-Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\*.dll"; DestDir: "{app}\App"; Excludes: "DevelopmentTools.Addin.dll"; Flags: ignoreversion
+Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\*.dll"; DestDir: "{app}\App"; Excludes: "DevelopmentTools.Addin.dll,RevitPerspectiveMinimap.Core.dll,OpeningDetailCore.dll,BIMDrawingFactory.UI.dll,DevelopmentTools.ProjectStandards.dll"; Flags: ignoreversion
 ; 複製設定檔 (若使用者原本已有則不覆蓋)
 Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\appsettings.json"; DestDir: "{app}\Config"; Flags: onlyifdoesntexist
 ; 複製 Resources 資料夾
 Source: "..\..\DevelopmentTools.Addin\Resources\*"; DestDir: "{app}\App\Resources"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\..\DevelopmentTools.Addin\Rules\*"; DestDir: "{app}\App\Rules"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\Runtime\*"; DestDir: "{app}\App\Runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; 複製 Updater 與其所需的依賴 DLL
 Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\DevelopmentTools.Updater.exe"; DestDir: "{app}\Updater"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\*.dll"; DestDir: "{app}\Updater"; Flags: ignoreversion
@@ -83,6 +84,13 @@ begin
       begin
         DeleteFile(OldAddinPath);
       end;
+
+      // BEAI is embedded in Development Tools; remove its standalone registration.
+      OldAddinPath := ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersion + '\BEAI.QueryHost.addin';
+      if FileExists(OldAddinPath) then
+      begin
+        DeleteFile(OldAddinPath);
+      end;
     end;
 
     // 2. 註冊新版 DevelopmentTools.addin
@@ -94,20 +102,28 @@ begin
       '    <Assembly>' + ExpandConstant('{localappdata}') + '\DevelopmentTools\App\DevelopmentTools.Addin.dll</Assembly>' + #13#10 +
       '    <FullClassName>DevelopmentTools.App</FullClassName>' + #13#10 +
       '    <ClientId>c2d5d85c-4d33-4f9e-a89e-21ef1ea3b361</ClientId>' + #13#10 +
-      '    <VendorId>DeepMind</VendorId>' + #13#10 +
-      '    <VendorDescription>Google DeepMind Advanced Agentic Coding Team</VendorDescription>' + #13#10 +
+      '    <VendorId>RoomTileSystem</VendorId>' + #13#10 +
+      '    <VendorDescription>Room Tile System v3</VendorDescription>' + #13#10 +
       '  </AddIn>' + #13#10 +
       '</RevitAddIns>';
 
-    for I := 0 to 2 do
+    // 外掛以 Revit 2024 API（.NET Framework 4.8）建置；Revit 2025 以後改用 .NET 8，無法載入，
+    // 只註冊 2024，並移除舊版安裝程式留在 2025/2026 的註冊檔。
+    for I := 1 to 2 do
     begin
-      RevitVersion := RevitVersions[I];
-      AddinPath := ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersion;
-      if DirExists(AddinPath) then
+      AddinPath := ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersions[I] + '\DevelopmentTools.addin';
+      if FileExists(AddinPath) then
       begin
-        SaveStringToFile(AddinPath + '\DevelopmentTools.addin', AddinContent, False);
-        Log('Registered DevelopmentTools.addin for Revit ' + RevitVersion);
+        DeleteFile(AddinPath);
+        Log('Removed unsupported registration for Revit ' + RevitVersions[I]);
       end;
+    end;
+
+    AddinPath := ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersions[0];
+    if DirExists(AddinPath) then
+    begin
+      SaveStringToFile(AddinPath + '\DevelopmentTools.addin', AddinContent, False);
+      Log('Registered DevelopmentTools.addin for Revit ' + RevitVersions[0]);
     end;
   end;
 end;

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 圖紙視圖量化開圖（BIM Drawing Factory）。來源：ai (2)\ai\圖紙視圖量化開圖\BIMDrawingFactory.UI（不含獨立執行用 App.xaml） -->
+  <PropertyGroup>
+    <AssemblyName>BIMDrawingFactory.UI</AssemblyName>
+    <RootNamespace>BIMDrawingFactory.UI</RootNamespace>
+    <!-- AssemblyInfo 使用 1.0.* 版本號（資源 pack URI 依版本區分），需關閉 Deterministic -->
+    <Deterministic>false</Deterministic>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="UIAutomationClient" />
+    <Reference Include="UIAutomationTypes" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,204 @@
+<UserControl x:Class="BIMDrawingFactory.UI.Views.GenerationResultView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:controls="clr-namespace:BIMDrawingFactory.UI.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="900">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24">
+        <StackPanel>
+            
+            <!-- Success Top Banner -->
+            <Border Padding="20"
+                    Margin="0,0,0,20">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource StandardCardStyle}">
+                        <Setter Property="Background" Value="{StaticResource StatusSuccessBgBrush}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource StatusSuccessBorderBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Result.IsSuccess}" Value="False">
+                                <Setter Property="Background" Value="#FDECEC"/>
+                                <Setter Property="BorderBrush" Value="#F1A7A1"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Path Data="{StaticResource IconSuccess}"
+                          Width="36" Height="36"
+                          Stretch="Uniform"
+                          VerticalAlignment="Center"
+                          Margin="0,0,16,0">
+                        <Path.Style>
+                            <Style TargetType="Path">
+                                <Setter Property="Fill" Value="{StaticResource StatusSuccessBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Result.IsSuccess}" Value="False">
+                                        <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Path.Style>
+                    </Path>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Result.ResultTitle}"
+                                   FontSize="{StaticResource FontSizeHeadline}"
+                                   FontWeight="Bold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Result.IsSuccess}" Value="False">
+                                            <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Result.ResultSummary}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <TextBlock Text="執行耗時" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Right"/>
+                        <TextBlock Text="{Binding Result.ElapsedTime}" FontSize="{StaticResource FontSizeTitle}" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Metrics Statistics Grid -->
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="新建圖紙 (Sheets)" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="{Binding Result.CreatedSheetsCount}" FontSize="{StaticResource FontSizeHero}" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource StandardCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="新建視圖 (Views)" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="{Binding Result.CreatedViewsCount}" FontSize="{StaticResource FontSizeHero}" FontWeight="Bold" Foreground="{StaticResource PrimaryAccentBrush}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="4" Style="{StaticResource StandardCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="明細表 / 圖例" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding Result.CreatedSchedulesCount}" FontSize="{StaticResource FontSizeHero}" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Text=" / " FontSize="{StaticResource FontSizeTitle}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Result.CreatedLegendsCount}" FontSize="{StaticResource FontSizeTitle}" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="6" Style="{StaticResource StandardCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="失敗 / 跳過" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding Result.FailedCount}" FontSize="{StaticResource FontSizeHero}" FontWeight="Bold" Foreground="{StaticResource StatusErrorBrush}"/>
+                            <TextBlock Text=" / " FontSize="{StaticResource FontSizeTitle}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Result.SkippedCount}" FontSize="{StaticResource FontSizeTitle}" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Created Items List Box -->
+            <Border Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="產出圖紙清冊快速檢視" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                    <ItemsControl ItemsSource="{Binding Result.GeneratedSheetSummaries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,0,0,1" Padding="6,8">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="•" Foreground="{StaticResource TextMutedBrush}" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Exact manual actions for tag/dimension/resource fallbacks. -->
+            <Border Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,20"
+                    Visibility="{Binding Result.UnresolvedIssues.Count, Converter={x:Static controls:VisibilityConverters.BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="需要人工處理的精確位置" FontWeight="Bold" Foreground="{StaticResource StatusWarningBrush}" Margin="0,0,0,4"/>
+                    <TextBlock Text="以下項目已保留圖紙與其他成功內容；請依視圖、品類與 ElementId 定位。"
+                               FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10"/>
+                    <ItemsControl ItemsSource="{Binding Result.UnresolvedIssues}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource StatusWarningBgBrush}" BorderBrush="{StaticResource StatusWarningBorderBrush}"
+                                        BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding SheetOrViewName, StringFormat='圖紙：{0}'}" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding FloorName, StringFormat='樓層：{0}'}" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock Text="{Binding UserMessage}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                        <TextBlock Text="{Binding SuggestedAction}" TextWrapping="Wrap" FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Bottom Action Row -->
+            <Border Style="{StaticResource StandardCardStyle}" Padding="16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding OpenFirstSheetInRevitCommand}"
+                            IsEnabled="{Binding Result.IsSuccess}"
+                            Content="★ 在 Revit 中開啟第一張圖紙"
+                            Margin="0,0,12,0"/>
+
+                    <Button Grid.Column="1"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding ExportReportCommand}"
+                            Content="匯出產出清冊 (Excel/CSV)"/>
+
+                    <Button Grid.Column="3"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding BackToHomeCommand}"
+                            Content="完成並回到主頁 (Done)"
+                            MinWidth="160"/>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

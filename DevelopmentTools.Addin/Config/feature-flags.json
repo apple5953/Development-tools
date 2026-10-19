@@ -1,0 +1,10 @@
+{
+  "externalAccess": true,
+  "system": true,
+  "read": true,
+  "analysis": false,
+  "navigation": false,
+  "actions": false,
+  "clash": false,
+  "remoteTransport": false
+}
