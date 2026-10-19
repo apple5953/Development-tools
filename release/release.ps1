@@ -127,10 +127,10 @@ $versionJson = @{
     "main_dll" = "DevelopmentTools.Addin.dll"
     "install_folder" = "%LOCALAPPDATA%\DevelopmentTools\App"
     "updater_path" = "%LOCALAPPDATA%\DevelopmentTools\Updater\DevelopmentTools.Updater.exe"
-    "manifest_url" = "https://cdn.jsdelivr.net/gh/$Owner/$Repo@main/update_manifest.json"
+    "manifest_url" = "https://raw.githubusercontent.com/$Owner/$Repo/main/update_manifest.json"
     "updated_at" = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
 }
-$versionJson | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $zipTempDir "version.json") -Encoding utf8
+[System.IO.File]::WriteAllText((Join-Path $zipTempDir "version.json"), ($versionJson | ConvertTo-Json -Depth 5), (New-Object System.Text.UTF8Encoding($false)))
 
 # 同步將產生的真實 version.json 複製到 bin/Release/net48，確保 Inno Setup 封裝時寫入正確的版本號
 Copy-Item -LiteralPath (Join-Path $zipTempDir "version.json") -Destination (Join-Path $releaseDir "version.json") -Force
@@ -159,7 +159,7 @@ $manifest = @{
     "release_note" = "Remote update release v$Version."
     "published_at" = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
 }
-$manifest | ConvertTo-Json -Depth 5 | Out-File -FilePath (Join-Path $parentRoot "update_manifest.json") -Encoding utf8
+[System.IO.File]::WriteAllText((Join-Path $parentRoot "update_manifest.json"), ($manifest | ConvertTo-Json -Depth 5), (New-Object System.Text.UTF8Encoding($false)))
 
 # Clean up temp files
 Remove-Item -LiteralPath $zipTempDir -Recurse -Force

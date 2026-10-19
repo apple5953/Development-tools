@@ -1,6 +1,6 @@
 [Setup]
 AppName=Room Tile System v3
-AppVersion=3.2.6
+AppVersion=3.2.7
 DefaultDirName={localappdata}\DevelopmentTools
 DefaultGroupName=Room Tile System
 OutputDir=..\..\dist

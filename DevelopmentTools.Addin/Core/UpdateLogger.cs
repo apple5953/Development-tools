@@ -5,7 +5,7 @@ namespace DevelopmentTools.Core
 {
     public static class UpdateLogger
     {
-        private static readonly string LogDir = @"C:\ProgramData\DevelopmentTools\Update\Logs";
+        private static readonly string LogDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Update", "Logs");
         private static readonly string LogFile = Path.Combine(LogDir, "update_log.txt");
 
         public static void Log(string message, Exception ex = null)

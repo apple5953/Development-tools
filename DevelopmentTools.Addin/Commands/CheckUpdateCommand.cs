@@ -13,11 +13,11 @@ namespace DevelopmentTools.Commands
         {
             try
             {
-                // 在主執行緒同步等待（限制 3 秒超時），讓按鍵按下去立刻有視覺反饋，且 100% 確保 TaskDialog 線程安全
+                // 在主執行緒等待檢查結果，TaskDialog 必須在 Revit UI 執行緒顯示。
                 var result = Task.Run(async () =>
                 {
                     var checkTask = UpdateManager.CheckForUpdatesAsync();
-                    var timeoutTask = Task.Delay(3000);
+                    var timeoutTask = Task.Delay(15000);
                     var completedTask = await Task.WhenAny(checkTask, timeoutTask);
                     if (completedTask == checkTask)
                     {
@@ -28,7 +28,13 @@ namespace DevelopmentTools.Commands
 
                 if (result == null)
                 {
-                    TaskDialog.Show("遠端更新提示", "連線至更新伺服器超時，請檢查網路連線。");
+                    TaskDialog.Show("遠端更新提示", "連線至更新伺服器超時，請檢查網路連線後重試。");
+                    return Result.Succeeded;
+                }
+
+                if (string.IsNullOrWhiteSpace(result.LatestVersion))
+                {
+                    TaskDialog.Show("遠端更新提示", "無法讀取更新清單，請檢查網路連線後重試。若持續失敗，請使用 GitHub Release 的安裝程式更新。");
                     return Result.Succeeded;
                 }
 

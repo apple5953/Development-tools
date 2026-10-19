@@ -29,7 +29,9 @@ namespace DevelopmentTools.Core
         {
             try
             {
-                return await HttpClientInstance.GetStringAsync(url);
+                // HttpClient may leave a UTF-8 BOM in the decoded string. JsonSerializer
+                // expects the JSON object to be the first character.
+                return (await HttpClientInstance.GetStringAsync(url)).TrimStart('\uFEFF');
             }
             catch (Exception ex)
             {
