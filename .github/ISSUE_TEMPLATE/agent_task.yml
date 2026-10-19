@@ -1,0 +1,42 @@
+name: BIM AI Agent 功能任務
+description: 指派給使用 Codex 或 Claude Code 的工程師
+title: "[Agent] "
+labels: []
+body:
+  - type: input
+    id: module
+    attributes:
+      label: 模組名稱 / Agent
+      placeholder: ScaffoldPlanner
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: 功能與可量化驗收條件
+      placeholder: 請寫明輸入、輸出、正常與異常場景
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 允許修改目錄
+      placeholder: DevelopmentTools.Modules/ScaffoldPlanner/
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Revit 實機驗收與測試模型
+      placeholder: 指定測試步驟，不要上傳機密模型
+    validations:
+      required: true
+  - type: dropdown
+    id: needs_core
+    attributes:
+      label: 是否需要修改共用核心？
+      options:
+        - "否"
+        - "是，需要主管先核准"
+    validations:
+      required: true

@@ -1,0 +1,16 @@
+# Initial code ownership. Replace/extend with verified GitHub usernames as team grows.
+* @apple5953
+/AGENTS.md @apple5953
+/CLAUDE.md @apple5953
+/.github/ @apple5953
+/docs/MODULE_CONTRACT.md @apple5953
+/DevelopmentTools.Addin/App.cs @apple5953
+/DevelopmentTools.Addin/DevelopmentTools.Addin.csproj @apple5953
+/DevelopmentTools.Addin/Core/ @apple5953
+/DevelopmentTools.Addin/Commands/Cmd_IntegratedModules.cs @apple5953
+/DevelopmentTools.Modules/Directory.Build.props @apple5953
+/BEAI/ @apple5953
+/DevelopmentTools.Updater/ @apple5953
+/release/ @apple5953
+/installer/ @apple5953
+/DevelopmentTools.sln @apple5953
