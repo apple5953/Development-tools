@@ -10,6 +10,7 @@
     <NoWarn>$(NoWarn);MSB3270;CS0618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
     <Reference Include="RevitAPI">
       <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>
       <Private>False</Private>

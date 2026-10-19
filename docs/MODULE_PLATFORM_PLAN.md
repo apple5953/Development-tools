@@ -73,8 +73,8 @@ module-only rollback must remove newly added files as well.
   separate review, and a future host requirement (4 unit tests).
 - PASS: MSBuild evaluates exactly the four existing module references plus the
   pilot; `GenerateModuleRegistration` target executes successfully.
-- BLOCKED: full net48 compile on this machine lacks .NET Framework 4.8 reference
-  assemblies, although Revit 2024 API DLLs are present.
+- PASS after adding the official net48 reference-assemblies package: local Debug
+  solution build completes with zero errors. See `docs/LOCAL_REVIT_2024_TEST.md`.
 - NOT RUN: Revit 2024 UI, authorization, update, rollback, and regression tests.
 - UNVERIFIED: Revit 2025 and 2026.
 - BLOCKED: PR workflow on a shared self-hosted Revit runner was rejected by
