@@ -95,7 +95,8 @@
 
   <Target Name="Obfuscate" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Release'">
     <Message Text="[Obfuscar] Starting obfuscation..." Importance="High" />
-    <Exec Command="&quot;$(Obfuscar)&quot; &quot;$(ProjectDir)obfuscar.xml&quot;" />
+    <Exec Command="python &quot;$(MSBuildProjectDirectory)\..\module-platform\prepare_release.py&quot;" />
+    <Exec Command="&quot;$(Obfuscar)&quot; &quot;$(MSBuildProjectDirectory)\obj\Release\module-platform\obfuscar.generated.xml&quot;" />
     <Message Text="[Obfuscar] Obfuscation finished." Importance="High" />
   </Target>
 </Project>

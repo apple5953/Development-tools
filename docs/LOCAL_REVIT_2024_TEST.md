@@ -13,9 +13,8 @@
 
 ## 目前本機載入狀態
 
-`%APPDATA%\Autodesk\Revit\Addins\2024\DevelopmentTools.addin` 目前指向本工作樹的
-`DevelopmentTools.Addin\bin\Debug\net48\DevelopmentTools.Addin.dll`。原清單備份在
-`dist\local-test\DevelopmentTools.addin.original`。保持工作樹位置不變直到測試完成。
+使用者已回報在 Revit 2024 測試數個功能正常，未提供逐項按鈕或授權結果。測試後已執行
+`stop-test.ps1`，`.addin` 清單已還原為原本 D: 工作區的 Debug DLL，Revit 已關閉。
 
 ## 手動驗收步驟
 
@@ -29,7 +28,8 @@
 
 ## 尚未通過或未執行
 
-- Revit UI 的實際按鈕、授權成功路徑、命令執行與既有功能回歸，須由使用者在 Revit 2024 完成上述步驟。
-- Release 混淆包、Installer、Updater 升級及整包回退尚未完成本次候選版驗收。
+- 使用者回報數個 Revit 功能正常；具體按鈕、範例模組授權成功路徑及完整既有功能回歸未留有逐項證據。
+- Release 解決方案建置成功（0 錯誤、294 警告）。`-NoPublish` 候選 ZIP 中六個自有 DLL 各出現一次，SHA256 均與混淆輸出一致；Inno 安裝程式編譯成功並包含 ExampleAgent.dll。
+- Updater 真正升級及失敗後整包回退尚未實際測試。`-NoPublish` 未推送、標記或建立正式 Release；其生成的 `update_manifest.json` 已還原。
 - Revit 2025／2026 未驗證。
 - 候選分支以遠端 `main` 為基礎；本機原工作區及已安裝 3.2.6 可能含未提交修改。此候選版的舊功能與已安裝版不能直接視為完全相同。

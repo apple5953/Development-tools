@@ -99,5 +99,11 @@ the approved pilot. Preserve the previous full ZIP for rollback. Do not alter
 path. Revert the packaging script changes and restore the previous ZIP if the
 Revit 2024 smoke test or rollback check fails.
 
-The automatic approval review rejected a direct change to formal release and
-installer inclusion/exclusion logic pending separate approval of this plan.
+The user explicitly approved this packaging plan on 2026-10-19. The feature
+branch now generates one reviewed owned-DLL inventory for Obfuscar, ZIP, and
+Inno Setup. A local Release build succeeded (0 errors), and a `-NoPublish`
+candidate ZIP and installer were built. All six owned DLLs occur once in the
+ZIP and match the obfuscated output byte for byte. The candidate has not been
+deployed to Revit, and the Updater's full upgrade and rollback remain untested.
+Keep the PR review gate before merging to `main`; do not publish a formal
+release or update production credentials as part of this change.
