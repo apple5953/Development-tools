@@ -59,4 +59,3 @@ Updater 會在套用更新前結束，典型錯誤為：
 - ZIP 安裝後 `%LOCALAPPDATA%\DevelopmentTools\Updater` 仍保留上述四個相依 DLL。
 - 更新成功後 App 與 Updater 的備份都存在於 `%LOCALAPPDATA%\DevelopmentTools\Update\Backup`。
 - Revit 2024 實機驗證通過；Revit 2025/2026 仍未驗證且目前安裝器不註冊。
-
