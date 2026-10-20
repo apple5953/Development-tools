@@ -1,0 +1,69 @@
+name: Publish approved production release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release/releases/*.json'
+      - 'update_manifest.json'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Publish newly approved release records
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE_SHA: ${{ github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t records < <(git diff --diff-filter=A --name-only "$BEFORE_SHA" "$GITHUB_SHA" -- 'release/releases/*.json')
+          if [ "${#records[@]}" -eq 0 ]; then
+            echo "No newly approved release record."
+            exit 0
+          fi
+          for record in "${records[@]}"; do
+            version=$(jq -r '.version' "$record")
+            run_id=$(jq -r '.runId' "$record")
+            artifact=$(jq -r '.artifactName' "$record")
+            zip_name=$(jq -r '.zipName' "$record")
+            zip_hash=$(jq -r '.zipSha256' "$record")
+            installer_name=$(jq -r '.installerName' "$record")
+            installer_hash=$(jq -r '.installerSha256' "$record")
+            notes=$(jq -r '.releaseNotes' "$record")
+            manifest_version=$(jq -r '.latest_version' update_manifest.json)
+            manifest_hash=$(jq -r '.sha256' update_manifest.json)
+            test "$manifest_version" = "$version"
+            test "$manifest_hash" = "$zip_hash"
+            rm -rf candidate
+            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name "$artifact" --dir candidate
+            zip_path=$(find candidate -type f -name "$zip_name" -print -quit)
+            installer_path=$(find candidate -type f -name "$installer_name" -print -quit)
+            test -n "$zip_path" && test -n "$installer_path"
+            echo "$zip_hash  $zip_path" | sha256sum --check --status
+            echo "$installer_hash  $installer_path" | sha256sum --check --status
+            if gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              rm -rf existing-release
+              mkdir existing-release
+              gh release download "v$version" --repo "$GITHUB_REPOSITORY" --dir existing-release --pattern "$zip_name" --pattern "$installer_name"
+              echo "$zip_hash  existing-release/$zip_name" | sha256sum --check --status
+              echo "$installer_hash  existing-release/$installer_name" | sha256sum --check --status
+              echo "Release v$version already exists and its assets match the approved hashes."
+              continue
+            fi
+            printf '%s\n' "$notes" > release-notes.md
+            gh release create "v$version" "$zip_path" "$installer_path" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "RTS v$version" \
+              --notes-file release-notes.md \
+              --latest
+          done

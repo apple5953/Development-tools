@@ -1,0 +1,91 @@
+name: Prepare production release
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: GitHub Actions run ID from Revit 2024 candidate package
+        required: true
+        type: string
+      version:
+        description: Candidate semantic version, for example 3.2.9
+        required: true
+        type: string
+      release_notes:
+        description: User-facing release notes
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Download immutable candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.candidate_run_id }}
+        run: gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --dir candidate
+      - name: Confirm candidate still represents current build inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata=$(find candidate -type f -name candidate-metadata.json -print -quit)
+          test -n "$metadata"
+          source_sha=$(jq -r '.sourceSha' "$metadata")
+          git merge-base --is-ancestor "$source_sha" HEAD
+          if ! git diff --quiet "$source_sha" HEAD -- \
+            DevelopmentTools.Addin DevelopmentTools.Modules DevelopmentTools.AgentWorkers \
+            DevelopmentTools.Updater BEAI module-platform release installer DevelopmentTools.sln; then
+            echo "Candidate is stale because build inputs changed after its source commit."
+            exit 1
+          fi
+      - name: Verify candidate and prepare release record
+        env:
+          VERSION: ${{ inputs.version }}
+          RUN_ID: ${{ inputs.candidate_run_id }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: >-
+          python release/prepare_release.py
+          --root .
+          --candidate candidate
+          --version "$VERSION"
+          --run-id "$RUN_ID"
+          --notes "$RELEASE_NOTES"
+      - name: Create reviewed release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          RUN_ID: ${{ inputs.candidate_run_id }}
+          NOTES: ${{ inputs.release_notes }}
+        run: |
+          branch="release/v${VERSION}-run-${RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add update_manifest.json "release/releases/v${VERSION}.json"
+          git commit -m "release: prepare v${VERSION}"
+          git push origin "$branch"
+          cat > release-pr-body.md <<EOF
+          ## Production release v${VERSION}
+
+          Approved candidate run: ${RUN_ID}
+
+          Release notes: ${NOTES}
+
+          Merging this PR publishes the immutable candidate as a GitHub Release and activates it for the stable updater.
+
+          Rollback: revert this manifest PR and mark or remove the GitHub Release.
+
+          核心變更已揭露
+          EOF
+          gh pr create --base main --head "$branch" --title "Release v${VERSION}" --body-file release-pr-body.md

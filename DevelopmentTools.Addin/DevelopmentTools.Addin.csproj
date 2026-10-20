@@ -52,7 +52,8 @@
   </Target>
 
   <Target Name="BuildAgentWorkers" BeforeTargets="StageApprovedAgentWorkers">
-    <MSBuild Projects="@(AgentWorkerProject)" Targets="Build" Properties="Configuration=$(Configuration)" BuildInParallel="true" />
+    <Exec Command="dotnet restore &quot;%(AgentWorkerProject.FullPath)&quot;" />
+    <Exec Command="dotnet build &quot;%(AgentWorkerProject.FullPath)&quot; --configuration &quot;$(Configuration)&quot; --no-restore" />
   </Target>
   <Target Name="CleanAgentWorkers" BeforeTargets="Clean">
     <MSBuild Projects="@(AgentWorkerProject)" Targets="Clean" Properties="Configuration=$(Configuration)" BuildInParallel="true" />

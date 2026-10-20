@@ -1,0 +1,97 @@
+name: Revit 2024 candidate package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'DevelopmentTools.Addin/**'
+      - 'DevelopmentTools.Modules/**'
+      - 'DevelopmentTools.AgentWorkers/**'
+      - 'DevelopmentTools.Updater/**'
+      - 'BEAI/**'
+      - 'module-platform/**'
+      - 'release/**'
+      - 'installer/**'
+      - 'DevelopmentTools.sln'
+      - '.github/workflows/revit-candidate.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: revit-candidate-main
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Build reviewed main on Revit 2024 runner
+    runs-on: [self-hosted, Windows, X64, revit-2024]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify installed build toolchain
+        shell: pwsh
+        run: |
+          $pythonCommand = Get-Command python -ErrorAction Stop
+          $dotnetCommand = Get-Command dotnet -ErrorAction Stop
+          $pythonVersion = [version]((python --version) -replace '^Python\s+', '')
+          $dotnetVersion = [version](dotnet --version)
+          if ($pythonVersion -lt [version]'3.10') {
+            throw "Python 3.10 or newer is required; found $pythonVersion at $($pythonCommand.Source)"
+          }
+          if ($dotnetVersion.Major -lt 8) {
+            throw ".NET SDK 8 or newer is required; found $dotnetVersion at $($dotnetCommand.Source)"
+          }
+          Write-Host "Python $($pythonVersion): $($pythonCommand.Source)"
+          Write-Host ".NET SDK $($dotnetVersion): $($dotnetCommand.Source)"
+      - name: Verify legal Revit 2024 build environment
+        shell: pwsh
+        run: |
+          $required = @(
+            'C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll',
+            'C:\Program Files\Autodesk\Revit 2024\RevitAPIUI.dll',
+            'C:\Program Files\Autodesk\Revit 2024\AdWindows.dll'
+          )
+          $missing = @($required | Where-Object { -not (Test-Path -LiteralPath $_) })
+          if ($missing.Count) { throw "Revit 2024 build files missing: $($missing -join ', ')" }
+      - name: Choose next candidate version
+        id: version
+        shell: pwsh
+        run: |
+          $current = [version](Get-Content update_manifest.json -Raw | ConvertFrom-Json).latest_version
+          $version = "$($current.Major).$($current.Minor).$($current.Build + 1)"
+          $shortSha = '${{ github.sha }}'.Substring(0, 7)
+          $artifact = "development-tools-candidate-v$version-$shortSha"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "artifact=$artifact" >> $env:GITHUB_OUTPUT
+      - name: Build, obfuscate and package without publishing
+        shell: pwsh
+        run: ./release/release.ps1 -Version '${{ steps.version.outputs.version }}' -NoPublish
+      - name: Verify candidate contents and hashes
+        shell: pwsh
+        run: >-
+          python release/verify_candidate.py
+          --root .
+          --version '${{ steps.version.outputs.version }}'
+          --run-id '${{ github.run_id }}'
+          --source-sha '${{ github.sha }}'
+          --artifact-name '${{ steps.version.outputs.artifact }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.artifact }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            dist/DevelopmentTools_v${{ steps.version.outputs.version }}.zip
+            dist/DevelopmentTools_Setup.exe
+            dist/candidate-metadata.json
+            update_manifest.json
+      - name: Write candidate summary
+        shell: pwsh
+        run: |
+          "## Revit candidate v${{ steps.version.outputs.version }}" >> $env:GITHUB_STEP_SUMMARY
+          "Artifact: ``${{ steps.version.outputs.artifact }}``" >> $env:GITHUB_STEP_SUMMARY
+          "Source: ``${{ github.sha }}``" >> $env:GITHUB_STEP_SUMMARY
+          "This candidate is not visible to the stable updater until production promotion is approved and its release PR is merged." >> $env:GITHUB_STEP_SUMMARY
