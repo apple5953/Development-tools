@@ -21,7 +21,10 @@ namespace DevelopmentTools.Core
             }
             catch { }
 
-            HttpClientInstance.Timeout = TimeSpan.FromSeconds(30);
+            // GitHub release assets may take longer than 30 seconds on a corporate
+            // proxy or VPN. Keep a finite timeout, but allow enough time for the
+            // signed release package to finish downloading.
+            HttpClientInstance.Timeout = TimeSpan.FromMinutes(5);
             HttpClientInstance.DefaultRequestHeaders.UserAgent.ParseAdd("RevitUpdater/1.0");
         }
 
@@ -42,32 +45,41 @@ namespace DevelopmentTools.Core
 
         public static async Task<bool> DownloadFileAsync(string url, string destinationPath)
         {
-            try
+            const int maxAttempts = 3;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                string dir = Path.GetDirectoryName(destinationPath);
-                if (!Directory.Exists(dir))
+                try
                 {
-                    Directory.CreateDirectory(dir);
-                }
-
-                using (var response = await HttpClientInstance.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    response.EnsureSuccessStatusCode();
-                    using (var streamToReadFrom = await response.Content.ReadAsStreamAsync())
+                    string dir = Path.GetDirectoryName(destinationPath);
+                    if (!Directory.Exists(dir))
                     {
-                        using (var streamToWriteTo = File.Open(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        Directory.CreateDirectory(dir);
+                    }
+
+                    using (var response = await HttpClientInstance.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                    {
+                        response.EnsureSuccessStatusCode();
+                        using (var streamToReadFrom = await response.Content.ReadAsStreamAsync())
                         {
-                            await streamToReadFrom.CopyToAsync(streamToWriteTo);
+                            using (var streamToWriteTo = File.Open(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                            {
+                                await streamToReadFrom.CopyToAsync(streamToWriteTo);
+                            }
                         }
                     }
+                    return true;
                 }
-                return true;
+                catch (Exception ex)
+                {
+                    UpdateLogger.Log($"下載檔案失敗（第 {attempt}/{maxAttempts} 次）URL: {url} 到 {destinationPath}", ex);
+                    try { if (File.Exists(destinationPath)) File.Delete(destinationPath); } catch { }
+                    if (attempt < maxAttempts)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(attempt * 2)).ConfigureAwait(false);
+                    }
+                }
             }
-            catch (Exception ex)
-            {
-                UpdateLogger.Log($"下載檔案失敗 URL: {url} 到 {destinationPath}", ex);
-                return false;
-            }
+            return false;
         }
 
         public static bool VerifySha256(string filePath, string expectedHash)

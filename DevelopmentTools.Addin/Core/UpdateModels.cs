@@ -32,9 +32,11 @@ namespace DevelopmentTools.Core
         public string zip_path { get; set; }
         public string sha256 { get; set; }
         public string install_dir { get; set; }
+        public string updater_dir { get; set; }
         public string backup_dir { get; set; }
         public string version_file_path { get; set; }
         public string new_version { get; set; }
         public string updated_at { get; set; }
+        public int revit_process_id { get; set; }
     }
 }
