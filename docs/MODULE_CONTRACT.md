@@ -12,7 +12,7 @@ Each issue/PR must document: module name; owner; feature branch; purpose; direct
 2. Prefer a separate `DevelopmentTools.Modules/<PascalCaseName>/` SDK-style .NET Framework 4.8 class library, with a distinct namespace.
 3. Reuse common props and existing dependencies where compatible; do not duplicate Revit Bridge, authentication, ribbon bootstrap, or update subsystem.
 4. Prepare a module README defining contracts, exposed command classes, permissions and manual Revit acceptance steps.
-5. For a new template module, provide `module.json`; the build generates the Ribbon wrapper, which calls `CommandAccessGuard.EnsureAuthorized` before the module command. Core changes outside this path require separate maintainer review. Do not bypass Google Sheets/Apps Script authorization.
+5. For a new template module, provide `module.json`; the build generates one independent RTS Ribbon panel, its large button, and the wrapper that calls `CommandAccessGuard.EnsureAuthorized` before the module command. `Ribbon.text` must be unique because it is the visible panel title. Core changes outside this path require separate maintainer review. Do not bypass Google Sheets/Apps Script authorization.
 6. Propose a unique ToolId following `DT_<ModuleName>`. Check the entire repo for collisions and include it in `module.json` and the PR. Authorization registration/config is subject to owner approval.
 7. Any Revit API work triggered by modeless UI or external requests must reach the Revit UI thread through the approved ExternalEvent pattern. Respect Transaction rules and the read-only RealityBridge v0.1 boundary.
 8. Keep computation independent of Revit API where feasible to allow unit tests without Revit.
