@@ -7,6 +7,7 @@
 ## 安全邊界
 
 - Self-hosted Runner 只接受 `push` 到受保護 `main` 的候選建置工作，不執行 `pull_request` 程式碼。
+- `Trusted maintainer gate` 對主管本人建立的 PR 直接放行；其他作者必須取得主管對目前最新 commit 的核准，核准後再 Push 會自動失效。
 - Reality Bridge 仍是唯一 Revit 與外部 AI 邊界；流程不建立第二套 Bridge。
 - 模組仍由既有 `CommandAccessGuard` 驗證 ToolId。
 - 候選工件不會修改正式更新資訊。
