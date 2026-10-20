@@ -1,8 +1,12 @@
 #include "..\..\DevelopmentTools.Addin\obj\Release\module-platform\owned-dlls.iss"
 
+#ifndef MyAppVersion
+  #define MyAppVersion "3.2.7"
+#endif
+
 [Setup]
 AppName=Room Tile System v3
-AppVersion=3.2.7
+AppVersion={#MyAppVersion}
 DefaultDirName={localappdata}\DevelopmentTools
 DefaultGroupName=Room Tile System
 OutputDir=..\..\dist

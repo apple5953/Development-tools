@@ -85,11 +85,7 @@ copy /Y "DevelopmentTools.Updater.exe" "%TARGET_DIR%\Updater\" >nul
 copy /Y "DevelopmentTools.Updater.exe.config" "%TARGET_DIR%\Updater\" >nul
 copy /Y "*.dll" "%TARGET_DIR%\Updater\" >nul
 
-echo   Cleaning conflicting system DLLs from Updater folder...
-del /F /Q "%TARGET_DIR%\Updater\System.Buffers.dll" >nul 2>nul
-del /F /Q "%TARGET_DIR%\Updater\System.Memory.dll" >nul 2>nul
-del /F /Q "%TARGET_DIR%\Updater\System.Numerics.Vectors.dll" >nul 2>nul
-del /F /Q "%TARGET_DIR%\Updater\System.Runtime.CompilerServices.Unsafe.dll" >nul 2>nul
+echo   Keeping the updater's private System.Text.Json dependencies...
 
 if exist "%TARGET_DIR%\Updater\DevelopmentTools.Addin.dll" (
     del /F /Q "%TARGET_DIR%\Updater\DevelopmentTools.Addin.dll" >nul 2>nul

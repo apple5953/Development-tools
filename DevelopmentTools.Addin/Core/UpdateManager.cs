@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Autodesk.Revit.UI;
@@ -13,6 +14,8 @@ namespace DevelopmentTools.Core
         private static readonly string LocalVersionPath = Path.Combine(BaseDir, "App", "version.json");
         private static readonly string StagingDir = Path.Combine(BaseDir, "Update", "Staging");
         private static readonly string BackupDir = Path.Combine(BaseDir, "Update", "Backup");
+        private static readonly string UpdaterStagingDir = Path.Combine(BaseDir, "Update", "UpdaterStaging");
+        private static readonly string UpdaterDir = Path.Combine(BaseDir, "Updater");
         private static readonly string PendingUpdatePath = Path.Combine(BaseDir, "Update", "pending_update.json");
         private static readonly string AppSettingsPath = Path.Combine(BaseDir, "Config", "appsettings.json");
 
@@ -129,18 +132,28 @@ namespace DevelopmentTools.Core
                     zip_path = destinationZip,
                     sha256 = manifest.sha256,
                     install_dir = Path.Combine(BaseDir, "App"),
+                    updater_dir = UpdaterDir,
                     backup_dir = BackupDir,
                     version_file_path = LocalVersionPath,
                     new_version = manifest.latest_version,
-                    updated_at = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
+                    updated_at = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    revit_process_id = Process.GetCurrentProcess().Id
                 };
 
                 string pendingJson = JsonSerializer.Serialize(pendingInfo, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(PendingUpdatePath, pendingJson);
 
-                string localJson = File.ReadAllText(LocalVersionPath);
-                var localVersion = JsonSerializer.Deserialize<LocalVersionInfo>(localJson);
-                string updaterExe = Environment.ExpandEnvironmentVariables(localVersion.updater_path);
+                // Launch the updater shipped inside the already SHA-256 verified
+                // package. This repairs missing updater dependencies and permits
+                // the updater itself to be replaced after Revit exits.
+                string updaterExe = ExtractPackagedUpdater(destinationZip);
+                if (string.IsNullOrEmpty(updaterExe))
+                {
+                    string localJson = File.ReadAllText(LocalVersionPath);
+                    var localVersion = JsonSerializer.Deserialize<LocalVersionInfo>(localJson);
+                    updaterExe = Environment.ExpandEnvironmentVariables(localVersion.updater_path);
+                    UpdateLogger.Log("更新包不含 UpdaterPayload，改用已安裝的相容更新器。");
+                }
 
                 if (!File.Exists(updaterExe))
                 {
@@ -166,6 +179,58 @@ namespace DevelopmentTools.Core
                 App.ShowDialogOnUi("更新錯誤", "啟動更新流程時發生錯誤: " + ex.Message);
                 return false;
             }
+        }
+
+        private static string ExtractPackagedUpdater(string zipPath)
+        {
+            if (Directory.Exists(UpdaterStagingDir))
+            {
+                Directory.Delete(UpdaterStagingDir, true);
+            }
+            Directory.CreateDirectory(UpdaterStagingDir);
+
+            string stagingRoot = Path.GetFullPath(UpdaterStagingDir)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            bool foundPayload = false;
+
+            using (var archive = ZipFile.OpenRead(zipPath))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    const string prefix = "UpdaterPayload/";
+                    string normalized = entry.FullName.Replace('\\', '/');
+                    if (!normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    foundPayload = true;
+                    string relativePath = normalized.Substring(prefix.Length);
+                    if (string.IsNullOrEmpty(relativePath)) continue;
+
+                    string destinationPath = Path.GetFullPath(Path.Combine(UpdaterStagingDir, relativePath));
+                    if (!destinationPath.StartsWith(stagingRoot, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidDataException("UpdaterPayload contains an unsafe path.");
+                    }
+
+                    if (string.IsNullOrEmpty(entry.Name))
+                    {
+                        Directory.CreateDirectory(destinationPath);
+                    }
+                    else
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
+                        entry.ExtractToFile(destinationPath, true);
+                    }
+                }
+            }
+
+            if (!foundPayload) return null;
+
+            string updaterExe = Path.Combine(UpdaterStagingDir, "DevelopmentTools.Updater.exe");
+            if (!File.Exists(updaterExe))
+            {
+                throw new FileNotFoundException("更新包的 UpdaterPayload 缺少 DevelopmentTools.Updater.exe。", updaterExe);
+            }
+            return updaterExe;
         }
     }
 }

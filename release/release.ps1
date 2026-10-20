@@ -90,7 +90,11 @@ if (Test-Path (Join-Path $parentRoot "DevelopmentTools.Addin\Config")) {
 # Own DLLs (main add-in + built-in modules) always come from the Obfuscated folder
 $ownedDllListPath = Join-Path $parentRoot "DevelopmentTools.Addin\obj\Release\module-platform\owned-dlls.json"
 if (-not (Test-Path $ownedDllListPath)) { throw "Owned DLL inventory not found: $ownedDllListPath" }
-$ownDlls = @(Get-Content -LiteralPath $ownedDllListPath -Raw | ConvertFrom-Json)
+$parsedOwnedDlls = Get-Content -LiteralPath $ownedDllListPath -Raw | ConvertFrom-Json
+$ownDlls = @()
+foreach ($ownedDll in $parsedOwnedDlls) {
+    $ownDlls += [string]$ownedDll
+}
 foreach ($d in $ownDlls) {
     $obf = Join-Path $releaseDir "Obfuscated\$d"
     if (-not (Test-Path $obf)) { throw "Obfuscated DLL not found: $obf" }
@@ -105,6 +109,15 @@ $updaterBinDir = Join-Path $parentRoot "DevelopmentTools.Updater\bin\Release\net
 Copy-Item -Path (Join-Path $updaterBinDir "DevelopmentTools.Updater.exe") -Destination $zipTempDir
 Copy-Item -Path (Join-Path $updaterBinDir "DevelopmentTools.Updater.exe.config") -Destination $zipTempDir
 Copy-Item -Path (Join-Path $updaterBinDir "*.dll") -Destination $zipTempDir
+
+# Keep a dedicated updater payload in every signed package. UpdateManager launches
+# this verified copy, so a portable installation with missing/old updater files can
+# repair itself and future updater versions can replace the installed updater.
+$updaterPayloadDir = Join-Path $zipTempDir "UpdaterPayload"
+New-Item -ItemType Directory -Path $updaterPayloadDir -Force | Out-Null
+Copy-Item -Path (Join-Path $updaterBinDir "DevelopmentTools.Updater.exe") -Destination $updaterPayloadDir
+Copy-Item -Path (Join-Path $updaterBinDir "DevelopmentTools.Updater.exe.config") -Destination $updaterPayloadDir
+Copy-Item -Path (Join-Path $updaterBinDir "*.dll") -Destination $updaterPayloadDir
 
 # Copy Resources folder to ZIP
 Copy-Item -Path (Join-Path $parentRoot "DevelopmentTools.Addin\Resources") -Destination $zipTempDir -Recurse
@@ -177,7 +190,7 @@ Remove-Item -LiteralPath $zipTempDir -Recurse -Force
 Write-Host "[RTS] Generating Inno Installer..."
 $issPath = Join-Path $parentRoot "installer\inno\DevelopmentTools_Setup.iss"
 if (Get-Command ISCC.exe -ErrorAction SilentlyContinue) {
-    & ISCC.exe $issPath
+    & ISCC.exe "/DMyAppVersion=$Version" $issPath
 } else {
     Write-Warning "Inno Setup Compiler (ISCC.exe) is not in PATH. Skipping installer compilation. Please build manually using DevelopmentTools_Setup.iss."
 }

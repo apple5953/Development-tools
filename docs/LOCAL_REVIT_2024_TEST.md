@@ -30,7 +30,10 @@
 
 - 使用者回報數個 Revit 功能正常；具體按鈕、範例模組授權成功路徑及完整既有功能回歸未留有逐項證據。
 - Release 解決方案建置成功（0 錯誤、294 警告）。`-NoPublish` 候選 ZIP 中六個自有 DLL 各出現一次，SHA256 均與混淆輸出一致；Inno 安裝程式編譯成功並包含 ExampleAgent.dll。
-- Updater 真正升級及失敗後整包回退尚未實際測試。`-NoPublish` 未推送、標記或建立正式 Release；其生成的 `update_manifest.json` 已還原。
+- 2026-10-20：已在隔離目錄重現 3.2.7 portable 安裝缺少 `System.Memory.dll` 時，Updater 於解析 pending JSON 前以 exit code 1 失敗。
+- 修正後的 `3.2.8 -NoPublish` 候選包已完成實際檔案升級測試：ZIP SHA-256、App 安裝、Updater 自我更新、App/Updater 雙備份、版本更新及暫存清理全部通過。
+- 已用有效 SHA-256 但故意損壞 `version.json` 的候選包觸發套用失敗；Updater 回傳 exit code 5，App 與 Updater 均成功回復，pending 檔保留供診斷。
+- 上述 Updater 測試使用隔離檔案目錄，未覆寫正式 `%LOCALAPPDATA%\DevelopmentTools`；`-NoPublish` 未推送、標記或建立正式 Release，生成的 `update_manifest.json` 已還原。
 - 2026-10-20：可熱替換 Agent Host 的 Debug 與 Release 建置均為 0 錯誤；10 項 Python 驗證／安裝／回退測試通過。UTF-8 stdin/stdout Worker 協議已獨立執行成功。
 - `3.2.8 -NoPublish` 候選 ZIP 與 Inno Installer 建置成功；ZIP 含版本化 `Agents/`、核准 catalog 與範例 Worker，Worker SHA-256 與 catalog 相符。未建立 tag、推送 Release 或修改正式憑證。
 - Agent 中心按鈕、ToolId 授權、Revit 開啟期間安裝新版、重新載入、雜湊拒絕、逾時隔離及實機回退仍待 Revit 2024 人工驗收。

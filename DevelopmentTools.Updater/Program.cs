@@ -11,6 +11,8 @@ namespace DevelopmentTools.Updater
 {
     class Program
     {
+        private const int RevitExitTimeoutMs = 15 * 60 * 1000;
+
         static int Main(string[] args)
         {
             string pendingJsonPath = null;
@@ -43,8 +45,14 @@ namespace DevelopmentTools.Updater
                 {
                     info.zip_path = Environment.ExpandEnvironmentVariables(info.zip_path ?? "");
                     info.install_dir = Environment.ExpandEnvironmentVariables(info.install_dir ?? "");
+                    info.updater_dir = Environment.ExpandEnvironmentVariables(info.updater_dir ?? "");
                     info.backup_dir = Environment.ExpandEnvironmentVariables(info.backup_dir ?? "");
                     info.version_file_path = Environment.ExpandEnvironmentVariables(info.version_file_path ?? "");
+                    if (string.IsNullOrWhiteSpace(info.updater_dir) && !string.IsNullOrWhiteSpace(info.install_dir))
+                    {
+                        var baseDir = Directory.GetParent(info.install_dir);
+                        if (baseDir != null) info.updater_dir = Path.Combine(baseDir.FullName, "Updater");
+                    }
                 }
             }
             catch (Exception ex)
@@ -53,14 +61,18 @@ namespace DevelopmentTools.Updater
                 return 1;
             }
 
+            if (!ValidatePendingInfo(info))
+            {
+                LogError("Update aborted: pending update configuration is incomplete.", null);
+                return 1;
+            }
+
             // 1. 等待 Revit 關閉
-            Console.WriteLine("Waiting for Revit to close (Timeout: 60s)...");
-            bool revitClosed = WaitForProcessToExit("Revit", 60000);
+            Console.WriteLine("Waiting for the Revit session that started this update to close (Timeout: 15 minutes)...");
+            bool revitClosed = WaitForRevitToExit(info.revit_process_id, RevitExitTimeoutMs);
             if (!revitClosed)
             {
-                LogError("Update aborted: Revit.exe did not exit within 60 seconds.", null);
-                Console.WriteLine("Press any key to exit.");
-                Console.ReadKey();
+                LogError("Update aborted: Revit did not exit within 15 minutes.", null);
                 return 2;
             }
 
@@ -85,7 +97,11 @@ namespace DevelopmentTools.Updater
                 Console.WriteLine("Backing up current installation...");
                 if (Directory.Exists(info.install_dir))
                 {
-                    CopyDirectory(info.install_dir, info.backup_dir);
+                    CopyDirectory(info.install_dir, Path.Combine(info.backup_dir, "App"));
+                }
+                if (Directory.Exists(info.updater_dir))
+                {
+                    CopyDirectory(info.updater_dir, Path.Combine(info.backup_dir, "Updater"));
                 }
             }
             catch (Exception ex)
@@ -104,8 +120,10 @@ namespace DevelopmentTools.Updater
                 {
                     foreach (ZipArchiveEntry entry in archive.Entries)
                     {
+                        string extractRoot = Path.GetFullPath(tempUnzipDir)
+                            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
                         string destinationPath = Path.GetFullPath(Path.Combine(tempUnzipDir, entry.FullName));
-                        if (!destinationPath.StartsWith(Path.GetFullPath(tempUnzipDir), StringComparison.OrdinalIgnoreCase))
+                        if (!destinationPath.StartsWith(extractRoot, StringComparison.OrdinalIgnoreCase))
                         {
                             throw new InvalidDataException("Zip Slip Vulnerability Detected! Aborting unzip.");
                         }
@@ -134,7 +152,22 @@ namespace DevelopmentTools.Updater
                 }
 
                 Console.WriteLine("Installing new files...");
-                CopyDirectory(tempUnzipDir, info.install_dir);
+                if (Directory.Exists(info.install_dir))
+                {
+                    Directory.Delete(info.install_dir, true);
+                }
+                CopyDirectory(tempUnzipDir, info.install_dir, "UpdaterPayload");
+
+                string updaterPayloadDir = Path.Combine(tempUnzipDir, "UpdaterPayload");
+                if (Directory.Exists(updaterPayloadDir))
+                {
+                    Console.WriteLine("Updating updater files...");
+                    if (Directory.Exists(info.updater_dir))
+                    {
+                        Directory.Delete(info.updater_dir, true);
+                    }
+                    CopyDirectory(updaterPayloadDir, info.updater_dir);
+                }
 
                 // 5. 更新本機 version.json 中的版本與時間
                 Console.WriteLine("Updating version meta...");
@@ -162,26 +195,50 @@ namespace DevelopmentTools.Updater
             catch (Exception ex)
             {
                 LogError("Failed to apply update. Attempting rollback...", ex);
-                Rollback(info.backup_dir, info.install_dir);
-                if (File.Exists(pendingJsonPath)) File.Delete(pendingJsonPath);
+                Rollback(info.backup_dir, info.install_dir, info.updater_dir);
                 return 5;
             }
             finally
             {
                 if (Directory.Exists(tempUnzipDir))
                 {
-                    Directory.Delete(tempUnzipDir, true);
+                    try { Directory.Delete(tempUnzipDir, true); } catch { }
                 }
             }
         }
 
-        private static bool WaitForProcessToExit(string name, int timeoutMs)
+        private static bool ValidatePendingInfo(PendingUpdateInfo info)
+        {
+            return info != null
+                && !string.IsNullOrWhiteSpace(info.zip_path)
+                && !string.IsNullOrWhiteSpace(info.sha256)
+                && !string.IsNullOrWhiteSpace(info.install_dir)
+                && !string.IsNullOrWhiteSpace(info.updater_dir)
+                && !string.IsNullOrWhiteSpace(info.backup_dir)
+                && !string.IsNullOrWhiteSpace(info.version_file_path)
+                && !string.IsNullOrWhiteSpace(info.new_version);
+        }
+
+        private static bool WaitForRevitToExit(int revitProcessId, int timeoutMs)
         {
             var stopwatch = Stopwatch.StartNew();
             while (stopwatch.ElapsedMilliseconds < timeoutMs)
             {
-                var processes = Process.GetProcessesByName(name);
-                if (processes.Length == 0)
+                if (revitProcessId > 0)
+                {
+                    try
+                    {
+                        using (var process = Process.GetProcessById(revitProcessId))
+                        {
+                            if (process.HasExited) return true;
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                        return true;
+                    }
+                }
+                else if (Process.GetProcessesByName("Revit").Length == 0)
                 {
                     return true;
                 }
@@ -211,7 +268,7 @@ namespace DevelopmentTools.Updater
             }
         }
 
-        private static void CopyDirectory(string sourceDir, string destDir)
+        private static void CopyDirectory(string sourceDir, string destDir, string excludedTopLevelDirectory = null)
         {
             Directory.CreateDirectory(destDir);
             foreach (string file in Directory.GetFiles(sourceDir))
@@ -221,19 +278,35 @@ namespace DevelopmentTools.Updater
             }
             foreach (string subDir in Directory.GetDirectories(sourceDir))
             {
+                if (!string.IsNullOrEmpty(excludedTopLevelDirectory)
+                    && string.Equals(Path.GetFileName(subDir), excludedTopLevelDirectory, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
                 string destSubDir = Path.Combine(destDir, Path.GetFileName(subDir));
                 CopyDirectory(subDir, destSubDir);
             }
         }
 
-        private static void Rollback(string backupDir, string installDir)
+        private static void Rollback(string backupDir, string installDir, string updaterDir)
         {
             try
             {
                 Console.WriteLine("Performing Rollback...");
                 if (Directory.Exists(backupDir))
                 {
-                    CopyDirectory(backupDir, installDir);
+                    string appBackup = Path.Combine(backupDir, "App");
+                    string updaterBackup = Path.Combine(backupDir, "Updater");
+                    if (Directory.Exists(appBackup))
+                    {
+                        if (Directory.Exists(installDir)) Directory.Delete(installDir, true);
+                        CopyDirectory(appBackup, installDir);
+                    }
+                    if (Directory.Exists(updaterBackup))
+                    {
+                        if (Directory.Exists(updaterDir)) Directory.Delete(updaterDir, true);
+                        CopyDirectory(updaterBackup, updaterDir);
+                    }
                     Console.WriteLine("Rollback successful.");
                 }
             }
@@ -298,9 +371,11 @@ namespace DevelopmentTools.Updater
         public string zip_path { get; set; }
         public string sha256 { get; set; }
         public string install_dir { get; set; }
+        public string updater_dir { get; set; }
         public string backup_dir { get; set; }
         public string version_file_path { get; set; }
         public string new_version { get; set; }
         public string updated_at { get; set; }
+        public int revit_process_id { get; set; }
     }
 }
