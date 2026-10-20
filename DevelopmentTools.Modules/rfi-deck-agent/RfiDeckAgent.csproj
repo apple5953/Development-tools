@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 釋疑擷取與簡報模組。共用設定（net48、C# 7.3、Revit 2024 API）在 ..\Directory.Build.props。 -->
+  <PropertyGroup>
+    <AssemblyName>RfiDeckAgent</AssemblyName>
+    <RootNamespace>RfiDeckAgent</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- JavaScriptSerializer：設定檔與收件匣 item.json -->
+    <Reference Include="System.Web.Extensions" />
+  </ItemGroup>
+</Project>
