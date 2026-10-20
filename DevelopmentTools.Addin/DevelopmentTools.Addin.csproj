@@ -52,7 +52,7 @@
   </Target>
 
   <Target Name="BuildAgentWorkers" BeforeTargets="StageApprovedAgentWorkers">
-    <MSBuild Projects="@(AgentWorkerProject)" Targets="Build" Properties="Configuration=$(Configuration)" BuildInParallel="true" />
+    <MSBuild Projects="@(AgentWorkerProject)" Targets="Restore;Build" Properties="Configuration=$(Configuration)" BuildInParallel="true" />
   </Target>
   <Target Name="CleanAgentWorkers" BeforeTargets="Clean">
     <MSBuild Projects="@(AgentWorkerProject)" Targets="Clean" Properties="Configuration=$(Configuration)" BuildInParallel="true" />
