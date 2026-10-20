@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "replace-with-agent-id",
+  "version": "0.1.0",
+  "hostVersion": "3.0.0",
+  "revitVersions": ["2024"],
+  "executable": "HotAgentWorker.exe",
+  "toolId": "DT_ReplaceWithAgentName",
+  "displayName": "請填寫 Agent 名稱",
+  "description": "請填寫這個唯讀 Worker 的用途。",
+  "permissions": ["document-context-read"],
+  "timeoutSeconds": 30,
+  "tests": ["stdin/stdout protocol", "Revit 2024 Agent Center authorization and execution"]
+}

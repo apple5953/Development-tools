@@ -119,6 +119,11 @@ if (Test-Path (Join-Path $releaseDir "Runtime")) {
     Copy-Item -Path (Join-Path $releaseDir "Runtime") -Destination $zipTempDir -Recurse
 }
 
+# Copy reviewed hot-swappable Agent Workers and their SHA-256 approval catalog.
+if (Test-Path (Join-Path $releaseDir "Agents")) {
+    Copy-Item -Path (Join-Path $releaseDir "Agents") -Destination $zipTempDir -Recurse
+}
+
 # Copy install.bat to ZIP
 Copy-Item -LiteralPath (Join-Path $parentRoot "installer\install.bat") -Destination $zipTempDir
 

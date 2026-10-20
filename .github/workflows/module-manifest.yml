@@ -5,9 +5,22 @@ on:
     paths:
       - 'DevelopmentTools.Modules/**'
       - 'module-platform/**'
+      - 'DevelopmentTools.AgentWorkers/**'
+      - 'DevelopmentTools.Addin/Core/AgentHost/**'
+      - 'DevelopmentTools.Addin/Commands/Cmd_HotAgentCenter.cs'
       - 'DevelopmentTools.Addin/GeneratedModules/**'
       - 'DevelopmentTools.Addin/Core/RibbonCatalog.cs'
       - '.github/workflows/module-manifest.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'DevelopmentTools.Modules/**'
+      - 'DevelopmentTools.AgentWorkers/**'
+      - 'module-platform/**'
+      - 'DevelopmentTools.Addin/Core/AgentHost/**'
+      - 'DevelopmentTools.Addin/Commands/Cmd_HotAgentCenter.cs'
+      - '.github/workflows/module-manifest.yml'
+  workflow_dispatch:
 
 permissions: {}
 
@@ -22,8 +35,37 @@ jobs:
         with:
           python-version: '3.11'
       - name: Validate module metadata
-        run: python module-platform/validate.py
+        run: |
+          python module-platform/validate.py
+          python module-platform/validate_agents.py
       - name: Run validator tests
         run: python -m unittest discover -s module-platform -p 'test_*.py' -v
       - name: Generate registration from submitted folders
         run: python module-platform/generate.py
+
+  agent-worker:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Validate worker metadata
+        run: python module-platform/validate_agents.py
+      - name: Build isolated workers without Revit API
+        shell: pwsh
+        run: Get-ChildItem DevelopmentTools.AgentWorkers -Filter *.csproj -Recurse | ForEach-Object { dotnet build $_.FullName -c Release -clp:ErrorsOnly; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
+      - name: Stage and hash approved workers
+        run: python module-platform/prepare_agents.py --configuration Release --output artifacts/Agents
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-bundle-${{ github.sha }}
+          path: artifacts/Agents
+          if-no-files-found: error
