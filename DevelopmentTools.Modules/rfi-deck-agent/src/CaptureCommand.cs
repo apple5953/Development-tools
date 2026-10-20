@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
@@ -43,6 +44,23 @@ namespace RfiDeckAgent.Core
                 d.CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
                 d.Author = Environment.UserName;
             }
+            else if (d.Project == doc.Title && IsOld(d))
+            {
+                // 同模型但很久以前的草稿：問要不要接著用，避免舊位置帶到新問題
+                TaskDialogResult r = TaskDialog.Show("釋疑擷取",
+                    string.Format("有一筆未完成的草稿（{0} 建立，{1} 張圖，位置 {2}）。\n是 = 繼續加到這筆草稿；否 = 放棄舊草稿重新開始。",
+                        d.CreatedAt, d.Shots.Count, d.Location.Length > 0 ? d.Location : "—"),
+                    TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No | TaskDialogCommonButtons.Cancel);
+                if (r == TaskDialogResult.Cancel) return Result.Cancelled;
+                if (r == TaskDialogResult.No)
+                {
+                    Inbox.ClearDraft();
+                    d = new RfiDraft();
+                    d.CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+                    d.Author = Environment.UserName;
+                    isNew = true;
+                }
+            }
             else if (d.Project.Length > 0 && d.Project != doc.Title)
             {
                 TaskDialogResult r = TaskDialog.Show("釋疑擷取",
@@ -62,13 +80,29 @@ namespace RfiDeckAgent.Core
             ModelContext c = ModelContext.Collect(uidoc);
             d.Project = doc.Title;
             d.ProjectPath = doc.PathName;
-            if (string.IsNullOrEmpty(d.Location)) d.Location = c.LocationText;
-            if (string.IsNullOrEmpty(d.Level)) d.Level = c.LevelName;
-            if (string.IsNullOrEmpty(d.Grid)) d.Grid = c.GridText;
-            if (string.IsNullOrEmpty(d.Building)) d.Building = c.Building;
-            if (string.IsNullOrEmpty(d.CellPos)) d.CellPos = c.CellPos;
-            if (string.IsNullOrEmpty(d.Anchors)) d.Anchors = c.Anchors;
-            if (string.IsNullOrEmpty(d.PositionNote)) d.PositionNote = c.PositionNote;
+            // 位置欄位一律整組更新：這次有選取元件（最準）或草稿還沒有位置 → 用這次的；否則保留草稿原本的
+            bool posChanged = false;
+            if (c.GridText.Length > 0 && (c.PointSource == "選取元件" || string.IsNullOrEmpty(d.Grid)))
+            {
+                posChanged = d.Grid != c.GridText || d.Level != c.LevelName || d.CellPos != c.CellPos;
+                d.Location = c.LocationText;
+                d.Level = c.LevelName;
+                d.Grid = c.GridText;
+                d.Building = c.Building;
+                d.CellPos = c.CellPos;
+                d.Anchors = c.Anchors;
+                d.PositionNote = c.PositionNote;
+                d.Labels = c.Labels;
+                d.ColumnRefs = c.ColumnRefs;
+                d.PointXY = c.PointXY;
+            }
+            else if (string.IsNullOrEmpty(d.Level) && c.LevelName.Length > 0)
+            {
+                d.Level = c.LevelName;
+                if (string.IsNullOrEmpty(d.Building)) d.Building = c.Building;
+                if (string.IsNullOrEmpty(d.Location)) d.Location = c.LocationText;
+            }
+            if (posChanged) RemoveAutoDrawing(d);
             foreach (string id in c.ElementIds) if (!d.ElementIds.Contains(id)) d.ElementIds.Add(id);
             foreach (string s in c.ElementDescriptions) if (!d.Elements.Contains(s)) d.Elements.Add(s);
 
@@ -90,7 +124,7 @@ namespace RfiDeckAgent.Core
             Inbox.SaveDraft(d);
 
             string note = string.Format("模型：{0}\n視圖：{1}　樓層：{2}　柱線：{3}\n選取元件：{4}" +
-                (c.Anchors.Length > 0 ? "\n周圍結構柱：" + c.Anchors : "") + (history.Length > 0 ? "\n⚠ " + history : ""),
+                (c.Anchors.Length > 0 ? "\n周圍結構柱：" + c.Anchors : "") + (c.Labels.Length > 0 ? "\n圖說編號：" + c.Labels : "") + (history.Length > 0 ? "\n⚠ " + history : ""),
                 d.Project, view.Name, c.LevelName.Length > 0 ? c.LevelName : "—",
                 c.GridText.Length > 0 ? c.GridText + (c.PointSource.Length > 0 ? "（依" + c.PointSource + "）" : "") : "—",
                 c.ElementDescriptions.Count > 0 ? string.Join("；", c.ElementDescriptions.GetRange(0, Math.Min(3, c.ElementDescriptions.Count))) +
@@ -171,13 +205,31 @@ namespace RfiDeckAgent.Core
                     si.View = "圖說(自動)";
                     si.Time = DateTime.Now.ToString("HH:mm:ss");
                     d.Shots.Add(si);
-                    string no = Convert.ToString(c["drawing_no"]) + " " + Convert.ToString(c["title"]);
-                    if (string.IsNullOrEmpty(d.Drawing)) d.Drawing = no.Trim();
+                    string no = (Convert.ToString(c["drawing_no"]) + " " + Convert.ToString(c["title"])).Trim();
+                    if (string.IsNullOrEmpty(d.Drawing)) { d.Drawing = no; d.AutoDrawing = no; }
                     break;          // 只自動加最相關的一張
                 }
             }
             catch { }
             return history;
+        }
+
+        /// <summary>位置改了：移除之前自動加的對照圖說（使用者自己加的不動）</summary>
+        static void RemoveAutoDrawing(RfiDraft d)
+        {
+            foreach (ShotInfo s in d.Shots.Where(x => x.View == "圖說(自動)").ToList())
+            {
+                d.Shots.Remove(s);
+                try { string f = Path.Combine(Config.DraftDir, s.File); if (File.Exists(f)) File.Delete(f); } catch { }
+            }
+            if (d.AutoDrawing.Length > 0 && d.Drawing == d.AutoDrawing) d.Drawing = "";
+            d.AutoDrawing = "";
+        }
+
+        static bool IsOld(RfiDraft d)
+        {
+            DateTime t;
+            return DateTime.TryParse(d.CreatedAt, out t) && (DateTime.Now - t).TotalHours > 2;
         }
 
         static string DefaultCaption(View v)

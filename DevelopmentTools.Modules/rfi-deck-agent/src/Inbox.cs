@@ -35,6 +35,10 @@ namespace RfiDeckAgent.Core
         public string CellPos = "";      // 柱線格內相對位置 "fx,fy"
         public string Anchors = "";      // 周圍結構柱位置標記
         public string PositionNote = ""; // 距 8 軸 2.35m、距 B' 軸 1.20m
+        public string AutoDrawing = "";  // 自動帶入的圖說名稱（位置改變時一起更新）
+        public string Labels = "";       // 選取元件的圖說編號（C56、J7a）
+        public string ColumnRefs = "";   // 周圍結構柱 編號:X,Y（公尺）
+        public string PointXY = "";      // 問題點位 X,Y（公尺）
         public List<string> ElementIds = new List<string>();
         public List<string> Elements = new List<string>();
         public List<ShotInfo> Shots = new List<ShotInfo>();
