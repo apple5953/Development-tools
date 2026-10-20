@@ -1,6 +1,14 @@
 import { randomUUID } from "node:crypto";
 import type { RealityRequest, RealityResponse, RealityTool } from "./contracts.js";
 
+const ALLOWED_TOOLS = new Set<RealityTool>([
+  "system.health",
+  "document.get_active",
+  "level.list",
+  "element.query",
+  "element.get_parameters",
+]);
+
 export interface GatewayOptions {
   bridgeUrl?: string;
   timeoutMs?: number;
@@ -35,9 +43,15 @@ export class BridgeGateway {
     if (url.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) {
       throw new Error("BEAI_BRIDGE_URL must use loopback HTTP in Local-First mode.");
     }
+    if (url.pathname.replace(/\/$/, "") !== "/api/v1/execute" || url.username || url.password || url.search || url.hash) {
+      throw new Error("BEAI_BRIDGE_URL must target the canonical /api/v1/execute endpoint without credentials, query, or fragment.");
+    }
   }
 
   async call<T>(tool: RealityTool, args: Record<string, unknown> = {}): Promise<RealityResponse<T>> {
+    if (!ALLOWED_TOOLS.has(tool)) {
+      throw new BridgeGatewayError(`Tool '${String(tool)}' is not registered by the BEAI MCP server.`, "BEAI_NOT_SUPPORTED");
+    }
     const request: RealityRequest = {
       requestId: randomUUID(),
       version: "1.0",
@@ -62,6 +76,10 @@ export class BridgeGateway {
       const payload = (await response.json()) as RealityResponse<T>;
       const elapsed = Math.round(performance.now() - started);
       console.info(JSON.stringify({ level: "AUDIT", requestId: request.requestId, tool, durationMs: elapsed, success: payload.success }));
+
+      if (payload.requestId !== request.requestId) {
+        throw new BridgeGatewayError("Reality Bridge returned a mismatched request ID.", "BEAI_INVALID_RESPONSE");
+      }
 
       if (!response.ok || !payload.success) {
         const error = payload.errors?.[0];

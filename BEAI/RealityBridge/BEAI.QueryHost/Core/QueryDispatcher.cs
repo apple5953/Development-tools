@@ -75,6 +75,10 @@ namespace BEAI.QueryHost.Core
                 // Route: POST /api/rules/reload
                 if (method == "POST" && path.Equals("/api/rules/reload", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!BridgeConfiguration.Instance.GetFlags().Actions)
+                    {
+                        return MaintenanceDenied();
+                    }
                     bool ok = HotReloadManager.Instance.ReloadAllRules(false);
                     if (ok)
                     {
@@ -89,6 +93,10 @@ namespace BEAI.QueryHost.Core
                 // Route: POST /api/worker/restart
                 if (method == "POST" && path.Equals("/api/worker/restart", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!BridgeConfiguration.Instance.GetFlags().Actions)
+                    {
+                        return MaintenanceDenied();
+                    }
                     bool ok = WorkerManager.Instance.RestartWorker();
                     return BeaiQueryResponse.Json(JsonConvert.SerializeObject(new { success = ok, workerStatus = RuntimeState.Instance.WorkerStatus, workerVersion = RuntimeState.Instance.WorkerVersion }));
                 }
@@ -96,6 +104,10 @@ namespace BEAI.QueryHost.Core
                 // Route: POST /api/worker/rollback
                 if (method == "POST" && path.Equals("/api/worker/rollback", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!BridgeConfiguration.Instance.GetFlags().Actions)
+                    {
+                        return MaintenanceDenied();
+                    }
                     bool ok = WorkerManager.Instance.RollbackWorker();
                     return BeaiQueryResponse.Json(JsonConvert.SerializeObject(new { success = ok, workerStatus = RuntimeState.Instance.WorkerStatus, workerVersion = RuntimeState.Instance.WorkerVersion }));
                 }
@@ -223,17 +235,36 @@ namespace BEAI.QueryHost.Core
                 status = "NOT_FOUND";
                 return BeaiQueryResponse.Json(JsonConvert.SerializeObject(ApiResponse<object>.Fail("NOT_FOUND", string.Format("Endpoint '{0} {1}' not found.", method, path))), 404);
             }
+            catch (JsonException ex)
+            {
+                status = "BEAI_INVALID_QUERY";
+                Logger.Error(string.Format("Invalid JSON in QueryDispatcher for {0} {1}", method, path), ex);
+                return BeaiQueryResponse.Json(
+                    JsonConvert.SerializeObject(ApiResponse<object>.Fail("BEAI_INVALID_QUERY", "Request JSON is invalid.")),
+                    400);
+            }
             catch (Exception ex)
             {
                 status = ErrorCodes.InternalError;
                 Logger.Error(string.Format("Unhandled error in QueryDispatcher for {0} {1}", method, path), ex);
-                return BeaiQueryResponse.Json(JsonConvert.SerializeObject(ApiResponse<object>.Fail(ErrorCodes.InternalError, ex.Message)), 500);
+                return BeaiQueryResponse.Json(
+                    JsonConvert.SerializeObject(ApiResponse<object>.Fail(ErrorCodes.InternalError, "The query could not be completed.")),
+                    500);
             }
             finally
             {
                 sw.Stop();
                 Logger.Query(method, path, sw.ElapsedMilliseconds, resultCount, status);
             }
+        }
+
+        private static BeaiQueryResponse MaintenanceDenied()
+        {
+            return BeaiQueryResponse.Json(
+                JsonConvert.SerializeObject(ApiResponse<object>.Fail(
+                    ErrorCodes.WriteNotAllowed,
+                    "Bridge maintenance endpoints are disabled by policy.")),
+                403);
         }
 
         private static ParameterSearchResponseDto ExecuteParameterSearch(Document doc, ParameterSearchRequestDto request)

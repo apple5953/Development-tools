@@ -43,6 +43,21 @@ jobs:
           if failures: print('\n'.join(failures)); sys.exit(1)
           print(f'JSON parse PASS: {len(list(filter(None,paths)))} files')
           PY
+      - name: Set up Node.js for MCP contract checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: BEAI/MCP/package-lock.json
+      - name: Validate BEAI MCP safety boundary
+        shell: bash
+        run: python3 scripts/validate-beai-mcp.py
+      - name: Build and test the BEAI MCP server
+        working-directory: BEAI/MCP
+        shell: bash
+        run: |
+          npm ci
+          npm run check
       - name: Assert shared governance docs exist
         shell: bash
         run: |
