@@ -1,0 +1,41 @@
+name: Trusted merge gate
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, review_requested]
+    branches: [main]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  gate:
+    name: Trusted maintainer gate
+    if: github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require current-head approval for non-maintainer PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MAINTAINER: apple5953
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$PR_AUTHOR" = "$MAINTAINER" ]; then
+            echo "Maintainer-authored PR; trusted merge gate passed."
+            exit 0
+          fi
+          approvals=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER/reviews?per_page=100" \
+            --jq "[.[] | select(.user.login == \"$MAINTAINER\" and .state == \"APPROVED\" and .commit_id == \"$HEAD_SHA\")] | length")
+          if [ "$approvals" -lt 1 ]; then
+            echo "PR author $PR_AUTHOR requires approval from $MAINTAINER for current head $HEAD_SHA."
+            exit 1
+          fi
+          echo "Current PR head is approved by $MAINTAINER."
