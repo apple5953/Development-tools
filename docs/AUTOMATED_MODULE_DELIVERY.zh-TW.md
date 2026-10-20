@@ -67,6 +67,39 @@
 - 專用 Windows x64 電腦。
 - 合法 Revit 2024 安裝或合法 Revit 2024 API 開發環境。
 - Runner 標籤：`self-hosted`、`Windows`、`X64`、`revit-2024`。
-- Python 3.12、.NET SDK 8、Inno Setup 6；workflow 會配置 Python 與 .NET SDK。
+- 預先安裝 Python 3.10 以上、.NET SDK 8 以上及 Inno Setup 6。workflow 只驗證版本，不安裝或修改系統工具鏈。
 - Runner 服務帳號必須可讀取 `C:\Program Files\Autodesk\Revit 2024` 與 Inno Setup。
 - 不得讓公開 PR workflow 使用此 Runner。
+
+目前登錄的 Runner 名稱為 `BEAI-Revit2024-DESKTOP-COOSTPI`，安裝於
+`C:\Users\User\ActionsRunners\Development-tools`。未安裝成 Windows 服務時，必須在該目錄執行
+`run.cmd` 並保持登入；關閉 Runner 或登出後，候選建置會安全地停留在 queued，不會改用不具 Revit SDK 的主機。
+
+若要長期無人值守，應由電腦管理員將官方 Runner 安裝成 Windows 服務，使用可讀取 Revit 2024、
+Inno Setup、Python 與 .NET SDK 的專用低權限帳號。不得以系統管理員互動帳號執行任意 PR 程式碼。
+
+## GitHub 儲存庫設定
+
+- `main` ruleset 必須要求 `Policy and static checks` 與 `Trusted maintainer gate`。
+- `production` environment 的 required reviewer 必須是 `apple5953`，且只允許 protected branches。
+- `Prepare production release` 在 workflow 內只要求 `actions: read`、`contents: write`、`pull-requests: write`。
+- GitHub **Settings → Actions → General → Workflow permissions** 必須允許 Actions 建立 Pull Request，否則候選包仍可完成，但正式版本 PR 無法自動建立。
+- Release workflow 不會自動核准自己的 PR；`Trusted maintainer gate` 仍要求 `apple5953` 對機器人版本 PR 的目前最新 commit 親自核准。
+
+## Runner 管理
+
+檢查 Runner 是否上線：
+
+```powershell
+gh api repos/apple5953/Development-tools/actions/runners `
+  --jq '.runners[] | {name,status,busy,labels:[.labels[].name]}'
+```
+
+手動啟動目前使用者模式 Runner：
+
+```powershell
+Set-Location 'C:\Users\User\ActionsRunners\Development-tools'
+.\run.cmd
+```
+
+停止 Runner 時，在執行視窗按 `Ctrl+C`。不要在 Revit 或候選建置進行中強制終止電腦。
