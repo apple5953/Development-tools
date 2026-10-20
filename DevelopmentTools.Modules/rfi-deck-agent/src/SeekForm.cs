@@ -25,6 +25,7 @@ namespace RfiDeckAgent.Core
         readonly FlowLayoutPanel cards = new FlowLayoutPanel();
         readonly Label head = new Label();
         readonly List<Tuple<CheckBox, TextBox, string>> rows = new List<Tuple<CheckBox, TextBox, string>>();
+        readonly List<Tuple<CheckBox, CheckBox, TextBox, string>> zooms = new List<Tuple<CheckBox, CheckBox, TextBox, string>>();
 
         public SeekForm(Dictionary<string, object> result)
         {
@@ -53,6 +54,8 @@ namespace RfiDeckAgent.Core
             {
                 foreach (Tuple<CheckBox, TextBox, string> r in rows)
                     if (r.Item1.Checked) Picked.Add(new SeekPick { Png = r.Item3, Caption = r.Item2.Text.Trim() });
+                foreach (Tuple<CheckBox, CheckBox, TextBox, string> z in zooms)
+                    if (z.Item1.Checked && z.Item2.Checked) Picked.Add(new SeekPick { Png = z.Item4, Caption = z.Item3.Text.Trim() + "（局部放大）" });
                 DialogResult = DialogResult.OK;
                 Close();
             };
@@ -78,7 +81,7 @@ namespace RfiDeckAgent.Core
             if (r.ContainsKey("warnings") && r["warnings"] is ArrayList && ((ArrayList)r["warnings"]).Count > 0)
                 warn = "　⚠ " + string.Join("；", ((ArrayList)r["warnings"]).Cast<object>().Select(x => x.ToString()).ToArray());
             string hist = HistoryText(r);
-            head.Text = string.Format("依 棟別「{0}」樓層「{1}」柱線「{2}」找到的圖說（紅框＝柱線範圍，紅圈＝物件位置）。勾選要放進簡報的，圖名可改。\n索引建立：{3}（{4}）{5}{6}",
+            head.Text = string.Format("依 棟別「{0}」樓層「{1}」柱線「{2}」找到的結構／建築圖說。加入的是整張圖說（含圖框），紅框＝位置範圍、紅圈＝物件位置、橘框＝構件編號；預覽為局部放大，雙擊看整張。\n索引建立：{3}（{4}）{5}{6}",
                 S(q, "building"), S(q, "level_norm"), S(q, "grid"), S(r, "index_built"), S(r, "index_builder"), warn,
                 hist.Length > 0 ? "\n⚠ " + hist : "");
             if (hist.Length > 0) { head.Height = 80; head.ForeColor = Color.FromArgb(160, 60, 0); }
@@ -97,16 +100,18 @@ namespace RfiDeckAgent.Core
                 Dictionary<string, object> c = o as Dictionary<string, object>;
                 if (c == null) continue;
                 string png = S(c, "png");
+                string zoom = S(c, "png_zoom");
+                string preview = File.Exists(zoom) ? zoom : png;
                 Panel p = new Panel();
-                p.Width = 540; p.Height = 400;
+                p.Width = 540; p.Height = 424;
                 p.BorderStyle = BorderStyle.FixedSingle;
                 p.Margin = new Padding(6);
                 PictureBox pb = new PictureBox();
                 pb.SetBounds(6, 6, 526, 296);
                 pb.SizeMode = PictureBoxSizeMode.Zoom;
-                if (File.Exists(png))
+                if (File.Exists(preview))
                 {
-                    try { using (FileStream fs = File.OpenRead(png)) pb.Image = Image.FromStream(fs); } catch { }
+                    try { using (FileStream fs = File.OpenRead(preview)) pb.Image = Image.FromStream(fs); } catch { }
                     pb.Cursor = Cursors.Hand;
                     pb.DoubleClick += delegate { System.Diagnostics.Process.Start(png); };
                 }
@@ -126,6 +131,14 @@ namespace RfiDeckAgent.Core
                 why.Font = new Font("Microsoft JhengHei UI", 9f);
                 why.SetBounds(6, 364, 526, 30);
                 p.Controls.Add(pb); p.Controls.Add(chk); p.Controls.Add(cap); p.Controls.Add(why);
+                if (File.Exists(zoom))
+                {
+                    CheckBox z = new CheckBox();
+                    z.Text = "另加局部放大圖";
+                    z.SetBounds(6, 396, 526, 22);
+                    p.Controls.Add(z);
+                    zooms.Add(Tuple.Create(chk, z, cap, zoom));
+                }
                 cards.Controls.Add(p);
                 rows.Add(Tuple.Create(chk, cap, png));
                 first = false;
@@ -151,15 +164,28 @@ namespace RfiDeckAgent.Core
         /// <summary>執行 seek_lookup.py，回傳結果（錯誤時含 error）</summary>
         public static Dictionary<string, object> Run(RfiDraft d, string building)
         {
-            string script = Path.Combine(PyRunner.ScriptDir, "seek_lookup.py");
+            // 查圖規則內嵌在外掛裡（外掛更新即更新規則）；--root 告訴它 AI AGENT 資料夾（索引、PDF、專案設定所在）
+            string script = ScriptStore.Resolve("seek_lookup.py");
+            string pkg = PyRunner.EnsureSeekPackages();
+            if (pkg != null)
+            {
+                Dictionary<string, object> e0 = new Dictionary<string, object>();
+                e0["ok"] = false;
+                e0["error"] = pkg;
+                return e0;
+            }
             string outDir = Path.Combine(Path.GetTempPath(), "dtai_seek_" + DateTime.Now.ToString("HHmmssfff"));
             List<string> a = new List<string>();
             a.Add(PyRunner.Q(script));
+            a.Add("--root " + PyRunner.Q(Config.Root));
             a.Add("--out " + PyRunner.Q(outDir));
             if (!string.IsNullOrEmpty(building)) a.Add("--building " + PyRunner.Q(building));
             if (!string.IsNullOrEmpty(d.Level)) a.Add("--level " + PyRunner.Q(d.Level));
             if (!string.IsNullOrEmpty(d.Grid)) a.Add("--grid " + PyRunner.Q(d.Grid));
             if (!string.IsNullOrEmpty(d.CellPos)) a.Add("--cellpos " + PyRunner.Q(d.CellPos));
+            if (!string.IsNullOrEmpty(d.PointXY)) a.Add("--point " + PyRunner.Q(d.PointXY));
+            if (!string.IsNullOrEmpty(d.ColumnRefs)) a.Add("--colrefs " + PyRunner.Q(d.ColumnRefs));
+            if (!string.IsNullOrEmpty(d.Labels)) a.Add("--labels " + string.Join(" ", d.Labels.Split('、').Where(x => x.Length > 0).Select(x => PyRunner.Q(x)).ToArray()));
             if (d.Elements.Count > 0)
             {
                 a.Add("--cats " + string.Join(" ", d.Elements.Select(e => PyRunner.Q(e.Split(' ')[0])).Distinct().ToArray()));

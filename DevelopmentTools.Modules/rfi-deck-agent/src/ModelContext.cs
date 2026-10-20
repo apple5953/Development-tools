@@ -20,6 +20,9 @@ namespace RfiDeckAgent.Core
         public string CellPos = "";         // 在柱線格內的相對位置 "fx,fy"（0~1，依 LINE 內標示順序）
         public string PositionNote = "";    // 距 8 軸 2.35m、距 B' 軸 1.20m
         public string Anchors = "";         // 周圍結構柱：B'-8、C'-8、B'-9、C'-9
+        public string Labels = "";          // 選取元件的圖說編號（備註欄，例 C56、G4e、J7a）
+        public string ColumnRefs = "";      // 周圍結構柱「圖說編號:X,Y」（公尺，主模型座標），用來對位 PDF
+        public string PointXY = "";         // 問題點位 X,Y（公尺，主模型座標）
         public string LocationText = "";
         public string PointSource = "";     // 位置依據：選取元件／剖面框中心／裁切框／畫面中心
         public List<string> ElementIds = new List<string>();
@@ -62,6 +65,7 @@ namespace RfiDeckAgent.Core
             XYZ point = null;
             BoundingBoxXYZ union = null;
             Level elemLevel = null;
+            List<string> labels = new List<string>();
             int n = 0;
             foreach (Element e in picked)
             {
@@ -72,6 +76,8 @@ namespace RfiDeckAgent.Core
                 }
                 n++;
                 if (elemLevel == null) elemLevel = LevelOf(doc, e);
+                string lab = DrawingLabel(e);
+                if (lab.Length > 0 && !labels.Contains(lab) && labels.Count < 10) labels.Add(lab);
                 BoundingBoxXYZ bb = e.get_BoundingBox(null);
                 if (bb == null) continue;
                 if (union == null) { union = new BoundingBoxXYZ(); union.Min = bb.Min; union.Max = bb.Max; }
@@ -82,6 +88,7 @@ namespace RfiDeckAgent.Core
                 }
             }
             if (union != null) { point = (union.Min + union.Max) / 2.0; c.PointSource = "選取元件"; }
+            c.Labels = string.Join("、", labels.ToArray());
 
             // ---------- 沒有選取：小剖面框中心 → 裁切框中心 → 畫面中心射線
             if (point == null)
@@ -139,7 +146,14 @@ namespace RfiDeckAgent.Core
                 c.GridText = g.Text;
                 c.CellPos = g.CellPos;
                 c.PositionNote = g.Note;
-                try { c.Anchors = NearbyColumns(doc, point); } catch { }
+                try
+                {
+                    string refs;
+                    c.Anchors = NearbyColumns(doc, point, out refs);
+                    c.ColumnRefs = refs;
+                }
+                catch { }
+                c.PointXY = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:0.000},{1:0.000}", point.X * FT, point.Y * FT);
             }
 
             string loc = c.LevelName;
@@ -170,6 +184,8 @@ namespace RfiDeckAgent.Core
             if (off.Length > 0) parts.Add("中心高 " + off);
             string mark = P(e, BuiltInParameter.ALL_MODEL_MARK);
             if (mark.Length > 0) parts.Add("標記 " + mark);
+            string lab = DrawingLabel(e);
+            if (lab.Length > 0) parts.Add("編號 " + lab);
             string colMark = P(e, BuiltInParameter.COLUMN_LOCATION_MARK);
             if (colMark.Length > 0) parts.Add("柱位 " + colMark);
             parts.Add("[ID " + IdText(e.Id) + "]");
@@ -186,6 +202,27 @@ namespace RfiDeckAgent.Core
                 return (s ?? "").Trim();
             }
             catch { return ""; }
+        }
+
+        static readonly System.Text.RegularExpressions.Regex LabelRx =
+            new System.Text.RegularExpressions.Regex(@"^[A-Za-z]{1,4}\d{0,3}[A-Za-z]?");
+
+        /// <summary>圖說編號：模型把結構柱/梁在圖上的編號寫在「備註」欄（C56、G4e、J7a…；也接受「圖說編號」「構件編號」參數）</summary>
+        public static string DrawingLabel(Element e)
+        {
+            try
+            {
+                foreach (string name in new[] { "備註", "圖說編號", "構件編號" })
+                {
+                    Parameter p = e.LookupParameter(name);
+                    if (p == null || p.StorageType != StorageType.String) continue;
+                    string v = (p.AsString() ?? "").Trim();
+                    System.Text.RegularExpressions.Match m = LabelRx.Match(v);
+                    if (m.Success && m.Value.Length >= 2) return m.Value;
+                }
+            }
+            catch { }
+            return "";
         }
 
         static Level LevelOf(Document doc, Element e)
@@ -236,9 +273,10 @@ namespace RfiDeckAgent.Core
         }
 
         // ------------------------------------------------------------ 周圍結構柱（主模型＋連結模型）
-        static string NearbyColumns(Document doc, XYZ p)
+        static string NearbyColumns(Document doc, XYZ p, out string refs)
         {
-            List<Tuple<double, string>> found = new List<Tuple<double, string>>();
+            // Item1 距離(m)、Item2 柱位置標記、Item3 圖說編號、Item4 X(m)、Item5 Y(m)
+            List<Tuple<double, string, string, double, double>> found = new List<Tuple<double, string, string, double, double>>();
             Action<Document, Transform> scan = (d, tf) =>
             {
                 foreach (Element col in new FilteredElementCollector(d).OfCategory(BuiltInCategory.OST_StructuralColumns).WhereElementIsNotElementType())
@@ -251,10 +289,8 @@ namespace RfiDeckAgent.Core
                     if (p.Z < z0 || p.Z > z1) continue;
                     double cx = (mn.X + mx.X) / 2, cy = (mn.Y + mx.Y) / 2;
                     double dist = Math.Sqrt((cx - p.X) * (cx - p.X) + (cy - p.Y) * (cy - p.Y)) * FT;
-                    if (dist > 15) continue;
-                    string mark = P(col, BuiltInParameter.COLUMN_LOCATION_MARK);
-                    if (mark.Length == 0) continue;
-                    found.Add(Tuple.Create(dist, mark));
+                    if (dist > 30) continue;
+                    found.Add(Tuple.Create(dist, P(col, BuiltInParameter.COLUMN_LOCATION_MARK), DrawingLabel(col), cx * FT, cy * FT));
                 }
             };
             scan(doc, null);
@@ -264,7 +300,20 @@ namespace RfiDeckAgent.Core
                 if (ld == null) continue;
                 try { scan(ld, li.GetTotalTransform()); } catch { }
             }
-            List<string> marks = found.OrderBy(t => t.Item1).Select(t => t.Item2).Distinct().Take(4).ToList();
+            List<Tuple<double, string, string, double, double>> near = found.OrderBy(t => t.Item1).ToList();
+            List<string> marks = near.Where(t => t.Item1 <= 15).Select(t => t.Item3.Length > 0 && t.Item2.Length > 0 ? t.Item3 + " " + t.Item2 : t.Item2 + t.Item3)
+                                     .Where(x => x.Length > 0).Distinct().Take(4).ToList();
+            // 對位用：有圖說編號、且編號在附近只出現一次（C0 這類小柱編號會重複，不能當錨點）
+            List<string> rf = new List<string>();
+            foreach (var g in near.Where(t => t.Item3.Length > 0).GroupBy(t => t.Item3))
+            {
+                var tt = g.First();
+                // 主模型與連結模型常有同一支柱（同編號同位置）→ 視為一支；同編號在不同位置（C0 這類）就不能當錨點
+                if (g.Any(o => Math.Abs(o.Item4 - tt.Item4) > 0.5 || Math.Abs(o.Item5 - tt.Item5) > 0.5)) continue;
+                rf.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}:{1:0.00},{2:0.00}", tt.Item3, tt.Item4, tt.Item5));
+                if (rf.Count >= 16) break;
+            }
+            refs = string.Join(";", rf.ToArray());
             return string.Join("、", marks.ToArray());
         }
 
