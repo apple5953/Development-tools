@@ -84,7 +84,7 @@ DevelopmentTools.Modules/room-check-agent/
 | `assembly` | 必須等於 `.csproj` 的 `AssemblyName` 加 `.dll`。不可與現有模組 DLL 撞名。 |
 | `entryClass` | 完整命名空間與類別名稱，須為可建立的 `IExternalCommand`。C# 編譯與 Revit 實測還須驗證其可用。 |
 | `ToolId` | 唯一授權識別，格式 `DT_` 加英文名稱；不要改用既有 ToolId。新的 ID 還需由授權系統核准。 |
-| `Ribbon` | `name` 為唯一內部按鈕名稱；`text` 是使用者看到的名稱；`category` 僅可選 `drawing`、`model`、`review`。 |
+| `Ribbon` | `name` 為唯一內部按鈕名稱；`text` 同時是獨立面板標題與大按鈕文字，且不可和其他模組重名；`category` 僅可選 `drawing`、`model`、`review`，用來決定模組面板由左到右的群組順序。 |
 | `permissions` | 普通按鈕使用 `ribbon-command`。`bridge-read` 尚不能由新模組自行宣告使用。 |
 | `dependencies` | 已存在模組的 `id` 清單；不能自我相依或形成循環。它是描述與驗證，不代替完整部署相依審查。 |
 | `tests` | 至少一個具體的人工或自動驗收項目。 |
@@ -128,7 +128,7 @@ python -m unittest discover -s module-platform -p 'test_*.py' -v
 dotnet build DevelopmentTools.sln -c Debug -clp:ErrorsOnly
 ```
 
-`validate.py` 檢查模組資料夾、專案、ToolId、Ribbon 名稱、版本、權限、依賴與循環。`generate.py` 在主外掛建置時執行，產生 `DevelopmentTools.Addin/GeneratedModules/GeneratedModuleCommands.cs`；此檔為產物，**不得手動修改或提交為模組變更**。主外掛專案用 `DevelopmentTools.Modules/*/*.csproj` 自動收集模組，無需同事改 `App.cs`、`RibbonCatalog.cs`、主 `.csproj` 或 `.sln`。
+`validate.py` 檢查模組資料夾、專案、ToolId、Ribbon 內部名稱、可見面板名稱、版本、權限、依賴與循環。`generate.py` 在主外掛建置時執行，為每個模組產生一個位於 `RTS` 頁籤右側的獨立面板、大按鈕及授權包裝命令，輸出到 `DevelopmentTools.Addin/GeneratedModules/GeneratedModuleCommands.cs`；此檔為產物，**不得手動修改或提交為一般模組變更**。主外掛專案用 `DevelopmentTools.Modules/*/*.csproj` 自動收集模組，無需同事改 `App.cs`、`RibbonCatalog.cs`、主 `.csproj` 或 `.sln`。
 
 缺少合法 Revit API 的電腦可以執行前兩項 Python 檢查，但不能宣稱整個 .NET 建置或 Revit 功能已通過。GitHub PR 的模組 workflow 目前也只跑 Python 描述檔、單元測試及註冊產生器；它**不會**在 Windows 上編譯模組 DLL 或測試 Revit。含第三方套件、WPF、族群資源或動態檔案的模組，還要核對 Release 候選包是否包含必要檔案。
 
@@ -139,7 +139,7 @@ dotnet build DevelopmentTools.sln -c Debug -clp:ErrorsOnly
 至少記錄以下結果：
 
 1. Revit 2024 正常啟動，沒有外掛載入錯誤；原有 RTS、MCP、BEAI 入口仍在。
-2. 新按鈕出現在 `Ribbon.category` 指定分類；文字、圖示、命令路徑與原有按鈕均正常。
+2. `RTS` 頁籤右側出現以 `Ribbon.text` 命名的獨立面板，面板內有同名大按鈕；新增多個模組時依 `drawing`、`model`、`review` 分組，再依模組 `id` 穩定地向右排列。文字、圖示、命令路徑與原有按鈕均正常。
 3. 未授權 ToolId 被阻止；已核准 ToolId 可執行。若尚未核准，將成功路徑標記「未驗證」，不要跳過授權。
 4. 使用指定測試模型驗證結果、例外處理、取消操作及需要的模型保存／復原。
 5. 同時測至少一個已知可用的原有功能，確認沒有明顯回歸。

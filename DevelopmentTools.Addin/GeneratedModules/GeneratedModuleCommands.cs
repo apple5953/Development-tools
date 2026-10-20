@@ -6,7 +6,8 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 namespace DevelopmentTools.Core { internal static partial class RibbonCatalog {
   private static void AddGeneratedModules(List<PanelDef> panels) {
-    foreach (var panel in panels) foreach (var item in panel.Items) foreach (var button in item.Buttons) if (button.Name == "CatReview") button.Children.Add(Btn("ExampleAgent", "DevelopmentTools.Commands.Generated_ExampleAgent", "範例模組", "◈", "#2878A8"));
+    panels.Add(Panel(TabMain, null, "範例模組", One(Btn("ExampleAgent", "DevelopmentTools.Commands.Generated_ExampleAgent", "範例模組", "◈", "#2878A8", "開啟範例模組"))));
+    panels.Add(Panel(TabMain, null, "釋疑簡報", One(Btn("RfiDeckAgent", "DevelopmentTools.Commands.Generated_RfiDeckAgent", "釋疑簡報", "◈", "#2878A8", "開啟釋疑簡報"))));
   }
 } }
 namespace DevelopmentTools.Commands {
@@ -15,6 +16,14 @@ namespace DevelopmentTools.Commands {
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
       if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_ExampleAgent", "範例模組")) return Result.Cancelled;
       try { return new global::ExampleAgent.Commands.OpenCommand().Execute(data, ref message, elements); }
+      catch (Exception ex) { message = ex.Message; return Result.Failed; }
+    }
+  }
+  [Transaction(TransactionMode.Manual)]
+  public sealed class Generated_RfiDeckAgent : IExternalCommand {
+    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
+      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_RfiDeckAgent", "釋疑簡報")) return Result.Cancelled;
+      try { return new global::RfiDeckAgent.Commands.OpenCommand().Execute(data, ref message, elements); }
       catch (Exception ex) { message = ex.Message; return Result.Failed; }
     }
   }

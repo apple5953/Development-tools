@@ -39,7 +39,11 @@ def validate_one(path):
     if tuple(map(int, data["hostVersion"].split("."))) > tuple(map(int, host_version.split("."))):
         raise ValueError(f"{path}: requires host {data['hostVersion']}, current is {host_version}")
     ribbon = data["Ribbon"]
-    if set(ribbon) != {"name", "text", "category"} or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", ribbon["name"]) or not ribbon["text"] or ribbon["category"] not in ("drawing", "model", "review"):
+    if (set(ribbon) != {"name", "text", "category"}
+            or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", ribbon["name"])
+            or not isinstance(ribbon["text"], str) or not ribbon["text"].strip()
+            or ribbon["text"] != ribbon["text"].strip()
+            or ribbon["category"] not in ("drawing", "model", "review")):
         raise ValueError(f"{path}: invalid Ribbon")
     if path.parent != Path(__file__).parent / "template" and data["id"] != path.parent.name:
         raise ValueError(f"{path}: id must equal folder name")
@@ -75,11 +79,11 @@ def main():
     parser.add_argument("--manifest", type=Path, help="validate one template or module manifest")
     args = parser.parse_args()
     paths = [args.manifest] if args.manifest else manifest_paths()
-    seen_ids, seen_names, seen_tools = set(), set(), set()
+    seen_ids, seen_names, seen_texts, seen_tools = set(), set(), set(), set()
     modules = []
     for path in paths:
         data, project = validate_one(path.resolve())
-        for key, seen, value in (("id", seen_ids, data["id"]), ("Ribbon name", seen_names, data["Ribbon"]["name"]), ("ToolId", seen_tools, data["ToolId"])):
+        for key, seen, value in (("id", seen_ids, data["id"]), ("Ribbon name", seen_names, data["Ribbon"]["name"]), ("Ribbon text", seen_texts, data["Ribbon"]["text"]), ("ToolId", seen_tools, data["ToolId"])):
             if value in seen:
                 raise ValueError(f"duplicate {key}: {value}")
             seen.add(value)

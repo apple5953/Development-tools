@@ -240,7 +240,11 @@ namespace DevelopmentTools.Core
                 try
                 {
                     panel = app.CreateRibbonPanel(p.Tab, Text(lm, p.TitleKey, p.Title));
-                    tracked.Add(new KeyValuePair<RibbonPanel, string>(panel, p.TitleKey));
+                    // Generated module panels use their reviewed manifest text directly. They have
+                    // no LanguageManager key, so do not let a later language switch replace the
+                    // visible title with an unknown synthetic key.
+                    if (!string.IsNullOrEmpty(p.TitleKey))
+                        tracked.Add(new KeyValuePair<RibbonPanel, string>(panel, p.TitleKey));
                 }
                 catch (Exception ex)
                 {
