@@ -27,6 +27,10 @@ namespace BEAI.QueryHost.Core
                 {
                     return Fail(requestId, "BEAI_INVALID_QUERY", "Request tool is required.", stopwatch);
                 }
+                if (!string.Equals(request.Version, "1.0", StringComparison.Ordinal))
+                {
+                    return Fail(requestId, "BEAI_INVALID_QUERY", "Reality Bridge contract version must be 1.0.", stopwatch);
+                }
 
                 string tool = request.Tool.Trim().ToLowerInvariant();
                 FeatureFlags flags = BridgeConfiguration.Instance.GetFlags();
@@ -109,6 +113,7 @@ namespace BEAI.QueryHost.Core
                 if (tool == RealityTools.ElementGetParameters)
                 {
                     List<long> elementIds = ReadElementIds(request.Args);
+                    HashSet<string> requestedParameters = ReadStringSet(request.Args, "parameters");
                     if (elementIds.Count == 0)
                     {
                         return Fail(requestId, "BEAI_INVALID_QUERY", "At least one elementId is required.", stopwatch);
@@ -124,7 +129,19 @@ namespace BEAI.QueryHost.Core
                     {
                         ElementParametersDto parameters = GenericRevitReader.ReadElementParameters(doc, new ElementId(elementId));
                         if (parameters == null) missing.Add(elementId);
-                        else items.Add(parameters);
+                        else
+                        {
+                            if (requestedParameters.Count > 0)
+                            {
+                                parameters.InstanceParameters = parameters.InstanceParameters
+                                    .Where(delegate(ParameterDto parameter) { return requestedParameters.Contains(parameter.Name); })
+                                    .ToList();
+                                parameters.TypeParameters = parameters.TypeParameters
+                                    .Where(delegate(ParameterDto parameter) { return requestedParameters.Contains(parameter.Name); })
+                                    .ToList();
+                            }
+                            items.Add(parameters);
+                        }
                     }
 
                     RealityResponse response = Ok(requestId, new { total = items.Count, items = items }, stopwatch);
@@ -184,6 +201,18 @@ namespace BEAI.QueryHost.Core
             long? single = ReadNullableLong(args, "elementId");
             if (single.HasValue && single.Value > 0) ids.Add(single.Value);
             return ids;
+        }
+
+        private static HashSet<string> ReadStringSet(JObject args, string name)
+        {
+            var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (args == null || !(args[name] is JArray)) return values;
+            foreach (JToken token in (JArray)args[name])
+            {
+                string value = token.Type == JTokenType.String ? token.ToString().Trim() : null;
+                if (!string.IsNullOrEmpty(value)) values.Add(value);
+            }
+            return values;
         }
 
         private static string ReadString(JObject args, string name)

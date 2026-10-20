@@ -36,7 +36,7 @@ The repository also contains an older `BEAI.RevitAdapter.2024` Named Pipe implem
 - Status, active model, categories, element count and element search.
 - Element summary and instance/type parameters.
 - Parameter search and query-plan endpoints.
-- Rule reload and worker restart/rollback development endpoints.
+- Rule reload and worker restart/rollback compatibility endpoints. They return 403 unless the local `actions` feature flag is explicitly enabled.
 - Page size is capped at 500 by the current element reader.
 
 ## Existing Security
@@ -44,7 +44,8 @@ The repository also contains an older `BEAI.RevitAdapter.2024` Named Pipe implem
 - The listener is bound to `127.0.0.1`.
 - The query dispatcher rejects PUT, PATCH and DELETE.
 - No Revit model transaction is opened by QueryHost.
-- Current CORS is permissive and there is no caller authentication.
+- Wildcard CORS is not enabled. The MCP server validates localhost Host and Origin headers, and the Gateway accepts only loopback `/api/v1/execute` URLs.
+- There is no remote caller authentication because V0.1 is deliberately local-only; any future remote transport remains disabled and requires a separate design review.
 - The older Named Pipe implementation does not apply an explicit current-user ACL.
 
 ## Existing Config And Logs
@@ -65,12 +66,10 @@ The repository also contains an older `BEAI.RevitAdapter.2024` Named Pipe implem
 
 ## Technical Debt And Risks
 
-- Transport routes and Revit dispatch logic are coupled in `QueryDispatcher`.
+- Legacy transport routes and Revit dispatch logic remain coupled in `QueryDispatcher` while clients migrate to the canonical endpoint.
 - Responses do not share one request/response envelope.
-- CORS allows every origin even though the service is local-only.
-- Exceptions can leak implementation details in some error responses.
-- No Local MCP Server or MCP integration test exists.
-- Levels are not exposed by the active QueryHost generation.
+- The HTTP request queue does not yet have a fixed capacity limit.
+- There is no remote identity protocol; remote transport remains disabled.
 - The inactive Named Pipe generation and active HTTP generation have drifted.
-- There is no queue capacity limit, caller identity policy or complete cancellation propagation.
+- Cancellation propagation is time-bounded but not end-to-end for every legacy endpoint.
 

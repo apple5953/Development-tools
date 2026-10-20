@@ -89,9 +89,6 @@ export function createBeaiServer(gateway = new BridgeGateway()): McpServer {
         workset: z.string().optional(),
         worksetId: z.number().int().optional(),
         nameContains: z.string().optional(),
-        elementId: z.number().int().positive().optional(),
-        uniqueId: z.string().optional(),
-        fields: z.array(z.string()).max(20).optional(),
         limit: z.number().int().min(1).max(500).default(100),
         cursor: z.number().int().min(1).default(1),
       }),
@@ -109,7 +106,6 @@ export function createBeaiServer(gateway = new BridgeGateway()): McpServer {
       title: "取得元件參數",
       description: "Read instance and type parameters for up to 50 elements in the active Revit model. This tool never modifies the model.",
       inputSchema: z.object({
-        modelId: z.string().optional(),
         elementIds: z.array(z.number().int().positive()).min(1).max(50),
         parameters: z.array(z.string()).max(100).optional(),
       }),

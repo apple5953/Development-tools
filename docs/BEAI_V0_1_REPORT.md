@@ -38,7 +38,8 @@ All tools are read-only. No arbitrary code or Revit API execution tool is expose
 ## Test Results
 
 - PASS: official MCP TypeScript SDK v2 build.
-- PASS: three Gateway contract, security and error tests.
+- PASS: six Gateway contract, loopback/canonical URL, runtime allowlist, request identity and stable-error tests.
+- PASS: repository compliance gate verifies the single embedded Bridge, five read-only MCP tools, ExternalEvent path, no Bridge Transaction, loopback binding and protected maintenance endpoints.
 - PASS: MCP initialize using protocol `2025-11-25`.
 - PASS: MCP tools/list returns all five V0.1 tools.
 - PASS: Revit-closed `system_health` returns `BEAI_BRIDGE_UNAVAILABLE` without crashing MCP.
@@ -69,6 +70,7 @@ All tools are read-only. No arbitrary code or Revit API execution tool is expose
 - Existing `System.Text.Json 8.0.3` references report known high-severity advisories and need a separate regression-reviewed upgrade.
 - The existing solution produces numerous Revit 2024 obsolete-API warnings unrelated to V0.1.
 - V0.1 supports host-model element queries only; link support is reserved for V0.2.
+- The optional `Horizun.Revit` Ribbon adapter refers to a separately installed legacy BIM MCP product. Its external binary is not built, packaged or certified by this repository and is outside the BEAI V0.1 safety proof.
 
 ## Next Step
 

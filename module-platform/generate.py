@@ -6,20 +6,23 @@ from pathlib import Path
 from validate import ROOT, manifest_paths, validate_one
 
 OUT = ROOT / "DevelopmentTools.Addin/GeneratedModules"
+CATEGORY_ORDER = {"drawing": 0, "model": 1, "review": 2}
 
 def cs(value):
     return json.dumps(value, ensure_ascii=False)
 
-def generate():
-    manifests = []
-    for path in manifest_paths():
-        data, project = validate_one(path)
-        manifests.append((data, project))
+def render(manifests):
+    manifests = sorted(
+        manifests,
+        key=lambda pair: (CATEGORY_ORDER[pair[0]["Ribbon"]["category"]], pair[0]["id"]),
+    )
     ids = {data["id"] for data, _ in manifests}
     names = [data["Ribbon"]["name"] for data, _ in manifests]
+    texts = [data["Ribbon"]["text"].strip() for data, _ in manifests]
     tools = [data["ToolId"] for data, _ in manifests]
-    if len(ids) != len(manifests) or len(set(names)) != len(names) or len(set(tools)) != len(tools):
-        raise ValueError("duplicate module identity, Ribbon name, or ToolId")
+    if (len(ids) != len(manifests) or len(set(names)) != len(names)
+            or len(set(texts)) != len(texts) or len(set(tools)) != len(tools)):
+        raise ValueError("duplicate module identity, Ribbon name, Ribbon text, or ToolId")
     if any(dep not in ids for data, _ in manifests for dep in data["dependencies"]):
         raise ValueError("unknown module dependency")
     graph = {data["id"]: data["dependencies"] for data, _ in manifests}
@@ -39,11 +42,13 @@ def generate():
         'namespace DevelopmentTools.Core { internal static partial class RibbonCatalog {',
         '  private static void AddGeneratedModules(List<PanelDef> panels) {',
     ]
-    categories = {'drawing': 'CatDrawing', 'model': 'CatModel', 'review': 'CatReview'}
     for data, _ in manifests:
         r = data['Ribbon']
         cmd = 'DevelopmentTools.Commands.Generated_' + r['name']
-        code.append(f'    foreach (var panel in panels) foreach (var item in panel.Items) foreach (var button in item.Buttons) if (button.Name == {cs(categories[r["category"]])}) button.Children.Add(Btn({cs(r["name"])}, {cs(cmd)}, {cs(r["text"])}, "◈", "#2878A8"));')
+        code.append(
+            f'    panels.Add(Panel(TabMain, null, {cs(r["text"])}, '
+            f'One(Btn({cs(r["name"])}, {cs(cmd)}, {cs(r["text"])}, "◈", "#2878A8", {cs("開啟" + r["text"])}))));'
+        )
     code += ['  }', '} }', 'namespace DevelopmentTools.Commands {']
     for data, _ in manifests:
         name = data['Ribbon']['name']
@@ -57,7 +62,14 @@ def generate():
             '    }', '  }',
         ]
     code += ['}', '']
-    source = '\n'.join(code)
+    return '\n'.join(code)
+
+def generate():
+    manifests = []
+    for path in manifest_paths():
+        data, project = validate_one(path)
+        manifests.append((data, project))
+    source = render(manifests)
     OUT.mkdir(exist_ok=True)
     (OUT / 'GeneratedModuleCommands.cs').write_text(source, encoding='utf-8')
     return len(manifests)

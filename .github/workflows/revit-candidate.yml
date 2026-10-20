@@ -16,6 +16,7 @@ on:
       - '.github/workflows/revit-candidate.yml'
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -59,11 +60,25 @@ jobs:
       - name: Choose next candidate version
         id: version
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $current = [version](Get-Content update_manifest.json -Raw | ConvertFrom-Json).latest_version
-          $version = "$($current.Major).$($current.Minor).$($current.Build + 1)"
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+          $uri = "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/actions/artifacts?per_page=100"
+          $response = Invoke-RestMethod -Uri $uri -Headers $headers
+          @($response.artifacts | Where-Object { -not $_.expired } | Select-Object -ExpandProperty name) |
+            Set-Content -LiteralPath candidate-artifact-names.txt -Encoding utf8
+          $version = python release/next_candidate_version.py `
+            --manifest update_manifest.json `
+            --artifact-names-file candidate-artifact-names.txt
+          if ($LASTEXITCODE -ne 0 -or -not $version) { throw "Unable to choose candidate version." }
           $shortSha = '${{ github.sha }}'.Substring(0, 7)
           $artifact = "development-tools-candidate-v$version-$shortSha"
+          Write-Host "Next candidate version: $version"
           "version=$version" >> $env:GITHUB_OUTPUT
           "artifact=$artifact" >> $env:GITHUB_OUTPUT
       - name: Build, obfuscate and package without publishing
