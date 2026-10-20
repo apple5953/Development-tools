@@ -138,6 +138,21 @@ namespace RfiDeckAgent.Core
             return "安裝 python-pptx 失敗：\n" + ins.Output + "\n" + ins.Error;
         }
 
+        static bool seekChecked;
+
+        /// <summary>查圖需要的套件（PyMuPDF 讀 PDF、Pillow 畫紅框、openpyxl 讀釋疑問題庫）；缺少就自動 pip install --user。每次開 Revit 只檢查一次</summary>
+        public static string EnsureSeekPackages()
+        {
+            if (seekChecked) return null;
+            PyResult r = Run("-c \"import fitz, PIL, openpyxl\"", 60000);
+            if (r.ExitCode == 0) { seekChecked = true; return null; }
+            if (r.ExitCode == -1 && r.Error.StartsWith("找不到")) return r.Error;
+            PyResult ins = Run("-m pip install --user --disable-pip-version-check pymupdf pillow openpyxl", 300000);
+            r = Run("-c \"import fitz, PIL, openpyxl\"", 60000);
+            if (r.ExitCode == 0) { seekChecked = true; return null; }
+            return "安裝查圖套件（pymupdf、pillow）失敗，請確認網路或請管理員安裝：\n" + ins.Output + "\n" + ins.Error;
+        }
+
         public static string Q(string s) { return "\"" + s.Replace("\"", "\\\"") + "\""; }
     }
 }

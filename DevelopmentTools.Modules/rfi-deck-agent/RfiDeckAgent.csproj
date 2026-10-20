@@ -9,4 +9,8 @@
     <!-- JavaScriptSerializer：設定檔與收件匣 item.json -->
     <Reference Include="System.Web.Extensions" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- 查圖規則內嵌在 DLL：模組更新＝規則更新。執行時由 src/ScriptStore.cs 寫到 %LOCALAPPDATA%\DT_AIAgent\py\ -->
+    <EmbeddedResource Include="py\seek_lookup.py" LogicalName="seek_lookup.py" />
+  </ItemGroup>
 </Project>

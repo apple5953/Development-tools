@@ -164,10 +164,20 @@ namespace RfiDeckAgent.Core
         /// <summary>執行 seek_lookup.py，回傳結果（錯誤時含 error）</summary>
         public static Dictionary<string, object> Run(RfiDraft d, string building)
         {
-            string script = Path.Combine(PyRunner.ScriptDir, "seek_lookup.py");
+            // 查圖規則內嵌在外掛裡（外掛更新即更新規則）；--root 告訴它 AI AGENT 資料夾（索引、PDF、專案設定所在）
+            string script = ScriptStore.Resolve("seek_lookup.py");
+            string pkg = PyRunner.EnsureSeekPackages();
+            if (pkg != null)
+            {
+                Dictionary<string, object> e0 = new Dictionary<string, object>();
+                e0["ok"] = false;
+                e0["error"] = pkg;
+                return e0;
+            }
             string outDir = Path.Combine(Path.GetTempPath(), "dtai_seek_" + DateTime.Now.ToString("HHmmssfff"));
             List<string> a = new List<string>();
             a.Add(PyRunner.Q(script));
+            a.Add("--root " + PyRunner.Q(Config.Root));
             a.Add("--out " + PyRunner.Q(outDir));
             if (!string.IsNullOrEmpty(building)) a.Add("--building " + PyRunner.Q(building));
             if (!string.IsNullOrEmpty(d.Level)) a.Add("--level " + PyRunner.Q(d.Level));
