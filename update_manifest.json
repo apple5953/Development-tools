@@ -1,12 +1,12 @@
 {
-    "published_at":  "2026-10-19T08:51:05",
-    "release_url":  "https://github.com/apple5953/Development-tools/releases/download/v3.2.7/DevelopmentTools_v3.2.7.zip",
-    "release_note":  "Remote update release v3.2.7.",
+    "published_at":  "2026-10-20T09:15:06",
+    "release_url":  "https://github.com/apple5953/Development-tools/releases/download/v3.2.8/DevelopmentTools_v3.2.8.zip",
+    "release_note":  "修復 3.2.7 Updater 相依 DLL，加入經 SHA-256 驗證的 Updater 自我更新、下載重試與 App/Updater 雙備份回復。舊 portable 安裝者需先手動執行一次 3.2.8 Installer。",
     "product_name":  "Room Tile System v3",
     "minimum_supported_version":  "1.0.0",
     "app_id":  "development_tools",
-    "latest_version":  "3.2.7",
+    "latest_version":  "3.2.8",
     "channel":  "stable",
-    "sha256":  "375b139ffe6d6307c5484869d910519d57b259469edef1de9eed4afeb8f7fbbd",
+    "sha256":  "dc0841dc8573233faa1de32d2cf4402c909e138fe8b7bfc5eec43273913e2fca",
     "force_update":  false
 }
