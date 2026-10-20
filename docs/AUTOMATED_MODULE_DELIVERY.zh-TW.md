@@ -25,7 +25,7 @@
 `.github/workflows/revit-candidate.yml` 在 `main` 的相關檔案變更後執行：
 
 1. 確認 Revit 2024 API 開發檔案存在。
-2. 由目前正式版自動增加 patch 版號。
+2. 比較目前正式版與 GitHub 尚未過期的候選工件，取最高版本後自動增加 patch 版號。即使上一個候選尚未升為正式版，也不會重複使用相同版本。
 3. 執行 `release/release.ps1 -NoPublish`。
 4. 驗證主 DLL、Updater、每個模組 DLL、內嵌版號與 SHA-256。
 5. 上傳保存 30 天的候選工件。
