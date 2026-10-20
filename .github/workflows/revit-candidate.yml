@@ -44,8 +44,8 @@ jobs:
           if ($dotnetVersion.Major -lt 8) {
             throw ".NET SDK 8 or newer is required; found $dotnetVersion at $($dotnetCommand.Source)"
           }
-          Write-Host "Python $pythonVersion: $($pythonCommand.Source)"
-          Write-Host ".NET SDK $dotnetVersion: $($dotnetCommand.Source)"
+          Write-Host "Python $($pythonVersion): $($pythonCommand.Source)"
+          Write-Host ".NET SDK $($dotnetVersion): $($dotnetCommand.Source)"
       - name: Verify legal Revit 2024 build environment
         shell: pwsh
         run: |
