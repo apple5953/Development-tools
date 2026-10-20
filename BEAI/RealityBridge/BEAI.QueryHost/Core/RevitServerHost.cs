@@ -147,9 +147,23 @@ namespace BEAI.QueryHost.Core
                         response.Close();
                         return;
                     }
-                    using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                    using (var payload = new MemoryStream())
                     {
-                        body = reader.ReadToEnd();
+                        var chunk = new byte[8192];
+                        int total = 0;
+                        int read;
+                        while ((read = request.InputStream.Read(chunk, 0, chunk.Length)) > 0)
+                        {
+                            total += read;
+                            if (total > MaxPayloadBytes)
+                            {
+                                response.StatusCode = (int)HttpStatusCode.RequestEntityTooLarge;
+                                response.Close();
+                                return;
+                            }
+                            payload.Write(chunk, 0, read);
+                        }
+                        body = request.ContentEncoding.GetString(payload.ToArray());
                     }
                 }
 
