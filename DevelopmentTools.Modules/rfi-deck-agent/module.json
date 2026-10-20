@@ -1,0 +1,19 @@
+{
+  "id": "rfi-deck-agent",
+  "version": "0.1.0",
+  "hostVersion": "3.2.4",
+  "RevitVersion": ["2024"],
+  "assembly": "RfiDeckAgent.dll",
+  "entryClass": "RfiDeckAgent.Commands.OpenCommand",
+  "ToolId": "DT_RfiDeckAgent",
+  "Ribbon": {"name": "RfiDeckAgent", "text": "釋疑簡報", "category": "review"},
+  "permissions": ["ribbon-command"],
+  "dependencies": [],
+  "tests": [
+    "Revit 2024：RTS › 檢討與管理 出現「釋疑簡報」，未授權 ToolId 被擋下",
+    "Revit 2024：未設定 AI AGENT 資料夾時先開啟設定",
+    "Revit 2024：釋疑擷取截圖成功，樓層／柱線／選取元件正確，模型未被修改",
+    "Revit 2024：產生簡報輸出 PPT 可開啟；收件匣、成果資料夾、共用簡報可開啟",
+    "回退：移除模組資料夾後重建，原有功能正常"
+  ]
+}
