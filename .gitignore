@@ -36,3 +36,7 @@ office-plugins-source.zip
 ai (2).zip
 
 build-logs/
+
+# Python validation caches
+__pycache__/
+*.py[cod]
