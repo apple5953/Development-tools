@@ -38,6 +38,8 @@
     <ProjectReference Include="..\BEAI\RealityBridge\BEAI.QueryHost\BEAI.QueryHost.csproj" />
     <!-- 內建功能模組 -->
     <ProjectReference Include="..\DevelopmentTools.Modules\*\*.csproj" />
+    <!-- Worker 由獨立 MSBuild target 建置，不成為 Revit Addin 的組件參考。 -->
+    <AgentWorkerProject Include="..\DevelopmentTools.AgentWorkers\*\*.csproj" />
   </ItemGroup>
 
   <Target Name="ValidateModuleManifests" BeforeTargets="ResolveProjectReferences">
@@ -45,6 +47,16 @@
   </Target>
   <Target Name="GenerateModuleRegistration" BeforeTargets="CoreCompile" DependsOnTargets="ValidateModuleManifests">
     <Exec Command="python &quot;$(MSBuildProjectDirectory)\..\module-platform\generate.py&quot;" />
+  </Target>
+
+  <Target Name="BuildAgentWorkers" BeforeTargets="StageApprovedAgentWorkers">
+    <MSBuild Projects="@(AgentWorkerProject)" Targets="Build" Properties="Configuration=$(Configuration)" BuildInParallel="true" />
+  </Target>
+  <Target Name="CleanAgentWorkers" BeforeTargets="Clean">
+    <MSBuild Projects="@(AgentWorkerProject)" Targets="Clean" Properties="Configuration=$(Configuration)" BuildInParallel="true" />
+  </Target>
+  <Target Name="StageApprovedAgentWorkers" AfterTargets="Build" DependsOnTargets="BuildAgentWorkers">
+    <Exec Command="python &quot;$(MSBuildProjectDirectory)\..\module-platform\prepare_agents.py&quot; --configuration &quot;$(Configuration)&quot; --output &quot;$(TargetDir)Agents&quot;" />
   </Target>
 
 
@@ -93,7 +105,7 @@
     </None>
   </ItemGroup>
 
-  <Target Name="Obfuscate" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Release'">
+  <Target Name="Obfuscate" AfterTargets="AfterBuild" DependsOnTargets="StageApprovedAgentWorkers" Condition="'$(Configuration)' == 'Release'">
     <Message Text="[Obfuscar] Starting obfuscation..." Importance="High" />
     <Exec Command="python &quot;$(MSBuildProjectDirectory)\..\module-platform\prepare_release.py&quot;" />
     <Exec Command="&quot;$(Obfuscar)&quot; &quot;$(MSBuildProjectDirectory)\obj\Release\module-platform\obfuscar.generated.xml&quot;" />

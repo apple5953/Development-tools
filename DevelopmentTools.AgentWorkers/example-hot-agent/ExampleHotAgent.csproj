@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>ExampleHotAgent</AssemblyName><RootNamespace>ExampleHotAgent</RootNamespace></PropertyGroup>
+  <ItemGroup><Reference Include="System.Web.Extensions" /></ItemGroup>
+</Project>

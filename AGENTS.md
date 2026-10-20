@@ -9,3 +9,11 @@
 - Keep existing HTTP endpoints compatible while clients migrate to `/api/v1/execute`.
 - Bind local HTTP services to loopback only.
 
+## Hot-swappable Agent Workers
+
+- Before creating an Agent Worker, read `docs/HOT_SWAPPABLE_AGENT_ARCHITECTURE.zh-TW.md` completely.
+- Pure AI/analysis workers belong under `DevelopmentTools.AgentWorkers/<id>/` and must not reference RevitAPI or RevitAPIUI.
+- Workers communicate only through the versioned stdin/stdout JSON protocol and may request only declared permissions.
+- Never install or load a branch-built DLL/EXE directly. Only the protected-main or Release bundle catalog and its SHA-256 inventory may activate a Worker.
+- Model changes remain behind the existing Reality Bridge, registered structured tools, authorization, ExternalEvent, and controlled Revit adapters.
+

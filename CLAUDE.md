@@ -2,6 +2,8 @@
 
 Read and obey [AGENTS.md](AGENTS.md) first, then [docs/MODULE_CONTRACT.md](docs/MODULE_CONTRACT.md) and [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
+For independently updateable AI/analysis workers, also read [docs/HOT_SWAPPABLE_AGENT_ARCHITECTURE.zh-TW.md](docs/HOT_SWAPPABLE_AGENT_ARCHITECTURE.zh-TW.md) before editing `DevelopmentTools.AgentWorkers/`.
+
 ## Non-negotiable
 - Never create another Revit Reality Bridge or parallel MCP/Revit integration.
 - Existing RealityBridge is the only secure boundary. Revit API calls must use ExternalEvent on the Revit UI thread.

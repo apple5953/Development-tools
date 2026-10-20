@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "example-hot-agent",
+  "version": "0.1.0",
+  "hostVersion": "3.0.0",
+  "revitVersions": ["2024"],
+  "executable": "ExampleHotAgent.exe",
+  "toolId": "DT_ExampleHotAgent",
+  "displayName": "熱替換範例 Agent",
+  "description": "讀取 Host 提供的安全文件摘要，回傳可顯示的分析結果。",
+  "permissions": ["document-context-read"],
+  "timeoutSeconds": 30,
+  "tests": ["stdin/stdout protocol", "Revit 2024 Agent Center authorization and execution"]
+}

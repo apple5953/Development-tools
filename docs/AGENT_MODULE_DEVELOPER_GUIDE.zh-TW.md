@@ -2,6 +2,8 @@
 
 本文件以 `main` 現有實作為準。先讀根目錄 `AGENTS.md`、`CLAUDE.md`，再讀本文件。每位 BIM 工程師在自己的分支新增一個 `DevelopmentTools.Modules/<id>/` 資料夾，提交 PR。主外掛在**建置時**驗證描述檔、自動引用專案並產生 Ribbon 包裝命令。維護者驗收後使用既有流程部署整包外掛。這不是把單一 DLL 丟到資料夾就能在執行中的 Revit 熱載入的系統。
 
+若功能是純 AI、規則或資料分析，且希望 Revit 開著時切換新版，改用 `DevelopmentTools.AgentWorkers/<id>/`，並完整遵循 [可熱替換 Agent 架構與操作手冊](HOT_SWAPPABLE_AGENT_ARCHITECTURE.zh-TW.md)。Revit API Ribbon 模組與可熱替換 Worker 是兩種不同契約，不能混用。
+
 ## 0. 先決定你的 Agent 屬於哪一種
 
 1. **Revit Ribbon 功能模組**：在 Revit 點按鈕，執行 C# `IExternalCommand`。使用本文件的 `module.json` 模板。可把規則分析、幾何計算等寫在模組，但不得繞過主外掛授權。

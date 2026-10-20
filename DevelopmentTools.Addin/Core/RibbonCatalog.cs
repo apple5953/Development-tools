@@ -122,6 +122,8 @@ namespace DevelopmentTools.Core
                         Btn("ProjectCompareCopy", C + "Cmd_ProjectCompareCopy", "參數比對複製", "⇄", "#1F618D"),
                         Sep(),
                         Btn("AIAssistant", C + "Cmd_AIAssistant", "AI 模型分析", "🤖", "#6E40C9"),
+                        Btn("HotAgentCenter", C + "Cmd_HotAgentCenter", "Agent 中心", "⚡", "#7D3C98",
+                            "載入經核准與 SHA-256 驗證的獨立 Agent Worker；更新 Worker 後不需關閉 Revit。"),
                         new ButtonDef
                         {
                             Name = "BEAIQueryStatus", ClassName = typeof(BEAI.QueryHost.Commands.ShowStatusCommand).FullName,
