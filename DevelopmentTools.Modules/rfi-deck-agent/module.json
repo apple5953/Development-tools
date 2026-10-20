@@ -1,16 +1,61 @@
 {
   "id": "rfi-deck-agent",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "hostVersion": "3.2.4",
   "RevitVersion": ["2024"],
   "assembly": "RfiDeckAgent.dll",
   "entryClass": "RfiDeckAgent.Commands.OpenCommand",
   "ToolId": "DT_RfiDeckAgent",
-  "Ribbon": {"name": "RfiDeckAgent", "text": "釋疑簡報", "category": "review"},
+  "Ribbon": {
+    "name": "RfiDeckAgent",
+    "text": "釋疑簡報",
+    "category": "review",
+    "icon": "RFI",
+    "color": "#2878A8",
+    "tools": [
+      {
+        "name": "RfiCapture",
+        "text": "釋疑擷取",
+        "entryClass": "RfiDeckAgent.Commands.CaptureToolCommand",
+        "tooltip": "截取目前 Revit 視圖並建立釋疑草稿"
+      },
+      {
+        "name": "RfiBuildDeck",
+        "text": "產生簡報",
+        "entryClass": "RfiDeckAgent.Commands.BuildDeckToolCommand",
+        "tooltip": "選擇收件匣項目並產生釋疑簡報 PPT"
+      },
+      {
+        "name": "RfiSharedSlides",
+        "text": "共用簡報",
+        "entryClass": "RfiDeckAgent.Commands.SharedSlidesToolCommand",
+        "tooltip": "開啟 Google 共用簡報"
+      },
+      {
+        "name": "RfiInbox",
+        "text": "開啟收件匣",
+        "entryClass": "RfiDeckAgent.Commands.InboxToolCommand",
+        "tooltip": "開啟尚未製作成簡報的釋疑項目"
+      },
+      {
+        "name": "RfiOutput",
+        "text": "開啟成果資料夾",
+        "entryClass": "RfiDeckAgent.Commands.OutputToolCommand",
+        "tooltip": "開啟簡報與文件輸出位置"
+      },
+      {
+        "name": "RfiSettings",
+        "text": "設定",
+        "entryClass": "RfiDeckAgent.Commands.SettingsToolCommand",
+        "tooltip": "設定 AI AGENT 資料夾、Python 與共用簡報連線"
+      }
+    ]
+  },
   "permissions": ["ribbon-command"],
   "dependencies": [],
   "tests": [
-    "Revit 2024：RTS › 檢討與管理 出現「釋疑簡報」，未授權 ToolId 被擋下",
+    "Revit 2024：RTS › AI Agents 只有一顆「釋疑簡報」下拉大按鈕，內含六個小工具",
+    "Revit 2024：未授權 DT_RfiDeckAgent 時六個小工具都被擋下；核准一次後皆可執行",
     "Revit 2024：未設定 AI AGENT 資料夾時先開啟設定",
     "Revit 2024：釋疑擷取截圖成功，樓層／柱線／選取元件正確，模型未被修改",
     "Revit 2024：產生簡報輸出 PPT 可開啟；收件匣、成果資料夾、共用簡報可開啟",

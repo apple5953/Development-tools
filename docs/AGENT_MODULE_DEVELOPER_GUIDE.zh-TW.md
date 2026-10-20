@@ -67,7 +67,23 @@ DevelopmentTools.Modules/room-check-agent/
   "Ribbon": {
     "name": "RoomCheckAgent",
     "text": "房間檢查",
-    "category": "review"
+    "category": "review",
+    "icon": "AI",
+    "color": "#2878A8",
+    "tools": [
+      {
+        "name": "RoomCheckScan",
+        "text": "執行檢查",
+        "entryClass": "RoomCheckAgent.Commands.ScanCommand",
+        "tooltip": "檢查目前模型中的房間資料"
+      },
+      {
+        "name": "RoomCheckReport",
+        "text": "開啟報告",
+        "entryClass": "RoomCheckAgent.Commands.ReportCommand",
+        "tooltip": "開啟最近一次房間檢查報告"
+      }
+    ]
   },
   "permissions": ["ribbon-command"],
   "dependencies": [],
@@ -82,9 +98,13 @@ DevelopmentTools.Modules/room-check-agent/
 | `hostVersion` | 三段數字；不得高於目前 `DevelopmentTools.Addin/version.json` 的版本。填最低相容版本，不要憑空填未測的版本。 |
 | `RevitVersion` | 填實際驗證版本；目前 Revit 2024 為已使用的建置環境，2025／2026 未測就不要宣稱通過。 |
 | `assembly` | 必須等於 `.csproj` 的 `AssemblyName` 加 `.dll`。不可與現有模組 DLL 撞名。 |
-| `entryClass` | 完整命名空間與類別名稱，須為可建立的 `IExternalCommand`。C# 編譯與 Revit 實測還須驗證其可用。 |
-| `ToolId` | 唯一授權識別，格式 `DT_` 加英文名稱；不要改用既有 ToolId。新的 ID 還需由授權系統核准。 |
-| `Ribbon` | `name` 為唯一內部按鈕名稱；`text` 同時是獨立面板標題與大按鈕文字，且不可和其他模組重名；`category` 僅可選 `drawing`、`model`、`review`，用來決定模組面板由左到右的群組順序。 |
+| `entryClass` | 舊版單入口相容欄位，仍須填一個可建立的 `IExternalCommand`。新模組的實際 Ribbon 子工具以 `Ribbon.tools[].entryClass` 為準。 |
+| `ToolId` | Agent 級唯一授權識別，格式 `DT_` 加英文名稱；此 Agent 下所有小工具共用這個授權。新的 ID 還需由授權系統核准。 |
+| `Ribbon.name` | Agent 大按鈕的全域唯一內部名稱，只能用英文字母、數字與底線，且不可和既有按鈕或任何 `tools[].name` 重名。 |
+| `Ribbon.text` | Agent 大按鈕的可見名稱，例如「房間檢查」。所有 Agent 集中在 RTS 頁籤右側的 `AI Agents` 面板。 |
+| `Ribbon.category` | `drawing`、`model`、`review` 之一，只控制 Agent 大按鈕的穩定排序，不會另外建立分類面板。 |
+| `Ribbon.icon` / `color` | 可選。大按鈕短圖示文字（最多 8 字元）與 `#RRGGBB` 背景色。 |
+| `Ribbon.tools` | 1–20 個下拉小工具。每項必須有全域唯一 `name`、可見 `text`、完整 `entryClass`；可加 `tooltip`、`icon`、`color`。排列順序就是 JSON 陣列順序。 |
 | `permissions` | 普通按鈕使用 `ribbon-command`。`bridge-read` 尚不能由新模組自行宣告使用。 |
 | `dependencies` | 已存在模組的 `id` 清單；不能自我相依或形成循環。它是描述與驗證，不代替完整部署相依審查。 |
 | `tests` | 至少一個具體的人工或自動驗收項目。 |
@@ -114,7 +134,9 @@ namespace RoomCheckAgent.Commands
 }
 ```
 
-`entryClass` 必須是 `RoomCheckAgent.Commands.OpenCommand`。產生器會在主外掛建立一層 `Generated_<Ribbon.name>` 命令：先呼叫既有 `CommandAccessGuard.EnsureAuthorized(ToolId, Ribbon.text)`，通過才呼叫模組命令。授權後端若尚未核准新 ToolId，按鈕可能可見但命令不能成功執行；不得透過修改正式憑證或繞過閘道來「修好」測試。PR 要明列新的 ToolId 供主管安排授權。
+每個 `Ribbon.tools[].entryClass` 都必須是 `IExternalCommand`。產生器為每個小工具建立 `Generated_<tool.name>` 包裝命令，先呼叫既有 `CommandAccessGuard.EnsureAuthorized(ToolId, "Agent / 小工具")`，通過後才建立並執行模組命令。同一 Agent 的小工具共用一個 `ToolId`，主管只需核准一次。授權後端尚未核准時，大按鈕與選單仍可見，但小工具執行會被阻止；不得修改正式憑證或繞過閘道。PR 必須明列新的 Agent `ToolId`。
+
+舊 manifest 若沒有 `Ribbon.tools`，產生器會建立一個相容的小工具並呼叫頂層 `entryClass`。新開發一律明確填寫 `Ribbon.tools`，不要再在 `OpenCommand` 內建立第二層 TaskDialog 選單。
 
 目前 `module-platform/generate.py` 產生的包裝命令標記為 `TransactionMode.Manual`；這**不代表**允許 AI 或 Bridge 任意修改模型。實際模組應依功能正確設定自身 Transaction 行為；任何修改模型的設計都要單獨審查並在測試模型驗證。外部 AI 呼叫不能直接執行未註冊工具或自行開啟 Revit Transaction。
 
@@ -128,7 +150,7 @@ python -m unittest discover -s module-platform -p 'test_*.py' -v
 dotnet build DevelopmentTools.sln -c Debug -clp:ErrorsOnly
 ```
 
-`validate.py` 檢查模組資料夾、專案、ToolId、Ribbon 內部名稱、可見面板名稱、版本、權限、依賴與循環。`generate.py` 在主外掛建置時執行，為每個模組產生一個位於 `RTS` 頁籤右側的獨立面板、大按鈕及授權包裝命令，輸出到 `DevelopmentTools.Addin/GeneratedModules/GeneratedModuleCommands.cs`；此檔為產物，**不得手動修改或提交為一般模組變更**。主外掛專案用 `DevelopmentTools.Modules/*/*.csproj` 自動收集模組，無需同事改 `App.cs`、`RibbonCatalog.cs`、主 `.csproj` 或 `.sln`。
+`validate.py` 檢查模組資料夾、專案、Agent ToolId、Agent/小工具 Ribbon 名稱、版本、權限、依賴與循環。`generate.py` 在主外掛建置時執行：所有 Agent 放在 `RTS` 頁籤右側同一個 `AI Agents` 面板；每個 Agent 是一顆下拉大按鈕，`Ribbon.tools` 是按鈕內的小工具。每個小工具都有授權包裝命令。輸出位於 `DevelopmentTools.Addin/GeneratedModules/GeneratedModuleCommands.cs`；此檔為產物，**不得手動修改或提交為一般模組變更**。主外掛專案用 `DevelopmentTools.Modules/*/*.csproj` 自動收集模組，無需同事改 `App.cs`、`RibbonCatalog.cs`、主 `.csproj` 或 `.sln`。
 
 缺少合法 Revit API 的電腦可以執行前兩項 Python 檢查，但不能宣稱整個 .NET 建置或 Revit 功能已通過。GitHub PR 的模組 workflow 目前也只跑 Python 描述檔、單元測試及註冊產生器；它**不會**在 Windows 上編譯模組 DLL 或測試 Revit。含第三方套件、WPF、族群資源或動態檔案的模組，還要核對 Release 候選包是否包含必要檔案。
 
@@ -139,8 +161,8 @@ dotnet build DevelopmentTools.sln -c Debug -clp:ErrorsOnly
 至少記錄以下結果：
 
 1. Revit 2024 正常啟動，沒有外掛載入錯誤；原有 RTS、MCP、BEAI 入口仍在。
-2. `RTS` 頁籤右側出現以 `Ribbon.text` 命名的獨立面板，面板內有同名大按鈕；新增多個模組時依 `drawing`、`model`、`review` 分組，再依模組 `id` 穩定地向右排列。文字、圖示、命令路徑與原有按鈕均正常。
-3. 未授權 ToolId 被阻止；已核准 ToolId 可執行。若尚未核准，將成功路徑標記「未驗證」，不要跳過授權。
+2. `RTS` 頁籤右側只有一個 `AI Agents` 面板；每個 Agent 只有一顆以 `Ribbon.text` 命名的下拉大按鈕。打開後，小工具數量、文字、順序、圖示與 `Ribbon.tools` 一致。
+3. 逐一點擊所有小工具：未授權 Agent ToolId 時全部被阻止；核准一次 ToolId 後，該 Agent 的全部小工具可依各自命令執行。若尚未核准，成功路徑標記「未驗證」。
 4. 使用指定測試模型驗證結果、例外處理、取消操作及需要的模型保存／復原。
 5. 同時測至少一個已知可用的原有功能，確認沒有明顯回歸。
 6. 關閉 Revit、還原原 `.addin` 清單及上個正式包，重開確認舊版本正常。
@@ -196,14 +218,18 @@ module-platform/template/ 和 DevelopmentTools.Modules/example-agent/。
 任務名稱：[填寫]
 功能與預期輸出：[填寫]
 指定模組資料夾：DevelopmentTools.Modules/[小寫 id]/
-預計 ToolId：DT_[唯一英文名稱]
-Ribbon 分類：[drawing/model/review]
+預計 Agent ToolId：DT_[唯一英文名稱]（同一 Agent 的小工具共用）
+Agent 大按鈕名稱：[中文顯示名稱]
+內部小工具：[逐項列出 name、text、entryClass、是否讀寫模型]
+Ribbon 分類：[drawing/model/review，只控制排序]
 模型是否會被修改：[否／若是，先提出審核設計]
 測試模型與驗收條件：[填寫]
 
 先確認 origin、目前分支與工作樹狀態；若在 main，建立自己的 feature 分支。
 只修改指定模組資料夾，使用 template 建立 module.json、SDK net48 csproj、
-IExternalCommand 與 README。不要建立第二套 Bridge、MCP 入口、授權或 Updater；
+每個 Ribbon.tools 對應的 IExternalCommand 與 README。每個 Agent 只建立一顆
+下拉大按鈕，小工具全部列在 Ribbon.tools；不要在 App.cs 自己建立 Ribbon。
+不要建立第二套 Bridge、MCP 入口、授權或 Updater；
 不要手動改 App.cs、RibbonCatalog.cs、主專案引用或生成檔。
 外部 AI 的 Revit API 呼叫只走現有 Reality Bridge 的註冊工具與 ExternalEvent；
 Reality Bridge V0.1 不可開 Transaction。

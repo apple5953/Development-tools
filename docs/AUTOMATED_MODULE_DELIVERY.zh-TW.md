@@ -10,6 +10,7 @@
 - `Trusted maintainer gate` 對主管本人建立的 PR 直接放行；其他作者必須取得主管對目前最新 commit 的核准，核准後再 Push 會自動失效。
 - Reality Bridge 仍是唯一 Revit 與外部 AI 邊界；流程不建立第二套 Bridge。
 - 模組仍由既有 `CommandAccessGuard` 驗證 ToolId。
+- 所有 Agent 集中於 `RTS › AI Agents` 面板；每個 Agent 只有一顆下拉大按鈕，內部小工具由 `Ribbon.tools` 產生並共用 Agent ToolId。
 - 候選工件不會修改正式更新資訊。
 - 正式發布必須先通過 GitHub `production` 環境核准與版本 PR。
 - Revit 2025／2026 未經實機驗證，不得標記為已支援。

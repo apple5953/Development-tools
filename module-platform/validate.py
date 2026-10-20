@@ -18,6 +18,23 @@ for source in (ROOT / "DevelopmentTools.Addin").rglob("*.cs"):
 
 LEGACY_MODULES = {"PerspectiveMinimap", "OpeningDetail", "DrawingFactory", "ProjectStandards"}
 
+NAME_PATTERN = r"[A-Za-z][A-Za-z0-9_]*"
+ENTRY_PATTERN = r"[A-Za-z_][A-Za-z0-9_.]*"
+COLOR_PATTERN = r"#[0-9A-Fa-f]{6}"
+
+
+def ribbon_tools(data):
+    """Return explicit tools, or one compatible tool for a v1 manifest."""
+    ribbon = data["Ribbon"]
+    if "tools" in ribbon:
+        return ribbon["tools"]
+    return [{
+        "name": ribbon["name"] + "Open",
+        "text": ribbon["text"],
+        "entryClass": data["entryClass"],
+        "tooltip": "開啟" + ribbon["text"],
+    }]
+
 def manifest_paths():
     paths = sorted(MODULES.glob("*/module.json"))
     for project in MODULES.glob("*/*.csproj"):
@@ -39,12 +56,39 @@ def validate_one(path):
     if tuple(map(int, data["hostVersion"].split("."))) > tuple(map(int, host_version.split("."))):
         raise ValueError(f"{path}: requires host {data['hostVersion']}, current is {host_version}")
     ribbon = data["Ribbon"]
-    if (set(ribbon) != {"name", "text", "category"}
-            or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", ribbon["name"])
+    if not isinstance(ribbon, dict):
+        raise ValueError(f"{path}: invalid Ribbon")
+    allowed_ribbon = {"name", "text", "category", "icon", "color", "tools"}
+    if (not {"name", "text", "category"}.issubset(ribbon)
+            or not set(ribbon).issubset(allowed_ribbon)
+            or not re.fullmatch(NAME_PATTERN, ribbon["name"])
             or not isinstance(ribbon["text"], str) or not ribbon["text"].strip()
             or ribbon["text"] != ribbon["text"].strip()
-            or ribbon["category"] not in ("drawing", "model", "review")):
+            or ribbon["category"] not in ("drawing", "model", "review")
+            or ("icon" in ribbon and (not isinstance(ribbon["icon"], str) or not ribbon["icon"].strip() or len(ribbon["icon"]) > 8))
+            or ("color" in ribbon and (not isinstance(ribbon["color"], str) or not re.fullmatch(COLOR_PATTERN, ribbon["color"])))):
         raise ValueError(f"{path}: invalid Ribbon")
+    tools = ribbon_tools(data)
+    if not isinstance(tools, list) or not tools or len(tools) > 20:
+        raise ValueError(f"{path}: Ribbon.tools must contain 1 to 20 tools")
+    tool_names = set()
+    for tool in tools:
+        allowed_tool = {"name", "text", "entryClass", "tooltip", "icon", "color"}
+        if (not isinstance(tool, dict)
+                or set(tool) - allowed_tool
+                or not {"name", "text", "entryClass"}.issubset(tool)
+                or not isinstance(tool["name"], str) or not re.fullmatch(NAME_PATTERN, tool["name"])
+                or not isinstance(tool["text"], str) or not tool["text"].strip() or tool["text"] != tool["text"].strip()
+                or not isinstance(tool["entryClass"], str) or not re.fullmatch(ENTRY_PATTERN, tool["entryClass"])
+                or ("tooltip" in tool and (not isinstance(tool["tooltip"], str) or not tool["tooltip"].strip()))
+                or ("icon" in tool and (not isinstance(tool["icon"], str) or not tool["icon"].strip() or len(tool["icon"]) > 8))
+                or ("color" in tool and (not isinstance(tool["color"], str) or not re.fullmatch(COLOR_PATTERN, tool["color"])))):
+            raise ValueError(f"{path}: invalid Ribbon tool")
+        if tool["name"] in tool_names:
+            raise ValueError(f"{path}: duplicate Ribbon tool name: {tool['name']}")
+        if tool["name"] == ribbon["name"] or tool["name"] in RESERVED_NAMES:
+            raise ValueError(f"{path}: existing Ribbon name or tool name collision")
+        tool_names.add(tool["name"])
     if path.parent != Path(__file__).parent / "template" and data["id"] != path.parent.name:
         raise ValueError(f"{path}: id must equal folder name")
     if ribbon["name"] in RESERVED_NAMES or data["ToolId"] in RESERVED_TOOLS:
@@ -79,7 +123,7 @@ def main():
     parser.add_argument("--manifest", type=Path, help="validate one template or module manifest")
     args = parser.parse_args()
     paths = [args.manifest] if args.manifest else manifest_paths()
-    seen_ids, seen_names, seen_texts, seen_tools = set(), set(), set(), set()
+    seen_ids, seen_names, seen_texts, seen_tools, seen_item_names = set(), set(), set(), set(), set()
     modules = []
     for path in paths:
         data, project = validate_one(path.resolve())
@@ -87,6 +131,10 @@ def main():
             if value in seen:
                 raise ValueError(f"duplicate {key}: {value}")
             seen.add(value)
+        for item_name in [data["Ribbon"]["name"]] + [tool["name"] for tool in ribbon_tools(data)]:
+            if item_name in seen_item_names:
+                raise ValueError(f"duplicate Ribbon item name: {item_name}")
+            seen_item_names.add(item_name)
         modules.append((data, project))
     for data, _ in modules:
         if any(dep not in seen_ids or dep == data["id"] for dep in data["dependencies"]):

@@ -35,6 +35,25 @@ class ModuleValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "separate explicit"):
             self.check()
 
+    def test_multiple_tools_are_valid(self):
+        self.check()
+
+    def test_duplicate_tool_name_is_rejected(self):
+        duplicate = dict(self.data["Ribbon"]["tools"][0])
+        self.data["Ribbon"]["tools"].append(duplicate)
+        with self.assertRaisesRegex(ValueError, "duplicate Ribbon tool name"):
+            self.check()
+
+    def test_tool_cannot_collide_with_agent_button(self):
+        self.data["Ribbon"]["tools"][0]["name"] = self.data["Ribbon"]["name"]
+        with self.assertRaisesRegex(ValueError, "collision"):
+            self.check()
+
+    def test_invalid_tool_entry_class_is_rejected(self):
+        self.data["Ribbon"]["tools"][0]["entryClass"] = "bad class"
+        with self.assertRaisesRegex(ValueError, "invalid Ribbon tool"):
+            self.check()
+
     def test_future_host_version_rejected(self):
         self.data["hostVersion"] = "99.0.0"
         with self.assertRaisesRegex(ValueError, "requires host"):

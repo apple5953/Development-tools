@@ -2,6 +2,8 @@
 
 Read and obey [AGENTS.md](AGENTS.md) first, then [docs/MODULE_CONTRACT.md](docs/MODULE_CONTRACT.md) and [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
+For a Revit Ribbon Agent, read [docs/AI_AGENT_RIBBON_CONTRACT.zh-TW.md](docs/AI_AGENT_RIBBON_CONTRACT.zh-TW.md) and use `module-platform/template/`. One Agent is one pulldown button; declare every child tool in `Ribbon.tools`.
+
 For independently updateable AI/analysis workers, also read [docs/HOT_SWAPPABLE_AGENT_ARCHITECTURE.zh-TW.md](docs/HOT_SWAPPABLE_AGENT_ARCHITECTURE.zh-TW.md) before editing `DevelopmentTools.AgentWorkers/`.
 
 ## Non-negotiable

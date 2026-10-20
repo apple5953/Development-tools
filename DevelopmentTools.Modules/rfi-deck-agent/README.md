@@ -1,6 +1,6 @@
 # rfi-deck-agent（釋疑簡報）
 
-負責人：@seamus0622　ToolId：`DT_RfiDeckAgent`　Ribbon：RTS › 檢討與管理 › 釋疑簡報
+負責人：@seamus0622　ToolId：`DT_RfiDeckAgent`　Ribbon：RTS › AI Agents › 釋疑簡報 ▼
 
 在 Revit 擷取視圖並記錄釋疑問題，累積在收件匣，再一鍵產出釋疑簡報 PPT；可選擇同步到 Google 共用簡報。屬於「文書與協作 Agent」的 Revit 端。
 
@@ -10,7 +10,7 @@
 
 ## 使用方式
 
-按「釋疑簡報」後選擇：
+按 `RTS › AI Agents › 釋疑簡報 ▼`，直接選擇下拉小工具：
 
 | 選項 | 功能 |
 |---|---|
@@ -25,6 +25,7 @@
 
 | 版本 | 內容 |
 |---|---|
+| 0.3.0 | 採用 Agent 多工具 Ribbon 契約：單一「釋疑簡報」下拉大按鈕內含六個小工具，全部共用 `DT_RfiDeckAgent` 授權 |
 | 0.2.0 | 對照圖說定位改以「柱編號」為錨點：讀取選取構件與周圍結構柱的「備註」欄圖說編號（柱 C56、梁 G4e、小梁 J7a）與模型座標，交給 `seek_lookup.py` 在 PDF 上找同編號的柱做「模型座標→圖面」換算；建築圖改用整張柱線換算。對照圖說只取結構＋建築圖，輸出整張圖說（含圖框）加紅框／紅圈／橘框，候選視窗可另加局部放大圖。柱線只在自己的長度範圍內才算（避免不同棟的同名柱線誤判）。接續草稿時，有選取元件就整組更新位置欄位並重找對照圖說；草稿超過 2 小時先詢問。擷取說明列出周圍結構柱與距最近柱線距離，並提示同位置的舊釋疑。**查圖規則 `py/seek_lookup.py` 內嵌在 DLL**，模組更新就同步更新規則；專案特有的設定移到 AI AGENT 資料夾的 `查圖設定.json`；第一次查圖自動 `pip install --user pymupdf pillow openpyxl` |
 | 0.1.0 | 由獨立外掛 DT AI AGENT 移入模組平台 |
 
@@ -47,7 +48,8 @@
 |---|---|
 | `module.json` | 模組描述檔 |
 | `RfiDeckAgent.csproj` | SDK 格式 net48 類別庫，沿用 `../Directory.Build.props`，另加 WinForms 與 `System.Web.Extensions` |
-| `OpenCommand.cs` | 唯一入口：選單式 TaskDialog，分派到功能本體 |
+| `OpenCommand.cs` | 舊版相容入口；新版 Ribbon 不再依賴第二層 TaskDialog 選單 |
+| `ToolCommands.cs` | 六個 Ribbon 小工具命令，分派到既有功能本體 |
 | `src/*.cs` | 功能本體（擷取、收件匣、簡報、Google 同步、設定），命名空間 `RfiDeckAgent.Core` |
 | `py/seek_lookup.py` | 查圖規則（依樓層、棟別、柱線、柱編號在圖說索引找結構／建築圖並畫紅框紅圈），以 EmbeddedResource 編進 DLL |
 
@@ -55,7 +57,7 @@
 
 來源：`簡報製作及文書處理 AI AGENT\01_AI運行本體\Revit外掛\src\Core`（原獨立外掛 DT AI AGENT）。
 
-- 不帶入原外掛的 `IExternalApplication`、獨立「DT Tools」頁籤、熱重載 Loader、`build_install.ps1`；6 個按鈕改為一個入口加選單（平台每個模組一個 Ribbon 按鈕）。
+- 不帶入原外掛的 `IExternalApplication`、獨立「DT Tools」頁籤、熱重載 Loader、`build_install.ps1`；六個功能放在平台產生的單一「釋疑簡報」下拉大按鈕內。
 - 拿掉寫死的 `D:\` 路徑：未設定資料夾時先引導到設定。
 - 預設文字去掉特定專案名稱；命名空間由 `DT_AIAgent.Core` 改為 `RfiDeckAgent.Core`。
 - 設定與草稿資料夾名稱仍為 `DT_AIAgent`，與舊版資料相容。

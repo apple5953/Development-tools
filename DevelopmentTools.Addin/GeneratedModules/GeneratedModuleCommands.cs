@@ -6,24 +6,73 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 namespace DevelopmentTools.Core { internal static partial class RibbonCatalog {
   private static void AddGeneratedModules(List<PanelDef> panels) {
-    panels.Add(Panel(TabMain, null, "範例模組", One(Btn("ExampleAgent", "DevelopmentTools.Commands.Generated_ExampleAgent", "範例模組", "◈", "#2878A8", "開啟範例模組"))));
-    panels.Add(Panel(TabMain, null, "釋疑簡報", One(Btn("RfiDeckAgent", "DevelopmentTools.Commands.Generated_RfiDeckAgent", "釋疑簡報", "◈", "#2878A8", "開啟釋疑簡報"))));
+    panels.Add(Panel(TabMain, null, "AI Agents",
+      One(Menu("ExampleAgent", "範例 Agent", "AI", "#2878A8", "開啟 範例 Agent 工具", Btn("ExampleAgentOpen", "DevelopmentTools.Commands.Generated_ExampleAgentOpen", "開啟範例工具", "◇", "#2878A8", "執行範例 Agent 的第一個工具"), Btn("ExampleAgentStatus", "DevelopmentTools.Commands.Generated_ExampleAgentStatus", "檢查範例狀態", "◇", "#2878A8", "顯示範例 Agent 狀態"))),
+      One(Menu("RfiDeckAgent", "釋疑簡報", "RFI", "#2878A8", "開啟 釋疑簡報 工具", Btn("RfiCapture", "DevelopmentTools.Commands.Generated_RfiCapture", "釋疑擷取", "◇", "#2878A8", "截取目前 Revit 視圖並建立釋疑草稿"), Btn("RfiBuildDeck", "DevelopmentTools.Commands.Generated_RfiBuildDeck", "產生簡報", "◇", "#2878A8", "選擇收件匣項目並產生釋疑簡報 PPT"), Btn("RfiSharedSlides", "DevelopmentTools.Commands.Generated_RfiSharedSlides", "共用簡報", "◇", "#2878A8", "開啟 Google 共用簡報"), Btn("RfiInbox", "DevelopmentTools.Commands.Generated_RfiInbox", "開啟收件匣", "◇", "#2878A8", "開啟尚未製作成簡報的釋疑項目"), Btn("RfiOutput", "DevelopmentTools.Commands.Generated_RfiOutput", "開啟成果資料夾", "◇", "#2878A8", "開啟簡報與文件輸出位置"), Btn("RfiSettings", "DevelopmentTools.Commands.Generated_RfiSettings", "設定", "◇", "#2878A8", "設定 AI AGENT 資料夾、Python 與共用簡報連線")))));
   }
 } }
 namespace DevelopmentTools.Commands {
   [Transaction(TransactionMode.Manual)]
-  public sealed class Generated_ExampleAgent : IExternalCommand {
+  public sealed class Generated_ExampleAgentOpen : IExternalCommand {
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
-      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_ExampleAgent", "範例模組")) return Result.Cancelled;
+      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_ExampleAgent", "範例 Agent / 開啟範例工具")) return Result.Cancelled;
       try { return new global::ExampleAgent.Commands.OpenCommand().Execute(data, ref message, elements); }
       catch (Exception ex) { message = ex.Message; return Result.Failed; }
     }
   }
   [Transaction(TransactionMode.Manual)]
-  public sealed class Generated_RfiDeckAgent : IExternalCommand {
+  public sealed class Generated_ExampleAgentStatus : IExternalCommand {
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
-      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_RfiDeckAgent", "釋疑簡報")) return Result.Cancelled;
-      try { return new global::RfiDeckAgent.Commands.OpenCommand().Execute(data, ref message, elements); }
+      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_ExampleAgent", "範例 Agent / 檢查範例狀態")) return Result.Cancelled;
+      try { return new global::ExampleAgent.Commands.StatusCommand().Execute(data, ref message, elements); }
+      catch (Exception ex) { message = ex.Message; return Result.Failed; }
+    }
+  }
+  [Transaction(TransactionMode.Manual)]
+  public sealed class Generated_RfiCapture : IExternalCommand {
+    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
+      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_RfiDeckAgent", "釋疑簡報 / 釋疑擷取")) return Result.Cancelled;
+      try { return new global::RfiDeckAgent.Commands.CaptureToolCommand().Execute(data, ref message, elements); }
+      catch (Exception ex) { message = ex.Message; return Result.Failed; }
+    }
+  }
+  [Transaction(TransactionMode.Manual)]
+  public sealed class Generated_RfiBuildDeck : IExternalCommand {
+    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
+      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_RfiDeckAgent", "釋疑簡報 / 產生簡報")) return Result.Cancelled;
+      try { return new global::RfiDeckAgent.Commands.BuildDeckToolCommand().Execute(data, ref message, elements); }
+      catch (Exception ex) { message = ex.Message; return Result.Failed; }
+    }
+  }
+  [Transaction(TransactionMode.Manual)]
+  public sealed class Generated_RfiSharedSlides : IExternalCommand {
+    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
+      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_RfiDeckAgent", "釋疑簡報 / 共用簡報")) return Result.Cancelled;
+      try { return new global::RfiDeckAgent.Commands.SharedSlidesToolCommand().Execute(data, ref message, elements); }
+      catch (Exception ex) { message = ex.Message; return Result.Failed; }
+    }
+  }
+  [Transaction(TransactionMode.Manual)]
+  public sealed class Generated_RfiInbox : IExternalCommand {
+    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
+      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_RfiDeckAgent", "釋疑簡報 / 開啟收件匣")) return Result.Cancelled;
+      try { return new global::RfiDeckAgent.Commands.InboxToolCommand().Execute(data, ref message, elements); }
+      catch (Exception ex) { message = ex.Message; return Result.Failed; }
+    }
+  }
+  [Transaction(TransactionMode.Manual)]
+  public sealed class Generated_RfiOutput : IExternalCommand {
+    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
+      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_RfiDeckAgent", "釋疑簡報 / 開啟成果資料夾")) return Result.Cancelled;
+      try { return new global::RfiDeckAgent.Commands.OutputToolCommand().Execute(data, ref message, elements); }
+      catch (Exception ex) { message = ex.Message; return Result.Failed; }
+    }
+  }
+  [Transaction(TransactionMode.Manual)]
+  public sealed class Generated_RfiSettings : IExternalCommand {
+    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {
+      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized("DT_RfiDeckAgent", "釋疑簡報 / 設定")) return Result.Cancelled;
+      try { return new global::RfiDeckAgent.Commands.SettingsToolCommand().Execute(data, ref message, elements); }
       catch (Exception ex) { message = ex.Message; return Result.Failed; }
     }
   }

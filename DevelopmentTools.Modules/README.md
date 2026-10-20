@@ -12,7 +12,8 @@
 
 ## 運作方式
 
-- 既有四個模組的 Ribbon 按鈕指向 `DevelopmentTools.Addin/Commands/Cmd_IntegratedModules.cs`；新模組則由 `module-platform/generate.py` 產生包裝命令。兩者都先走 `CommandAccessGuard.EnsureAuthorized`。
+- 既有四個模組的 Ribbon 按鈕指向 `DevelopmentTools.Addin/Commands/Cmd_IntegratedModules.cs`；新 Agent 由 `module-platform/generate.py` 集中放到 `RTS › AI Agents`。每個 Agent 是一顆下拉大按鈕，`module.json` 的 `Ribbon.tools` 是按鈕內的小工具。每個小工具都先走同一 Agent `ToolId` 的 `CommandAccessGuard.EnsureAuthorized`。
+- 新 Agent 的完整 Ribbon 契約與可直接交給 Codex／Claude Code 的提示詞見 [`docs/AI_AGENT_RIBBON_CONTRACT.zh-TW.md`](../docs/AI_AGENT_RIBBON_CONTRACT.zh-TW.md)。模組不可自行建立頁籤、面板、Bridge、授權或 Updater。
 - 共用設定（net48、WPF、Revit 2024 API 參考）在 `Directory.Build.props`。
 - Release 建置時主外掛、四個既有模組與經審核的新模組 DLL 都經 Obfuscar 混淆。`module-platform/prepare_release.py` 從描述檔產生自有 DLL 清單，供混淆、ZIP 與安裝程式使用。新模組的其他資源及第三方相依仍需逐項核對。
 
