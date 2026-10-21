@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 
-from validate import ROOT, manifest_paths, validate_one
+from validate import ROOT, manifest_paths, ribbon_tools, validate_one
 
 OUT = ROOT / "DevelopmentTools.Addin/GeneratedModules"
 CATEGORY_ORDER = {"drawing": 0, "model": 1, "review": 2}
@@ -17,12 +17,13 @@ def render(manifests):
         key=lambda pair: (CATEGORY_ORDER[pair[0]["Ribbon"]["category"]], pair[0]["id"]),
     )
     ids = {data["id"] for data, _ in manifests}
-    names = [data["Ribbon"]["name"] for data, _ in manifests]
+    names = [name for data, _ in manifests for name in
+             [data["Ribbon"]["name"]] + [tool["name"] for tool in ribbon_tools(data)]]
     texts = [data["Ribbon"]["text"].strip() for data, _ in manifests]
-    tools = [data["ToolId"] for data, _ in manifests]
+    tool_ids = [data["ToolId"] for data, _ in manifests]
     if (len(ids) != len(manifests) or len(set(names)) != len(names)
-            or len(set(texts)) != len(texts) or len(set(tools)) != len(tools)):
-        raise ValueError("duplicate module identity, Ribbon name, Ribbon text, or ToolId")
+            or len(set(texts)) != len(texts) or len(set(tool_ids)) != len(tool_ids)):
+        raise ValueError("duplicate module identity, Ribbon item name, Ribbon text, or ToolId")
     if any(dep not in ids for data, _ in manifests for dep in data["dependencies"]):
         raise ValueError("unknown module dependency")
     graph = {data["id"]: data["dependencies"] for data, _ in manifests}
@@ -42,25 +43,36 @@ def render(manifests):
         'namespace DevelopmentTools.Core { internal static partial class RibbonCatalog {',
         '  private static void AddGeneratedModules(List<PanelDef> panels) {',
     ]
-    for data, _ in manifests:
-        r = data['Ribbon']
-        cmd = 'DevelopmentTools.Commands.Generated_' + r['name']
-        code.append(
-            f'    panels.Add(Panel(TabMain, null, {cs(r["text"])}, '
-            f'One(Btn({cs(r["name"])}, {cs(cmd)}, {cs(r["text"])}, "◈", "#2878A8", {cs("開啟" + r["text"])}))));'
-        )
+    if manifests:
+        code.append('    panels.Add(Panel(TabMain, null, "AI Agents",')
+        for index, (data, _) in enumerate(manifests):
+            r = data['Ribbon']
+            children = []
+            for tool in ribbon_tools(data):
+                cmd = 'DevelopmentTools.Commands.Generated_' + tool['name']
+                children.append(
+                    f'Btn({cs(tool["name"])}, {cs(cmd)}, {cs(tool["text"])}, '
+                    f'{cs(tool.get("icon", "◇"))}, {cs(tool.get("color", r.get("color", "#2878A8")))}, '
+                    f'{cs(tool.get("tooltip", tool["text"]))})'
+                )
+            suffix = ',' if index < len(manifests) - 1 else '));'
+            code.append(
+                f'      One(Menu({cs(r["name"])}, {cs(r["text"])}, '
+                f'{cs(r.get("icon", "◈"))}, {cs(r.get("color", "#2878A8"))}, '
+                f'{cs("開啟 " + r["text"] + " 工具")}, {", ".join(children)})){suffix}'
+            )
     code += ['  }', '} }', 'namespace DevelopmentTools.Commands {']
     for data, _ in manifests:
-        name = data['Ribbon']['name']
-        code += [
-            '  [Transaction(TransactionMode.Manual)]',
-            f'  public sealed class Generated_{name} : IExternalCommand {{',
-            '    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {',
-            f'      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized({cs(data["ToolId"])}, {cs(data["Ribbon"]["text"])})) return Result.Cancelled;',
-            f'      try {{ return new global::{data["entryClass"]}().Execute(data, ref message, elements); }}',
-            '      catch (Exception ex) { message = ex.Message; return Result.Failed; }',
-            '    }', '  }',
-        ]
+        for tool in ribbon_tools(data):
+            code += [
+                '  [Transaction(TransactionMode.Manual)]',
+                f'  public sealed class Generated_{tool["name"]} : IExternalCommand {{',
+                '    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) {',
+                f'      if (!DevelopmentTools.Core.CommandAccessGuard.EnsureAuthorized({cs(data["ToolId"])}, {cs(data["Ribbon"]["text"] + " / " + tool["text"])})) return Result.Cancelled;',
+                f'      try {{ return new global::{tool["entryClass"]}().Execute(data, ref message, elements); }}',
+                '      catch (Exception ex) { message = ex.Message; return Result.Failed; }',
+                '    }', '  }',
+            ]
     code += ['}', '']
     return '\n'.join(code)
 

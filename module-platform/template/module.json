@@ -6,7 +6,27 @@
   "assembly": "ExampleAgent.dll",
   "entryClass": "ExampleAgent.Commands.OpenCommand",
   "ToolId": "DT_ExampleAgent",
-  "Ribbon": {"name": "ExampleAgent", "text": "範例模組", "category": "review"},
+  "Ribbon": {
+    "name": "ExampleAgent",
+    "text": "範例 Agent",
+    "category": "review",
+    "icon": "AI",
+    "color": "#2878A8",
+    "tools": [
+      {
+        "name": "ExampleAgentOpen",
+        "text": "開啟範例工具",
+        "entryClass": "ExampleAgent.Commands.OpenCommand",
+        "tooltip": "執行範例 Agent 的第一個工具"
+      },
+      {
+        "name": "ExampleAgentStatus",
+        "text": "檢查範例狀態",
+        "entryClass": "ExampleAgent.Commands.StatusCommand",
+        "tooltip": "顯示範例 Agent 狀態"
+      }
+    ]
+  },
   "permissions": ["ribbon-command"],
   "dependencies": [],
   "tests": ["Revit 2024 button, authorization, command and rollback acceptance"]
