@@ -10,6 +10,25 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+SEMVER_PATTERN = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+
+
+def parse_version(value: str, label: str) -> tuple[int, int, int]:
+    match = SEMVER_PATTERN.fullmatch(value.strip())
+    if match is None:
+        raise ValueError(f"{label} must use numeric major.minor.patch format")
+    return tuple(int(part) for part in match.groups())
+
+
+def validate_promotion_version(current: str, candidate: str) -> None:
+    current_version = parse_version(current, "repository latest_version")
+    candidate_version = parse_version(candidate, "version")
+    if candidate_version <= current_version:
+        raise ValueError(
+            f"candidate version {candidate} must be newer than stable version {current}"
+        )
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -27,8 +46,6 @@ def main() -> None:
     parser.add_argument("--notes", required=True)
     args = parser.parse_args()
 
-    if not re.fullmatch(r"\d+\.\d+\.\d+", args.version):
-        raise SystemExit("version must use numeric major.minor.patch format")
     if not args.run_id.isdigit():
         raise SystemExit("run ID must be numeric")
 
@@ -38,12 +55,12 @@ def main() -> None:
     if not current_manifest_path.is_file():
         raise SystemExit("repository update_manifest.json is missing")
     current_manifest = json.loads(current_manifest_path.read_text(encoding="utf-8-sig"))
-    current_match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", str(current_manifest.get("latest_version", "")))
-    if current_match is None:
-        raise SystemExit("repository latest_version must use numeric major.minor.patch format")
-    expected_version = f"{current_match.group(1)}.{current_match.group(2)}.{int(current_match.group(3)) + 1}"
-    if args.version != expected_version:
-        raise SystemExit(f"candidate must be the next patch version: expected {expected_version}")
+    try:
+        validate_promotion_version(
+            str(current_manifest.get("latest_version", "")), args.version
+        )
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
     metadata_paths = list(candidate.rglob("candidate-metadata.json"))
     manifest_paths = list(candidate.rglob("update_manifest.json"))
     if len(metadata_paths) != 1 or len(manifest_paths) != 1:

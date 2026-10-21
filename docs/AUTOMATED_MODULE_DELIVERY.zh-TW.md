@@ -46,6 +46,8 @@
 
 在 Actions 執行 `Prepare production release`，輸入候選 Run ID、候選版本與發布說明。`production` 環境要求主管核准。核准後 workflow：
 
+候選版本採單調遞增。若中間候選未發布，正式晉升可以從目前穩定版直接跳到較新的已驗證候選，例如由 `3.2.8` 晉升至 `3.2.12`；不得晉升至相同或更舊版本。候選版本、Run ID、來源 SHA 與工件雜湊仍必須完全相符。
+
 1. 下載指定候選工件。
 2. 驗證版本與 SHA-256。
 3. 更新 `update_manifest.json`。
