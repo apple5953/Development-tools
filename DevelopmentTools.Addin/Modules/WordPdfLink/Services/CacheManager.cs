@@ -37,7 +37,7 @@ namespace DT_WordPdfLink.Services
             // Fallback
             isFallback = true;
             string localDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                global::DevelopmentTools.Core.InstallLocation.DataDir ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "DT_WordPdfLink",
                 "Cache",
                 projectKey
@@ -60,7 +60,7 @@ namespace DT_WordPdfLink.Services
 
         public static string GetTempPdfPath(string wordPath, string projectKey, string sheetUniqueId)
         {
-            string tempDir = Path.Combine(Path.GetTempPath(), "DT_WordPdfLink");
+            string tempDir = Path.Combine(global::DevelopmentTools.Core.InstallLocation.TempDir, "DT_WordPdfLink");
             if (!Directory.Exists(tempDir))
             {
                 Directory.CreateDirectory(tempDir);

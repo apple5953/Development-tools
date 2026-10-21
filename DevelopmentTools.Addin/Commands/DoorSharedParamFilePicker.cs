@@ -14,9 +14,9 @@ namespace DevelopmentTools.Commands
         {
             get
             {
-                return Path.Combine(
+                return global::DevelopmentTools.Core.InstallLocation.DataFile("door-shared-param-path.txt", Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "DevelopmentTools", "door-shared-param-path.txt");
+                    "DevelopmentTools", "door-shared-param-path.txt"));
             }
         }
 

@@ -5,8 +5,20 @@ namespace DevelopmentTools.Core
 {
     public static class UpdateLogger
     {
-        private static readonly string LogDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Update", "Logs");
-        private static readonly string LogFile = Path.Combine(LogDir, "update_log.txt");
+        // 解析出非系統碟根目錄後寫到 <根目錄>\Update\Logs；解析前（或找不到非系統碟）沿用舊位置。
+        private static string LogDir
+        {
+            get
+            {
+                string root = InstallLocation.ResolvedRootOrNull;
+                if (!string.IsNullOrEmpty(root) && !InstallLocation.IsOnSystemDrive(root))
+                {
+                    return Path.Combine(root, "Update", "Logs");
+                }
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Update", "Logs");
+            }
+        }
+        private static string LogFile { get { return Path.Combine(LogDir, "update_log.txt"); } }
 
         public static void Log(string message, Exception ex = null)
         {

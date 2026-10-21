@@ -11,10 +11,15 @@ namespace DevelopmentTools.Modules.AIAssistant
         public string ModelName { get; set; } = "gpt-4o";
         public bool IsApiReady { get; set; } = false;
 
-        private static readonly string SettingsPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "DevelopmentTools", "App", "ai_settings.json"
-        );
+        private static string SettingsPath
+        {
+            get
+            {
+                return global::DevelopmentTools.Core.InstallLocation.DataFile("ai_settings.json", Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "DevelopmentTools", "App", "ai_settings.json"));
+            }
+        }
 
         public static AIApiSettings Load()
         {

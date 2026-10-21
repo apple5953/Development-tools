@@ -182,7 +182,7 @@ namespace RfiDeckAgent.Core
                 if (string.IsNullOrEmpty(d.Grid)) return "";
                 bool already = d.Shots.Exists(s => s.View == "圖說(自動)");
                 string idx = Path.Combine(Config.Root, @"03_資料庫\圖說\圖說查找索引.db");
-                if (!File.Exists(idx) && !File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DT_AIAgent\seek.json"))) return "";
+                if (!File.Exists(idx) && !File.Exists(DtStorage.File(@"DT_AIAgent\seek.json", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DT_AIAgent\seek.json")))) return "";
                 Dictionary<string, object> r = SeekForm.Run(d, d.Building);
                 object ok, cs;
                 if (r == null || !r.TryGetValue("ok", out ok) || !(ok is bool) || !(bool)ok) return "";

@@ -24,7 +24,9 @@ namespace BEAI.QueryHost.Core
         public SessionManager()
         {
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            _sessionsDirectory = Path.Combine(appData, "BEAI", "sessions");
+            _sessionsDirectory = DtStorage.DataDir != null
+                ? Path.Combine(DtStorage.DataDir, "BEAI", "sessions")
+                : Path.Combine(appData, "BEAI", "sessions");
             EnsureDirectory();
             InitializeSession();
         }

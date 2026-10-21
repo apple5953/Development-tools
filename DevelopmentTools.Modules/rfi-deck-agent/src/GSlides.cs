@@ -28,8 +28,15 @@ namespace RfiDeckAgent.Core
             get
             {
                 string d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DT_AIAgent");
+                string legacy = Path.Combine(d, "gslides.json");
+                if (DtStorage.DataDir != null)
+                {
+                    string f = DtStorage.File(@"DT_AIAgent\gslides.json", legacy);
+                    Directory.CreateDirectory(Path.GetDirectoryName(f));
+                    return f;
+                }
                 if (!Directory.Exists(d)) Directory.CreateDirectory(d);
-                return Path.Combine(d, "gslides.json");
+                return legacy;
             }
         }
 

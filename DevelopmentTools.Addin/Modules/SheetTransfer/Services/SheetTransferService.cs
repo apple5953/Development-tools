@@ -264,7 +264,7 @@ namespace DevelopmentTools.Modules.SheetTransfer.Services
                             string oldPath = _targetDoc.Application.SharedParametersFilename;
                             try
                             {
-                                string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TempTransferSharedParams.txt");
+                                string tempFile = System.IO.Path.Combine(global::DevelopmentTools.Core.InstallLocation.TempDir, "TempTransferSharedParams.txt");
                                 using (System.IO.StreamWriter sw = new System.IO.StreamWriter(tempFile, false, System.Text.Encoding.Unicode))
                                 {
                                     sw.WriteLine("# This is a Revit shared parameter file.");
@@ -301,7 +301,7 @@ namespace DevelopmentTools.Modules.SheetTransfer.Services
                             string oldPath = _targetDoc.Application.SharedParametersFilename;
                             try
                             {
-                                string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TempTransferSharedParams.txt");
+                                string tempFile = System.IO.Path.Combine(global::DevelopmentTools.Core.InstallLocation.TempDir, "TempTransferSharedParams.txt");
                                 Guid tempGuid = Guid.NewGuid();
                                 using (System.IO.StreamWriter sw = new System.IO.StreamWriter(tempFile, false, System.Text.Encoding.Unicode))
                                 {

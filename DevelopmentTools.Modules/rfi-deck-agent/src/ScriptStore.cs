@@ -10,7 +10,7 @@ namespace RfiDeckAgent.Core
     {
         public static string Dir
         {
-            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"DT_AIAgent\py"); }
+            get { return DtStorage.DataDir != null ? Path.Combine(DtStorage.DataDir, @"DT_AIAgent\py") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"DT_AIAgent\py"); }
         }
 
         /// <summary>取得內嵌程式的實體路徑；沒有內嵌時回傳 null</summary>

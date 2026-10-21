@@ -77,7 +77,7 @@ namespace DevelopmentTools.Core.AgentHost
             };
             // Do not leak Revit/user process secrets to a Worker. Approved Workers receive only a minimal OS environment.
             string systemRoot = Environment.GetEnvironmentVariable("SystemRoot");
-            string temporary = Path.GetTempPath();
+            string temporary = global::DevelopmentTools.Core.InstallLocation.TempDir;
             start.EnvironmentVariables.Clear();
             if (!string.IsNullOrWhiteSpace(systemRoot)) start.EnvironmentVariables["SystemRoot"] = systemRoot;
             start.EnvironmentVariables["TEMP"] = temporary;

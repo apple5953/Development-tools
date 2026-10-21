@@ -93,7 +93,8 @@ namespace DevelopmentTools.CodeCheck
         public string LoadedFrom { get; private set; }
 
         public static string UserFolder =>
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DevelopmentTools", "CodeCheck");
+            global::DevelopmentTools.Core.InstallLocation.DataFolder("CodeCheck",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DevelopmentTools", "CodeCheck"));
 
         public static string AddinFolder
         {

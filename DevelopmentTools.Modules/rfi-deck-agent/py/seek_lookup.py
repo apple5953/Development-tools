@@ -9,7 +9,7 @@
 索引與 PDF 位置：預設 <AI AGENT>/03_資料庫/圖說/圖說查找索引.db 與該資料夾下放 PDF 的子資料夾；
 專案設定（棟別名稱、柱線對應棟別、柱線座標檔、釋疑問題庫）：<AI AGENT>/03_資料庫/圖說/查圖設定.json。
 本程式也內嵌在 Revit 外掛裡（外掛更新即更新規則），外掛會以 --root 傳入 AI AGENT 資料夾。
-別台電腦 PDF 放別處 → %APPDATA%/DT_AIAgent/seek.json 寫 {"pdf_dir": "...", "index": "..."}。
+別台電腦 PDF 放別處 → <DEVELOPMENTTOOLS_DATA 或 %APPDATA%>/DT_AIAgent/seek.json 寫 {"pdf_dir": "...", "index": "..."}。
 只讀索引，不做 OCR，所以每台電腦結果相同（前提：PDF 版本相同，程式會比對檔案大小與特徵碼）。
 """
 import argparse
@@ -65,7 +65,11 @@ CAT_DISC = [  # Revit 類別關鍵字 → 圖號前綴（專業）
 
 
 def settings():
+    # 外掛啟動時設定 DEVELOPMENTTOOLS_DATA（非系統碟）；找不到時退回舊的 %APPDATA%。
     p = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "DT_AIAgent", "seek.json")
+    data = os.environ.get("DEVELOPMENTTOOLS_DATA")
+    if data and os.path.exists(os.path.join(data, "DT_AIAgent", "seek.json")):
+        p = os.path.join(data, "DT_AIAgent", "seek.json")
     try:
         return json.load(open(p, encoding="utf-8"))
     except Exception:

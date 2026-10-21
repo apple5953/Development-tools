@@ -59,3 +59,66 @@ Updater 會在套用更新前結束，典型錯誤為：
 - ZIP 安裝後 `%LOCALAPPDATA%\DevelopmentTools\Updater` 仍保留上述四個相依 DLL。
 - 更新成功後 App 與 Updater 的備份都存在於 `%LOCALAPPDATA%\DevelopmentTools\Update\Backup`。
 - Revit 2024 實機驗證通過；Revit 2025/2026 仍未驗證且目前安裝器不註冊。
+
+## 3.2.13 下載檔被公司防毒攔截（安裝位置移出 C 槽）
+
+3.2.13 以前，更新包下載（`Update\Staging`）、Updater 解壓（`Update\UpdaterStaging`）、
+套件解壓（`%TEMP%\RTS_Update_*`）與安裝目錄全部位於系統碟的
+`%LOCALAPPDATA%\DevelopmentTools` 與 `%TEMP%`。公司防毒會攔截寫入 C: 使用者目錄的
+下載檔與執行檔，導致更新失敗。
+
+修正後的安裝根目錄解析順序（Add-in `InstallLocation`、Inno Setup、`install.bat` 一致）：
+
+1. 環境變數 `DEVELOPMENTTOOLS_ROOT`（IT 可統一指定，例如 `D:\DevelopmentTools`）。
+2. `Config\appsettings.json` 的 `"InstallRoot"`（僅 Add-in 線上更新讀取）。
+3. 目前已安裝在非系統碟時沿用原位置。
+4. 第一個可寫入、剩餘空間 > 500 MB 的本機固定非系統碟：`X:\DevelopmentTools`。
+5. 都不可用時才退回 `%LOCALAPPDATA%\DevelopmentTools`。
+
+線上更新時：
+
+- ZIP 下載到 `<根目錄>\Update\Staging`，Updater 由 `<根目錄>\Update\UpdaterStaging` 啟動。
+- 套件解壓到 `<根目錄>\Update\Extract`，不再使用 `%TEMP%`。
+- 若舊安裝在 C:，Updater 會在 Revit 關閉後安裝到新根目錄，並改寫
+  `%APPDATA%\Autodesk\Revit\Addins\2024\DevelopmentTools.addin` 的 `<Assembly>`。
+  舊 C: 目錄不會被刪除或修改（`ai_settings.json`、`LanguageSetting.txt` 仍在原處讀取）；
+  失敗時只還原 `.addin` 並移除未完成的新目錄。
+- 更新記錄改寫到 `<根目錄>\Update\Logs\update_log.txt`。
+
+### 舊版（3.2.8～3.2.13）直接按「更新」
+
+舊版外掛會啟動新版更新包內附的 Updater，因此不需要重新安裝：
+
+1. 舊版外掛仍把 ZIP 下載到 `%LOCALAPPDATA%\DevelopmentTools\Update\Staging`
+   （這段程式已在使用者電腦上，無法從伺服器端改變；僅此一次）。
+2. 新版 Updater 發現舊安裝在 C:，會在 Revit 關閉後安裝到 `X:\DevelopmentTools`
+   並改寫所有指向 `DevelopmentTools.Addin.dll` 的 Revit `.addin`
+   （使用者層級與 `C:\ProgramData\Autodesk\Revit\Addins`）。其他外掛的 `.addin` 不會被動到。
+3. 安全條件：任一註冊檔無法寫入、找不到註冊檔、或沒有可寫入的非系統碟時，
+   **放棄搬移並照舊原地更新**，外掛維持可用。
+4. 下次開啟 Revit 即從新位置載入；之後的更新全程不碰 C 槽。
+
+若公司防毒連第 1 步的下載都攔截，該台電腦需手動執行一次新版
+`DevelopmentTools_Setup.exe`（預設安裝到 D:），之後即可正常線上更新。
+
+### 使用者資料與暫存檔
+
+外掛啟動時設定行程環境變數 `DEVELOPMENTTOOLS_DATA`（`<根目錄>\Data`）與
+`DEVELOPMENTTOOLS_TEMP`（`<根目錄>\Temp`，7 天前的檔案自動清除），所有模組共用：
+
+| 舊位置 | 新位置 |
+| --- | --- |
+| `%LOCALAPPDATA%\DevelopmentTools\App\ai_settings.json`、`LanguageSetting.txt` | `Data\` |
+| `%LOCALAPPDATA%\DevelopmentTools\Logs`、`door-shared-param-path.txt` | `Data\Logs`、`Data\` |
+| `%APPDATA%\DevelopmentTools\{FinishBuildUp,FastRebar,CodeCheck,DrawingFactory}` | `Data\{...}` |
+| `%APPDATA%\DT_AIAgent`、`%LOCALAPPDATA%\DT_AIAgent\{py,draft}` | `Data\DT_AIAgent` |
+| `%LOCALAPPDATA%\DT_WordPdfLink` | `Data\DT_WordPdfLink` |
+| `%APPDATA%\BEAI\device.json`、`sessions` | `Data\BEAI` |
+| `%TEMP%`（預覽、共用參數、Agent Worker、查圖輸出） | `Temp\` |
+
+第一次讀取時自動從舊位置複製（舊檔保留，可隨時回退）。找不到非系統碟時不設定這兩個變數，
+所有路徑與舊版完全相同。
+
+無法避開 C 槽的項目：Revit 只從 `%APPDATA%\Autodesk\Revit\Addins` 或
+`C:\ProgramData\Autodesk\Revit\Addins` 讀取 `.addin` 註冊檔（純文字 XML），
+以及 Revit 本身的記錄檔與暫存檔。

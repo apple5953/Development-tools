@@ -21,7 +21,7 @@ namespace RfiDeckAgent.Core
     {
         static string SettingFile
         {
-            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DT_AIAgent\python.txt"); }
+            get { return DtStorage.File(@"DT_AIAgent\python.txt", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DT_AIAgent\python.txt")); }
         }
 
         public static string ScriptDir { get { return Path.Combine(Config.Root, @"01_AI運行本體\程式"); } }
@@ -81,7 +81,7 @@ namespace RfiDeckAgent.Core
             string py = FindPython(out prefix);
             if (py == null)
             {
-                res.Error = "找不到 Python。請安裝 Python 3（python.org），或在 %APPDATA%\\DT_AIAgent\\python.txt 填 python.exe 的完整路徑。";
+                res.Error = "找不到 Python。請安裝 Python 3（python.org），或在「設定」填 python.exe 的完整路徑。";
                 return res;
             }
             ProcessStartInfo psi = new ProcessStartInfo(py, prefix + args);
@@ -91,7 +91,7 @@ namespace RfiDeckAgent.Core
             psi.RedirectStandardError = true;
             psi.StandardOutputEncoding = Encoding.UTF8;
             psi.StandardErrorEncoding = Encoding.UTF8;
-            psi.WorkingDirectory = Directory.Exists(ScriptDir) ? ScriptDir : Path.GetTempPath();
+            psi.WorkingDirectory = Directory.Exists(ScriptDir) ? ScriptDir : DtStorage.TempDir;
             psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
             psi.EnvironmentVariables["PYTHONUTF8"] = "1";
             StringBuilder err = new StringBuilder();

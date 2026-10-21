@@ -63,7 +63,8 @@ namespace DevelopmentTools.FinishBuildUp
                 ExcludeKeywords = new List<string> { "增築", "地坪", "裝修", "面層", "防水", "粉刷", "鋪面", "地磚", "石材", "收邊", "回填" };
         }
 
-        public static string Folder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DevelopmentTools", "FinishBuildUp");
+        public static string Folder => global::DevelopmentTools.Core.InstallLocation.DataFolder("FinishBuildUp",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DevelopmentTools", "FinishBuildUp"));
 
         private static string FileFor(string key)
         {

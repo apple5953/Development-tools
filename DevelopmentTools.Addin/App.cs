@@ -410,6 +410,9 @@ namespace DevelopmentTools
         public Result OnStartup(UIControlledApplication application)
         {
             UiDispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+            // 最先執行：決定非系統碟根目錄並設定 DEVELOPMENTTOOLS_DATA / DEVELOPMENTTOOLS_TEMP，
+            // 讓所有模組的設定、記錄與暫存檔都避開 C 槽（公司防毒會攔截）。
+            global::DevelopmentTools.Core.InstallLocation.InitializeEnvironment();
             try
             {
                 // （已將原右側常駐頁面改為獨立彈出視窗模式）
@@ -519,7 +522,7 @@ namespace DevelopmentTools
 
                 if (string.IsNullOrEmpty(dllPath) || !System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dllPath), "Resources")))
                 {
-                    dllPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "App", "dummy.dll");
+                    dllPath = System.IO.Path.Combine(global::DevelopmentTools.Core.InstallLocation.CurrentAppDir, "dummy.dll");
                 }
 
                 string iconPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dllPath), "Resources", "RibbonIcons", iconFileName);

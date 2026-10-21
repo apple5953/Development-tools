@@ -8,7 +8,7 @@ namespace DT_WordPdfLink.Utils
         private static string GetLogPath()
         {
             string folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                global::DevelopmentTools.Core.InstallLocation.DataDir ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "DT_WordPdfLink",
                 "Logs"
             );

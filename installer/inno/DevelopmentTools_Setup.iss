@@ -7,7 +7,10 @@
 [Setup]
 AppName=Room Tile System v3
 AppVersion={#MyAppVersion}
-DefaultDirName={localappdata}\DevelopmentTools
+; 公司防毒會攔截系統碟（C:）使用者目錄中的下載與執行檔，預設安裝到第一個可寫入的非系統固定磁碟，
+; 例如 D:\DevelopmentTools；找不到時才退回 {localappdata}\DevelopmentTools。
+DefaultDirName={code:GetDefaultInstallRoot}
+UsePreviousAppDir=no
 DefaultGroupName=Room Tile System
 OutputDir=..\..\dist
 OutputBaseFilename=DevelopmentTools_Setup
@@ -21,6 +24,8 @@ DisableProgramGroupPage=yes
 Name: "{app}\Update\Staging"
 Name: "{app}\Update\Backup"
 Name: "{app}\Update\Logs"
+Name: "{app}\Update\Extract"
+Name: "{app}\Update\UpdaterStaging"
 Name: "{app}\Modules"
 
 [Files]
@@ -43,6 +48,76 @@ Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\*.dll"; DestDir: "{app
 Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\DevelopmentTools.Updater.exe.config"; DestDir: "{app}\Updater"; Flags: ignoreversion
 
 [Code]
+const
+  DRIVE_FIXED = 3;
+
+function GetDriveType(lpRootPathName: string): Cardinal;
+  external 'GetDriveTypeW@kernel32.dll stdcall';
+
+function IsWritableRoot(Dir: string): Boolean;
+var
+  Probe: string;
+begin
+  Result := False;
+  if not ForceDirectories(Dir) then Exit;
+  Probe := AddBackslash(Dir) + '.write_probe';
+  if SaveStringToFile(Probe, 'ok', False) then
+  begin
+    DeleteFile(Probe);
+    Result := True;
+  end;
+end;
+
+function GetDefaultInstallRoot(Param: string): string;
+var
+  I: Integer;
+  Root: string;
+  SystemLetter: string;
+  RootOverride: string;
+begin
+  RootOverride := GetEnv('DEVELOPMENTTOOLS_ROOT');
+  if (RootOverride <> '') and IsWritableRoot(RootOverride) then
+  begin
+    Result := RootOverride;
+    Exit;
+  end;
+
+  SystemLetter := Uppercase(Copy(ExpandConstant('{sys}'), 1, 1));
+  for I := Ord('D') to Ord('Z') do
+  begin
+    if Chr(I) <> SystemLetter then
+    begin
+      Root := Chr(I) + ':\';
+      if (GetDriveType(Root) = DRIVE_FIXED) and DirExists(Root) then
+      begin
+        if IsWritableRoot(Root + 'DevelopmentTools') then
+        begin
+          Result := Root + 'DevelopmentTools';
+          Exit;
+        end;
+      end;
+    end;
+  end;
+
+  Result := ExpandConstant('{localappdata}') + '\DevelopmentTools';
+end;
+
+procedure CopyLegacyConfig();
+var
+  LegacyConfig: string;
+  TargetConfig: string;
+begin
+  // 從舊的 C: 安裝位置帶入使用者設定（例如自訂 ManifestUrl），避免改裝到 D: 後遺失。
+  LegacyConfig := ExpandConstant('{localappdata}') + '\DevelopmentTools\Config\appsettings.json';
+  TargetConfig := ExpandConstant('{app}') + '\Config\appsettings.json';
+  if FileExists(LegacyConfig) and (not FileExists(TargetConfig))
+     and (CompareText(LegacyConfig, TargetConfig) <> 0) then
+  begin
+    ForceDirectories(ExtractFileDir(TargetConfig));
+    FileCopy(LegacyConfig, TargetConfig, True);
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   AddinContent: string;
@@ -53,6 +128,11 @@ var
   I: Integer;
   RevitVersions: array[0..2] of string;
 begin
+  if CurStep = ssInstall then
+  begin
+    CopyLegacyConfig();
+  end;
+
   if CurStep = ssPostInstall then
   begin
     RevitVersions[0] := '2024';
@@ -106,7 +186,7 @@ begin
       '<RevitAddIns>' + #13#10 +
       '  <AddIn Type="Application">' + #13#10 +
       '    <Name>Development Tools</Name>' + #13#10 +
-      '    <Assembly>' + ExpandConstant('{localappdata}') + '\DevelopmentTools\App\DevelopmentTools.Addin.dll</Assembly>' + #13#10 +
+      '    <Assembly>' + ExpandConstant('{app}') + '\App\DevelopmentTools.Addin.dll</Assembly>' + #13#10 +
       '    <FullClassName>DevelopmentTools.App</FullClassName>' + #13#10 +
       '    <ClientId>c2d5d85c-4d33-4f9e-a89e-21ef1ea3b361</ClientId>' + #13#10 +
       '    <VendorId>RoomTileSystem</VendorId>' + #13#10 +

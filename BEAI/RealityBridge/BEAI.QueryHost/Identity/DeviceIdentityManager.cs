@@ -19,8 +19,9 @@ namespace BEAI.QueryHost.Identity
         public DeviceIdentityManager()
         {
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            _configDirectory = Path.Combine(appData, "BEAI");
-            _configFilePath = Path.Combine(_configDirectory, "device.json");
+            // 裝置識別移到非系統碟資料目錄；第一次會從舊 %APPDATA%\BEAI\device.json 複製，識別碼不變。
+            _configFilePath = BEAI.QueryHost.Core.DtStorage.File(@"BEAI\device.json", Path.Combine(appData, "BEAI", "device.json"));
+            _configDirectory = Path.GetDirectoryName(_configFilePath);
             _deviceName = Environment.MachineName;
 
             InitializeDeviceIdentity();
