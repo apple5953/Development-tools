@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "version": "3.2.13",
+  "sourceSha": "81cfe83b282ff6b03b15400e30e76d9a0974e4e8",
+  "runId": "39522774914",
+  "artifactName": "development-tools-candidate-v3.2.13-81cfe83",
+  "zipName": "DevelopmentTools_v3.2.13.zip",
+  "zipSha256": "03d0d4141fb506ad2cc9dd69965dad979b26b9698fc3613751b44fd856251ddf",
+  "installerName": "DevelopmentTools_Setup.exe",
+  "installerSha256": "b3ee2e5a97bfa47e3949da1bd87a5f54c00cdca585332577f3a2a40f15663449",
+  "generatedAtUtc": "2026-10-21T00:41:44.504109Z",
+  "revitVersions": [
+    "2024"
+  ],
+  "modules": [
+    {
+      "id": "example-agent",
+      "version": "0.1.0",
+      "assembly": "ExampleAgent.dll",
+      "toolId": "DT_ExampleAgent"
+    },
+    {
+      "id": "rfi-deck-agent",
+      "version": "0.3.0",
+      "assembly": "RfiDeckAgent.dll",
+      "toolId": "DT_RfiDeckAgent"
+    }
+  ],
+  "releaseNotes": "修正穩定更新頻道停留在 3.2.8 與候選版本無法晉升問題；加入 AI Agent 單一按鈕與子工具選單架構、rfi-deck-agent 0.3.0，並保留既有 Updater、授權、Reality Bridge 與回退機制。",
+  "approvedAtUtc": "2026-10-21T00:43:01.236955Z"
+}
