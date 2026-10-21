@@ -59,3 +59,33 @@ Updater 會在套用更新前結束，典型錯誤為：
 - ZIP 安裝後 `%LOCALAPPDATA%\DevelopmentTools\Updater` 仍保留上述四個相依 DLL。
 - 更新成功後 App 與 Updater 的備份都存在於 `%LOCALAPPDATA%\DevelopmentTools\Update\Backup`。
 - Revit 2024 實機驗證通過；Revit 2025/2026 仍未驗證且目前安裝器不註冊。
+
+## 3.2.13 下載檔被公司防毒攔截（安裝位置移出 C 槽）
+
+3.2.13 以前，更新包下載（`Update\Staging`）、Updater 解壓（`Update\UpdaterStaging`）、
+套件解壓（`%TEMP%\RTS_Update_*`）與安裝目錄全部位於系統碟的
+`%LOCALAPPDATA%\DevelopmentTools` 與 `%TEMP%`。公司防毒會攔截寫入 C: 使用者目錄的
+下載檔與執行檔，導致更新失敗。
+
+修正後的安裝根目錄解析順序（Add-in `InstallLocation`、Inno Setup、`install.bat` 一致）：
+
+1. 環境變數 `DEVELOPMENTTOOLS_ROOT`（IT 可統一指定，例如 `D:\DevelopmentTools`）。
+2. `Config\appsettings.json` 的 `"InstallRoot"`（僅 Add-in 線上更新讀取）。
+3. 目前已安裝在非系統碟時沿用原位置。
+4. 第一個可寫入、剩餘空間 > 500 MB 的本機固定非系統碟：`X:\DevelopmentTools`。
+5. 都不可用時才退回 `%LOCALAPPDATA%\DevelopmentTools`。
+
+線上更新時：
+
+- ZIP 下載到 `<根目錄>\Update\Staging`，Updater 由 `<根目錄>\Update\UpdaterStaging` 啟動。
+- 套件解壓到 `<根目錄>\Update\Extract`，不再使用 `%TEMP%`。
+- 若舊安裝在 C:，Updater 會在 Revit 關閉後安裝到新根目錄，並改寫
+  `%APPDATA%\Autodesk\Revit\Addins\2024\DevelopmentTools.addin` 的 `<Assembly>`。
+  舊 C: 目錄不會被刪除或修改（`ai_settings.json`、`LanguageSetting.txt` 仍在原處讀取）；
+  失敗時只還原 `.addin` 並移除未完成的新目錄。
+- 更新記錄改寫到 `<根目錄>\Update\Logs\update_log.txt`。
+
+**已安裝 3.2.13（或更早）的電腦**：其 Add-in 的舊下載程式仍會把 ZIP 存到 C:，
+所以這次必須手動執行一次新版 `DevelopmentTools_Setup.exe`（預設會安裝到 D:），
+之後的線上更新才會全程避開 C 槽。Revit 必須能寫入的 `.addin` 註冊檔仍位於
+`%APPDATA%\Autodesk\Revit\Addins`，這是 Revit 規定的位置，只是一個 XML 文字檔。

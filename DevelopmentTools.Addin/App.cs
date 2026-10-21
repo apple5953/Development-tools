@@ -519,7 +519,7 @@ namespace DevelopmentTools
 
                 if (string.IsNullOrEmpty(dllPath) || !System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dllPath), "Resources")))
                 {
-                    dllPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "App", "dummy.dll");
+                    dllPath = System.IO.Path.Combine(DevelopmentTools.Core.InstallLocation.CurrentAppDir, "dummy.dll");
                 }
 
                 string iconPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dllPath), "Resources", "RibbonIcons", iconFileName);

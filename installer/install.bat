@@ -5,7 +5,20 @@ echo ====================================================
 echo   Installing Development Tools Revit Addin... (Non-Admin)
 echo ====================================================
 
-set TARGET_DIR=%LOCALAPPDATA%\DevelopmentTools
+rem Company antivirus blocks downloads/executables under the system drive user profile (C:).
+rem Install to the first writable fixed non-system drive (e.g. D:\DevelopmentTools).
+rem IT can force a location with the DEVELOPMENTTOOLS_ROOT environment variable.
+set TARGET_DIR=
+if defined DEVELOPMENTTOOLS_ROOT set "TARGET_DIR=%DEVELOPMENTTOOLS_ROOT%"
+if not defined TARGET_DIR (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$sys=$env:SystemDrive; foreach($d in [System.IO.DriveInfo]::GetDrives()){ try { if($d.DriveType -eq 'Fixed' -and $d.IsReady -and $d.Name.Substring(0,2) -ne $sys){ $p=Join-Path $d.Name 'DevelopmentTools'; New-Item -ItemType Directory -Force -Path $p | Out-Null; $f=Join-Path $p '.write_probe'; Set-Content -Path $f -Value ok -ErrorAction Stop; Remove-Item $f; Write-Output $p; break } } catch {} }" > "%~dp0dt_install_root.txt" 2>nul
+    if exist "%~dp0dt_install_root.txt" (
+        set /p TARGET_DIR=<"%~dp0dt_install_root.txt"
+        del /F /Q "%~dp0dt_install_root.txt" >nul 2>nul
+    )
+)
+if not defined TARGET_DIR set "TARGET_DIR=%LOCALAPPDATA%\DevelopmentTools"
+echo Install location: %TARGET_DIR%
 set ADDIN_NAME=DevelopmentTools.addin
 
 echo 0. Validating extracted package...
@@ -77,6 +90,11 @@ del /F /Q "%TARGET_DIR%\App\System.Numerics.Vectors.dll" >nul 2>nul
 del /F /Q "%TARGET_DIR%\App\System.Runtime.CompilerServices.Unsafe.dll" >nul 2>nul
 
 if not exist "%TARGET_DIR%\Config\appsettings.json" (
+    if exist "%LOCALAPPDATA%\DevelopmentTools\Config\appsettings.json" (
+        copy /Y "%LOCALAPPDATA%\DevelopmentTools\Config\appsettings.json" "%TARGET_DIR%\Config\" >nul
+    )
+)
+if not exist "%TARGET_DIR%\Config\appsettings.json" (
     copy /Y "appsettings.json" "%TARGET_DIR%\Config\" >nul
 )
 
@@ -104,7 +122,7 @@ echo     ^<VendorId^>RoomTileSystem^</VendorId^>
 echo     ^<VendorDescription^>Room Tile System v3^</VendorDescription^>
 echo   ^</AddIn^>
 echo ^</RevitAddIns^>
-) > "%TEMP%\%ADDIN_NAME%"
+) > "%TARGET_DIR%\%ADDIN_NAME%"
 
 set REVIT_ADDINS_BASE=%APPDATA%\Autodesk\Revit\Addins
 rem The add-in is built for Revit 2024 (.NET Framework 4.8). Revit 2025+ runs on .NET 8 and cannot load it,
@@ -117,7 +135,7 @@ for %%V in (2025 2026) do (
 )
 for %%V in (2024) do (
     if exist "%REVIT_ADDINS_BASE%\%%V" (
-        copy /Y "%TEMP%\%ADDIN_NAME%" "%REVIT_ADDINS_BASE%\%%V\" >nul
+        copy /Y "%TARGET_DIR%\%ADDIN_NAME%" "%REVIT_ADDINS_BASE%\%%V\" >nul
         echo   [Registered] Revit %%V Addin
         
         rem Clean legacy RoomTileSystem.addin
@@ -137,7 +155,7 @@ if exist "%TARGET_DIR%\Updater\RoomTileSystem.Updater.exe" (
     del /F "%TARGET_DIR%\Updater\RoomTileSystem.Updater.exe"
 )
 
-del "%TEMP%\%ADDIN_NAME%"
+del "%TARGET_DIR%\%ADDIN_NAME%"
 
 echo ====================================================
 echo   Installation complete! Please open Revit to start using the plugin.

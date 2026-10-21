@@ -2,9 +2,12 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace DevelopmentTools.Updater
@@ -12,6 +15,7 @@ namespace DevelopmentTools.Updater
     class Program
     {
         private const int RevitExitTimeoutMs = 15 * 60 * 1000;
+        private static string? _logDir;
 
         static int Main(string[] args)
         {
@@ -48,6 +52,11 @@ namespace DevelopmentTools.Updater
                     info.updater_dir = Environment.ExpandEnvironmentVariables(info.updater_dir ?? "");
                     info.backup_dir = Environment.ExpandEnvironmentVariables(info.backup_dir ?? "");
                     info.version_file_path = Environment.ExpandEnvironmentVariables(info.version_file_path ?? "");
+                    info.source_install_dir = ExpandOrNull(info.source_install_dir);
+                    info.source_updater_dir = ExpandOrNull(info.source_updater_dir);
+                    info.extract_dir = ExpandOrNull(info.extract_dir);
+                    info.log_dir = ExpandOrNull(info.log_dir);
+                    if (!string.IsNullOrWhiteSpace(info.log_dir)) _logDir = info.log_dir;
                     if (string.IsNullOrWhiteSpace(info.updater_dir) && !string.IsNullOrWhiteSpace(info.install_dir))
                     {
                         var baseDir = Directory.GetParent(info.install_dir);
@@ -85,7 +94,21 @@ namespace DevelopmentTools.Updater
             }
 
             // 3. 備份
-            string tempUnzipDir = Path.Combine(Path.GetTempPath(), "RTS_Update_" + Guid.NewGuid().ToString("N"));
+            // 解壓縮目錄放在更新包旁（非系統碟），不使用 %TEMP%，避免公司防毒攔截 C: 暫存區中的執行檔。
+            string extractBase = !string.IsNullOrWhiteSpace(info.extract_dir)
+                ? info.extract_dir!
+                : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(info.zip_path)) ?? Path.GetTempPath(), "Extract");
+            string tempUnzipDir = Path.Combine(extractBase, "RTS_Update_" + Guid.NewGuid().ToString("N"));
+
+            string sourceInstallDir = string.IsNullOrWhiteSpace(info.source_install_dir) ? info.install_dir : info.source_install_dir!;
+            string sourceUpdaterDir = string.IsNullOrWhiteSpace(info.source_updater_dir) ? info.updater_dir : info.source_updater_dir!;
+            bool relocating = !SamePath(sourceInstallDir, info.install_dir);
+            var manifestBackups = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (relocating)
+            {
+                Console.WriteLine($"Relocating installation: {sourceInstallDir} -> {info.install_dir}");
+            }
+
             try
             {
                 if (Directory.Exists(info.backup_dir))
@@ -95,13 +118,23 @@ namespace DevelopmentTools.Updater
                 Directory.CreateDirectory(info.backup_dir);
 
                 Console.WriteLine("Backing up current installation...");
-                if (Directory.Exists(info.install_dir))
+                if (Directory.Exists(sourceInstallDir))
                 {
-                    CopyDirectory(info.install_dir, Path.Combine(info.backup_dir, "App"));
+                    CopyDirectory(sourceInstallDir, Path.Combine(info.backup_dir, "App"));
                 }
-                if (Directory.Exists(info.updater_dir))
+                if (Directory.Exists(sourceUpdaterDir))
                 {
-                    CopyDirectory(info.updater_dir, Path.Combine(info.backup_dir, "Updater"));
+                    CopyDirectory(sourceUpdaterDir, Path.Combine(info.backup_dir, "Updater"));
+                }
+                if (relocating && info.addin_manifest_paths != null)
+                {
+                    foreach (string manifestPath in info.addin_manifest_paths)
+                    {
+                        if (!string.IsNullOrWhiteSpace(manifestPath) && File.Exists(manifestPath))
+                        {
+                            manifestBackups[manifestPath] = File.ReadAllText(manifestPath);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -182,10 +215,26 @@ namespace DevelopmentTools.Updater
                     File.WriteAllText(info.version_file_path, updatedJson);
                 }
 
+                // 5.1 安裝位置已移出系統碟：改寫 Revit .addin 指向新的 DLL。
+                if (relocating)
+                {
+                    string newAssembly = Path.Combine(info.install_dir, "DevelopmentTools.Addin.dll");
+                    foreach (var pair in manifestBackups)
+                    {
+                        Console.WriteLine($"Updating Revit add-in registration: {pair.Key}");
+                        File.WriteAllText(pair.Key, RewriteAddinAssembly(pair.Value, newAssembly), new UTF8Encoding(false));
+                    }
+                    if (manifestBackups.Count == 0)
+                    {
+                        LogError("Warning: no Revit .addin registration was found to relocate. Re-run DevelopmentTools_Setup.exe if Revit does not load the add-in.", null);
+                    }
+                }
+
                 // 6. 清理 Staging 壓縮包與 pending_update.json
                 Console.WriteLine("Cleaning up temporary update configuration...");
                 if (File.Exists(info.zip_path)) File.Delete(info.zip_path);
                 if (File.Exists(pendingJsonPath)) File.Delete(pendingJsonPath);
+                if (relocating) CleanupLegacyStaging(sourceInstallDir);
 
                 LogSuccess($"Successfully upgraded to version {info.new_version}!");
                 Console.WriteLine("Update process completed successfully!");
@@ -195,7 +244,14 @@ namespace DevelopmentTools.Updater
             catch (Exception ex)
             {
                 LogError("Failed to apply update. Attempting rollback...", ex);
-                Rollback(info.backup_dir, info.install_dir, info.updater_dir);
+                if (relocating)
+                {
+                    RollbackRelocation(manifestBackups, info.install_dir, info.updater_dir);
+                }
+                else
+                {
+                    Rollback(info.backup_dir, info.install_dir, info.updater_dir);
+                }
                 return 5;
             }
             finally
@@ -268,6 +324,72 @@ namespace DevelopmentTools.Updater
             }
         }
 
+        private static string? ExpandOrNull(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : Environment.ExpandEnvironmentVariables(value);
+        }
+
+        private static bool SamePath(string a, string b)
+        {
+            try
+            {
+                return string.Equals(
+                    Path.GetFullPath(a).TrimEnd('\\', '/'),
+                    Path.GetFullPath(b).TrimEnd('\\', '/'),
+                    StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        internal static string RewriteAddinAssembly(string manifestXml, string newAssemblyPath)
+        {
+            string escaped = System.Security.SecurityElement.Escape(newAssemblyPath) ?? newAssemblyPath;
+            var pattern = new Regex(@"<Assembly>[^<]*DevelopmentTools\.Addin\.dll\s*</Assembly>", RegexOptions.IgnoreCase);
+            if (!pattern.IsMatch(manifestXml))
+            {
+                throw new InvalidDataException("Revit .addin registration does not reference DevelopmentTools.Addin.dll.");
+            }
+            return pattern.Replace(manifestXml, "<Assembly>" + escaped.Replace("$", "$$") + "</Assembly>");
+        }
+
+        private static void RollbackRelocation(Dictionary<string, string> manifestBackups, string newInstallDir, string newUpdaterDir)
+        {
+            // 舊安裝位置在遷移時完全沒有被修改，只要還原 .addin 並移除未完成的新目錄即可。
+            Console.WriteLine("Performing Rollback (relocation)...");
+            foreach (var pair in manifestBackups)
+            {
+                try { File.WriteAllText(pair.Key, pair.Value, new UTF8Encoding(false)); }
+                catch (Exception ex) { LogError("Critical Error: failed to restore " + pair.Key, ex); }
+            }
+            try { if (Directory.Exists(newInstallDir)) Directory.Delete(newInstallDir, true); } catch { }
+            try { if (Directory.Exists(newUpdaterDir)) Directory.Delete(newUpdaterDir, true); } catch { }
+            Console.WriteLine("Rollback finished. The previous installation remains active.");
+        }
+
+        private static void CleanupLegacyStaging(string sourceInstallDir)
+        {
+            try
+            {
+                var legacyBase = Directory.GetParent(sourceInstallDir.TrimEnd('\\', '/'));
+                if (legacyBase == null) return;
+                foreach (string name in new[] { "Staging", "UpdaterStaging" })
+                {
+                    string dir = Path.Combine(legacyBase.FullName, "Update", name);
+                    if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                }
+            }
+            catch { }
+        }
+
+        private static string ResolveLogDir()
+        {
+            if (!string.IsNullOrWhiteSpace(_logDir)) return _logDir!;
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Update", "Logs");
+        }
+
         private static void CopyDirectory(string sourceDir, string destDir, string excludedTopLevelDirectory = null)
         {
             Directory.CreateDirectory(destDir);
@@ -329,7 +451,7 @@ namespace DevelopmentTools.Updater
 
             try
             {
-                string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Update", "Logs");
+                string logDir = ResolveLogDir();
                 Directory.CreateDirectory(logDir);
                 File.AppendAllText(Path.Combine(logDir, "update_log.txt"), logText + Environment.NewLine);
             }
@@ -345,7 +467,7 @@ namespace DevelopmentTools.Updater
 
             try
             {
-                string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Update", "Logs");
+                string logDir = ResolveLogDir();
                 Directory.CreateDirectory(logDir);
                 File.AppendAllText(Path.Combine(logDir, "update_log.txt"), logText + Environment.NewLine);
             }
@@ -377,5 +499,10 @@ namespace DevelopmentTools.Updater
         public string new_version { get; set; }
         public string updated_at { get; set; }
         public int revit_process_id { get; set; }
+        public string? source_install_dir { get; set; }
+        public string? source_updater_dir { get; set; }
+        public string? extract_dir { get; set; }
+        public string? log_dir { get; set; }
+        public List<string>? addin_manifest_paths { get; set; }
     }
 }
