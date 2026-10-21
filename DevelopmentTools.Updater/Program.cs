@@ -76,6 +76,10 @@ namespace DevelopmentTools.Updater
                 return 1;
             }
 
+            // 舊版外掛（3.2.13 以前）產生的 pending 檔沒有遷移資訊；由 Updater 自行決定是否移出系統碟。
+            // 只有在所有 Revit 註冊檔都能改寫時才搬移，否則照舊原地更新，確保外掛不會因此無法載入。
+            PlanRelocation(info!);
+
             // 1. 等待 Revit 關閉
             Console.WriteLine("Waiting for the Revit session that started this update to close (Timeout: 15 minutes)...");
             bool revitClosed = WaitForRevitToExit(info.revit_process_id, RevitExitTimeoutMs);
@@ -324,6 +328,211 @@ namespace DevelopmentTools.Updater
             }
         }
 
+        private const string RootOverrideEnvironmentVariable = "DEVELOPMENTTOOLS_ROOT";
+        private static readonly Regex AddinAssemblyPattern =
+            new Regex(@"<Assembly>[^<]*DevelopmentTools\.Addin\.dll\s*</Assembly>", RegexOptions.IgnoreCase);
+
+        internal static void PlanRelocation(PendingUpdateInfo info)
+        {
+            try
+            {
+                bool legacyPending = string.IsNullOrWhiteSpace(info.source_install_dir);
+                if (legacyPending)
+                {
+                    info.source_install_dir = info.install_dir;
+                    info.source_updater_dir = info.updater_dir;
+                }
+
+                string sourceInstall = info.source_install_dir!;
+                if (legacyPending)
+                {
+                    if (!IsOnSystemDrive(sourceInstall)) return;
+                    string? sourceBase = Directory.GetParent(sourceInstall.TrimEnd('\\', '/'))?.FullName;
+                    string? root = ResolveTargetRoot(sourceBase);
+                    if (root == null || (sourceBase != null && SamePath(root, sourceBase))) return;
+
+                    info.install_dir = Path.Combine(root, "App");
+                    info.updater_dir = Path.Combine(root, "Updater");
+                    info.backup_dir = Path.Combine(root, "Update", "Backup");
+                    info.version_file_path = Path.Combine(root, "App", "version.json");
+                    info.extract_dir = Path.Combine(root, "Update", "Extract");
+                    info.log_dir = Path.Combine(root, "Update", "Logs");
+                    _logDir = info.log_dir;
+                    if (sourceBase != null) CopyMissingFiles(Path.Combine(sourceBase, "Config"), Path.Combine(root, "Config"));
+                }
+
+                if (SamePath(sourceInstall, info.install_dir)) return;
+
+                // 收集所有指向 DevelopmentTools.Addin.dll 的 Revit 註冊檔（使用者層級與 ProgramData）。
+                var manifests = new List<string>(info.addin_manifest_paths ?? new List<string>());
+                foreach (string found in FindAddinRegistrations())
+                {
+                    if (!manifests.Any(m => SamePath(m, found))) manifests.Add(found);
+                }
+                manifests = manifests.Where(File.Exists).ToList();
+
+                string? blocked = manifests.FirstOrDefault(m => !CanRewrite(m));
+                if (manifests.Count == 0 || blocked != null)
+                {
+                    LogError(blocked != null
+                        ? "Relocation skipped: cannot write Revit registration " + blocked + ". Updating in place."
+                        : "Relocation skipped: no Revit registration found. Updating in place.", null);
+                    CancelRelocation(info);
+                    return;
+                }
+                info.addin_manifest_paths = manifests;
+            }
+            catch (Exception ex)
+            {
+                LogError("Relocation planning failed. Updating in place.", ex);
+                CancelRelocation(info);
+            }
+        }
+
+        private static void CancelRelocation(PendingUpdateInfo info)
+        {
+            // 安裝位置維持原處；下載、解壓、備份與記錄仍可留在非系統碟。
+            if (string.IsNullOrWhiteSpace(info.source_install_dir)) return;
+            info.install_dir = info.source_install_dir!;
+            info.updater_dir = info.source_updater_dir ?? info.updater_dir;
+            info.version_file_path = Path.Combine(info.install_dir, "version.json");
+            info.addin_manifest_paths = new List<string>();
+        }
+
+        private static string? ResolveTargetRoot(string? currentBase)
+        {
+            string? fromEnvironment = NormalizeRoot(Environment.GetEnvironmentVariable(RootOverrideEnvironmentVariable));
+            if (fromEnvironment != null && IsWritableDirectory(fromEnvironment)) return fromEnvironment;
+
+            if (currentBase != null)
+            {
+                string? fromSettings = NormalizeRoot(ReadInstallRootSetting(Path.Combine(currentBase, "Config", "appsettings.json")));
+                if (fromSettings != null && IsWritableDirectory(fromSettings)) return fromSettings;
+            }
+
+            DriveInfo[] drives;
+            try { drives = DriveInfo.GetDrives(); } catch { return null; }
+            foreach (var drive in drives.OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    if (drive.DriveType != DriveType.Fixed || !drive.IsReady) continue;
+                    if (IsOnSystemDrive(drive.RootDirectory.FullName)) continue;
+                    if (drive.AvailableFreeSpace <= 500L * 1024 * 1024) continue;
+                    string candidate = Path.Combine(drive.RootDirectory.FullName, "DevelopmentTools");
+                    if (IsWritableDirectory(candidate)) return candidate;
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        private static string? ReadInstallRootSetting(string settingsPath)
+        {
+            try
+            {
+                if (!File.Exists(settingsPath)) return null;
+                using (var doc = JsonDocument.Parse(File.ReadAllText(settingsPath)))
+                {
+                    if (doc.RootElement.ValueKind == JsonValueKind.Object
+                        && doc.RootElement.TryGetProperty("InstallRoot", out var prop)
+                        && prop.ValueKind == JsonValueKind.String)
+                    {
+                        return prop.GetString();
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static string? NormalizeRoot(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            try
+            {
+                string expanded = Environment.ExpandEnvironmentVariables(value!.Trim().Trim('"'));
+                if (!Path.IsPathRooted(expanded)) return null;
+                return Path.GetFullPath(expanded).TrimEnd('\\', '/');
+            }
+            catch { return null; }
+        }
+
+        internal static bool IsOnSystemDrive(string path)
+        {
+            try
+            {
+                string? root = Path.GetPathRoot(Path.GetFullPath(path));
+                string? systemRoot = Path.GetPathRoot(Environment.SystemDirectory);
+                if (string.IsNullOrEmpty(systemRoot)) return false;
+                return string.Equals(root, systemRoot, StringComparison.OrdinalIgnoreCase);
+            }
+            catch { return true; }
+        }
+
+        private static bool IsWritableDirectory(string directory)
+        {
+            try
+            {
+                Directory.CreateDirectory(directory);
+                string probe = Path.Combine(directory, ".write_probe_" + Guid.NewGuid().ToString("N"));
+                File.WriteAllText(probe, "ok");
+                File.Delete(probe);
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static IEnumerable<string> FindAddinRegistrations()
+        {
+            var roots = new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Autodesk", "Revit", "Addins"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Autodesk", "Revit", "Addins")
+            };
+            foreach (string root in roots)
+            {
+                string[] files;
+                try
+                {
+                    if (!Directory.Exists(root)) continue;
+                    files = Directory.GetFiles(root, "*.addin", SearchOption.AllDirectories);
+                }
+                catch { continue; }
+                foreach (string file in files)
+                {
+                    bool match = false;
+                    try { match = AddinAssemblyPattern.IsMatch(File.ReadAllText(file)); } catch { }
+                    if (match) yield return file;
+                }
+            }
+        }
+
+        private static bool CanRewrite(string path)
+        {
+            try
+            {
+                using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read)) { }
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static void CopyMissingFiles(string sourceDir, string targetDir)
+        {
+            try
+            {
+                if (!Directory.Exists(sourceDir)) return;
+                Directory.CreateDirectory(targetDir);
+                foreach (string file in Directory.GetFiles(sourceDir))
+                {
+                    string destination = Path.Combine(targetDir, Path.GetFileName(file));
+                    if (!File.Exists(destination)) File.Copy(file, destination, false);
+                }
+            }
+            catch { }
+        }
+
         private static string? ExpandOrNull(string? value)
         {
             return string.IsNullOrWhiteSpace(value) ? null : Environment.ExpandEnvironmentVariables(value);
@@ -347,7 +556,7 @@ namespace DevelopmentTools.Updater
         internal static string RewriteAddinAssembly(string manifestXml, string newAssemblyPath)
         {
             string escaped = System.Security.SecurityElement.Escape(newAssemblyPath) ?? newAssemblyPath;
-            var pattern = new Regex(@"<Assembly>[^<]*DevelopmentTools\.Addin\.dll\s*</Assembly>", RegexOptions.IgnoreCase);
+            var pattern = AddinAssemblyPattern;
             if (!pattern.IsMatch(manifestXml))
             {
                 throw new InvalidDataException("Revit .addin registration does not reference DevelopmentTools.Addin.dll.");

@@ -85,7 +85,40 @@ Updater 會在套用更新前結束，典型錯誤為：
   失敗時只還原 `.addin` 並移除未完成的新目錄。
 - 更新記錄改寫到 `<根目錄>\Update\Logs\update_log.txt`。
 
-**已安裝 3.2.13（或更早）的電腦**：其 Add-in 的舊下載程式仍會把 ZIP 存到 C:，
-所以這次必須手動執行一次新版 `DevelopmentTools_Setup.exe`（預設會安裝到 D:），
-之後的線上更新才會全程避開 C 槽。Revit 必須能寫入的 `.addin` 註冊檔仍位於
-`%APPDATA%\Autodesk\Revit\Addins`，這是 Revit 規定的位置，只是一個 XML 文字檔。
+### 舊版（3.2.8～3.2.13）直接按「更新」
+
+舊版外掛會啟動新版更新包內附的 Updater，因此不需要重新安裝：
+
+1. 舊版外掛仍把 ZIP 下載到 `%LOCALAPPDATA%\DevelopmentTools\Update\Staging`
+   （這段程式已在使用者電腦上，無法從伺服器端改變；僅此一次）。
+2. 新版 Updater 發現舊安裝在 C:，會在 Revit 關閉後安裝到 `X:\DevelopmentTools`
+   並改寫所有指向 `DevelopmentTools.Addin.dll` 的 Revit `.addin`
+   （使用者層級與 `C:\ProgramData\Autodesk\Revit\Addins`）。其他外掛的 `.addin` 不會被動到。
+3. 安全條件：任一註冊檔無法寫入、找不到註冊檔、或沒有可寫入的非系統碟時，
+   **放棄搬移並照舊原地更新**，外掛維持可用。
+4. 下次開啟 Revit 即從新位置載入；之後的更新全程不碰 C 槽。
+
+若公司防毒連第 1 步的下載都攔截，該台電腦需手動執行一次新版
+`DevelopmentTools_Setup.exe`（預設安裝到 D:），之後即可正常線上更新。
+
+### 使用者資料與暫存檔
+
+外掛啟動時設定行程環境變數 `DEVELOPMENTTOOLS_DATA`（`<根目錄>\Data`）與
+`DEVELOPMENTTOOLS_TEMP`（`<根目錄>\Temp`，7 天前的檔案自動清除），所有模組共用：
+
+| 舊位置 | 新位置 |
+| --- | --- |
+| `%LOCALAPPDATA%\DevelopmentTools\App\ai_settings.json`、`LanguageSetting.txt` | `Data\` |
+| `%LOCALAPPDATA%\DevelopmentTools\Logs`、`door-shared-param-path.txt` | `Data\Logs`、`Data\` |
+| `%APPDATA%\DevelopmentTools\{FinishBuildUp,FastRebar,CodeCheck,DrawingFactory}` | `Data\{...}` |
+| `%APPDATA%\DT_AIAgent`、`%LOCALAPPDATA%\DT_AIAgent\{py,draft}` | `Data\DT_AIAgent` |
+| `%LOCALAPPDATA%\DT_WordPdfLink` | `Data\DT_WordPdfLink` |
+| `%APPDATA%\BEAI\device.json`、`sessions` | `Data\BEAI` |
+| `%TEMP%`（預覽、共用參數、Agent Worker、查圖輸出） | `Temp\` |
+
+第一次讀取時自動從舊位置複製（舊檔保留，可隨時回退）。找不到非系統碟時不設定這兩個變數，
+所有路徑與舊版完全相同。
+
+無法避開 C 槽的項目：Revit 只從 `%APPDATA%\Autodesk\Revit\Addins` 或
+`C:\ProgramData\Autodesk\Revit\Addins` 讀取 `.addin` 註冊檔（純文字 XML），
+以及 Revit 本身的記錄檔與暫存檔。

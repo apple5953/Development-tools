@@ -80,8 +80,10 @@ namespace RfiDeckAgent.Core
             get
             {
                 string d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DT_AIAgent");
+                string legacy = Path.Combine(d, "root.txt");
+                if (DtStorage.DataDir != null) return DtStorage.File(@"DT_AIAgent\root.txt", legacy);
                 if (!Directory.Exists(d)) Directory.CreateDirectory(d);
-                return Path.Combine(d, "root.txt");
+                return legacy;
             }
         }
 
@@ -100,7 +102,12 @@ namespace RfiDeckAgent.Core
                 catch { }
                 return DefaultRoot;
             }
-            set { File.WriteAllText(SettingFile, value, System.Text.Encoding.UTF8); }
+            set
+            {
+                string f = SettingFile;
+                Directory.CreateDirectory(Path.GetDirectoryName(f));
+                File.WriteAllText(f, value, System.Text.Encoding.UTF8);
+            }
         }
 
         public static string InboxDir { get { return Path.Combine(Root, @"03_資料庫\釋疑問題庫\收件匣"); } }
@@ -110,7 +117,7 @@ namespace RfiDeckAgent.Core
         {
             get
             {
-                string d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"DT_AIAgent\draft");
+                string d = DtStorage.Folder(@"DT_AIAgent\draft", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"DT_AIAgent\draft"));
                 if (!Directory.Exists(d)) Directory.CreateDirectory(d);
                 return d;
             }

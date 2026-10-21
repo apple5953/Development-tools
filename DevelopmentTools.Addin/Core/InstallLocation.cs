@@ -24,6 +24,151 @@ namespace DevelopmentTools.Core
     {
         public const string FolderName = "DevelopmentTools";
         public const string RootOverrideEnvironmentVariable = "DEVELOPMENTTOOLS_ROOT";
+        /// <summary>使用者資料（設定、記錄、草稿）根目錄；由外掛啟動時設定，獨立模組（rfi-deck-agent、DrawingFactory、BEAI）共用。</summary>
+        public const string DataEnvironmentVariable = "DEVELOPMENTTOOLS_DATA";
+        /// <summary>暫存檔根目錄；取代 %TEMP%。</summary>
+        public const string TempEnvironmentVariable = "DEVELOPMENTTOOLS_TEMP";
+
+        private static readonly object SyncRoot = new object();
+        private static string _resolvedRoot;
+
+        /// <summary>已解析的目標根目錄（尚未解析時為 null，避免記錄器遞迴）。</summary>
+        public static string ResolvedRootOrNull { get { return _resolvedRoot; } }
+
+        /// <summary>目標根目錄（快取，整個 Revit 工作階段只解析一次）。</summary>
+        public static string PreferredBaseDir
+        {
+            get
+            {
+                if (_resolvedRoot != null) return _resolvedRoot;
+                lock (SyncRoot)
+                {
+                    if (_resolvedRoot == null) _resolvedRoot = ResolvePreferredBaseDir();
+                    return _resolvedRoot;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 外掛啟動時第一個呼叫：設定行程環境變數，讓所有模組的資料與暫存檔都寫到非系統碟。
+        /// 找不到非系統碟時不設定，所有模組維持原本路徑（行為與舊版完全相同）。
+        /// </summary>
+        public static void InitializeEnvironment()
+        {
+            try
+            {
+                string root = PreferredBaseDir;
+                if (IsOnSystemDrive(root)) return;
+
+                string data = Path.Combine(root, "Data");
+                string temp = Path.Combine(root, "Temp");
+                Directory.CreateDirectory(data);
+                Directory.CreateDirectory(temp);
+                Environment.SetEnvironmentVariable(RootOverrideEnvironmentVariable, root, EnvironmentVariableTarget.Process);
+                Environment.SetEnvironmentVariable(DataEnvironmentVariable, data, EnvironmentVariableTarget.Process);
+                Environment.SetEnvironmentVariable(TempEnvironmentVariable, temp, EnvironmentVariableTarget.Process);
+                CleanupOldTempFiles(temp, TimeSpan.FromDays(7));
+            }
+            catch (Exception ex)
+            {
+                UpdateLogger.Log("初始化非系統碟資料目錄失敗，沿用原路徑", ex);
+            }
+        }
+
+        /// <summary>非系統碟資料目錄；未啟用時為 null。</summary>
+        public static string DataDir
+        {
+            get { return NonEmpty(Environment.GetEnvironmentVariable(DataEnvironmentVariable)); }
+        }
+
+        /// <summary>暫存目錄（非系統碟），未啟用時退回 %TEMP%。</summary>
+        public static string TempDir
+        {
+            get
+            {
+                string temp = NonEmpty(Environment.GetEnvironmentVariable(TempEnvironmentVariable));
+                if (temp == null) return Path.GetTempPath();
+                try { Directory.CreateDirectory(temp); return temp; }
+                catch { return Path.GetTempPath(); }
+            }
+        }
+
+        /// <summary>
+        /// 取得資料檔路徑。啟用非系統碟時回傳 Data\relativePath，並在新位置不存在時從舊位置複製一次（舊檔保留）。
+        /// 未啟用時直接回傳舊路徑。
+        /// </summary>
+        public static string DataFile(string relativePath, string legacyPath)
+        {
+            string data = DataDir;
+            if (data == null) return legacyPath;
+            string target = Path.Combine(data, relativePath);
+            try
+            {
+                if (!File.Exists(target) && !string.IsNullOrEmpty(legacyPath) && File.Exists(legacyPath))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    File.Copy(legacyPath, target, false);
+                }
+            }
+            catch { }
+            return target;
+        }
+
+        /// <summary>取得資料資料夾路徑，規則同 <see cref="DataFile"/>（只補上新位置缺少的檔案）。</summary>
+        public static string DataFolder(string relativePath, string legacyDirectory)
+        {
+            string data = DataDir;
+            if (data == null) return legacyDirectory;
+            string target = Path.Combine(data, relativePath);
+            try
+            {
+                // 只在新資料夾第一次建立時搬入舊資料，之後完全以新位置為準。
+                if (!Directory.Exists(target)
+                    && !string.IsNullOrEmpty(legacyDirectory) && Directory.Exists(legacyDirectory))
+                {
+                    // 先複製到暫存名稱再改名，複製中斷時下次會重新搬移。
+                    string staging = target + ".migrating";
+                    if (Directory.Exists(staging)) Directory.Delete(staging, true);
+                    CopyMissing(legacyDirectory, staging);
+                    Directory.Move(staging, target);
+                }
+                Directory.CreateDirectory(target);
+            }
+            catch { }
+            return target;
+        }
+
+        private static void CopyMissing(string source, string destination)
+        {
+            Directory.CreateDirectory(destination);
+            foreach (string file in Directory.GetFiles(source))
+            {
+                string to = Path.Combine(destination, Path.GetFileName(file));
+                if (!File.Exists(to)) File.Copy(file, to, false);
+            }
+            foreach (string dir in Directory.GetDirectories(source))
+            {
+                CopyMissing(dir, Path.Combine(destination, Path.GetFileName(dir)));
+            }
+        }
+
+        private static void CleanupOldTempFiles(string temp, TimeSpan age)
+        {
+            try
+            {
+                DateTime cutoff = DateTime.Now - age;
+                foreach (string file in Directory.GetFiles(temp, "*", SearchOption.AllDirectories))
+                {
+                    try { if (File.GetLastWriteTime(file) < cutoff) File.Delete(file); } catch { }
+                }
+            }
+            catch { }
+        }
+
+        private static string NonEmpty(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
 
         public static string LegacyBaseDir
         {

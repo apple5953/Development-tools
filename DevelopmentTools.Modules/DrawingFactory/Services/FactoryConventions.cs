@@ -97,9 +97,9 @@ namespace BIMDrawingFactory.UI.Services
         {
             get
             {
-                return Path.Combine(
+                return DtStorage.File(@"DrawingFactory\conventions.json", Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "DevelopmentTools", "DrawingFactory", "conventions.json");
+                    "DevelopmentTools", "DrawingFactory", "conventions.json"));
             }
         }
 

@@ -22,7 +22,8 @@ namespace DevelopmentTools.Core
         private LanguageManager()
         {
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            _settingsPath = Path.Combine(appData, "DevelopmentTools", "App", "LanguageSetting.txt");
+            _settingsPath = InstallLocation.DataFile("LanguageSetting.txt",
+                Path.Combine(appData, "DevelopmentTools", "App", "LanguageSetting.txt"));
 
             LoadSettings();
             InitializeTranslations();

@@ -174,7 +174,7 @@ namespace RfiDeckAgent.Core
                 e0["error"] = pkg;
                 return e0;
             }
-            string outDir = Path.Combine(Path.GetTempPath(), "dtai_seek_" + DateTime.Now.ToString("HHmmssfff"));
+            string outDir = Path.Combine(DtStorage.TempDir, "dtai_seek_" + DateTime.Now.ToString("HHmmssfff"));
             List<string> a = new List<string>();
             a.Add(PyRunner.Q(script));
             a.Add("--root " + PyRunner.Q(Config.Root));

@@ -160,7 +160,7 @@ namespace DT_WordPdfLink.Forms
             try
             {
                 string targetPdfToRender = _fullPdfPath;
-                string tempSinglePdf = Path.Combine(Path.GetTempPath(), string.Format("word_page_preview_{0}_{1}.pdf", Path.GetFileNameWithoutExtension(_wordPath), pageNumber));
+                string tempSinglePdf = Path.Combine(global::DevelopmentTools.Core.InstallLocation.TempDir, string.Format("word_page_preview_{0}_{1}.pdf", Path.GetFileNameWithoutExtension(_wordPath), pageNumber));
 
                 // If multi-page, export single page PDF for exact page N rendering
                 if (_pageCount > 1 && File.Exists(_wordPath))

@@ -57,7 +57,7 @@ namespace DevelopmentTools.Core
         // 取得或建立臨時共享參數檔案
         private static DefinitionFile GetOrCreateSharedParameterFile(Application app)
         {
-            string tempFile = Path.Combine(Path.GetTempPath(), "RoomTileSharedParameters.txt");
+            string tempFile = Path.Combine(global::DevelopmentTools.Core.InstallLocation.TempDir, "RoomTileSharedParameters.txt");
             
             // 建立定義檔內容 (Revit 共享參數檔標準編碼為 Unicode/UTF-16LE)
             using (StreamWriter sw = new StreamWriter(tempFile, false, System.Text.Encoding.Unicode))

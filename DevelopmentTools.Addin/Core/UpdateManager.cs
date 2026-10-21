@@ -105,7 +105,7 @@ namespace DevelopmentTools.Core
             try
             {
                 // 下載、解壓、Updater 與安裝全部放在非系統碟，避免公司防毒攔截 C: 使用者目錄中的下載檔。
-                string targetBaseDir = InstallLocation.ResolvePreferredBaseDir();
+                string targetBaseDir = InstallLocation.PreferredBaseDir;
                 string updateDir = Path.Combine(targetBaseDir, "Update");
                 string stagingDir = Path.Combine(updateDir, "Staging");
                 string backupDir = Path.Combine(updateDir, "Backup");

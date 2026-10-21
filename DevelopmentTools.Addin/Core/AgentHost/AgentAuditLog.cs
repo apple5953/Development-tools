@@ -13,7 +13,9 @@ namespace DevelopmentTools.Core.AgentHost
         {
             try
             {
-                string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Logs");
+                string directory = global::DevelopmentTools.Core.InstallLocation.DataDir != null
+                    ? Path.Combine(global::DevelopmentTools.Core.InstallLocation.DataDir, "Logs")
+                    : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DevelopmentTools", "Logs");
                 Directory.CreateDirectory(directory);
                 string line = JsonSerializer.Serialize(new Dictionary<string, object>
                 {

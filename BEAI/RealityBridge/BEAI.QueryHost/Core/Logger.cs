@@ -21,7 +21,7 @@ namespace BEAI.QueryHost.Core
             }
             catch
             {
-                _logDirectory = Path.GetTempPath();
+                _logDirectory = DtStorage.TempDir;
             }
         }
 

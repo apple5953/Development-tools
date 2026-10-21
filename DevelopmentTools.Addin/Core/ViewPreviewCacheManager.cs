@@ -8,7 +8,7 @@ namespace DevelopmentTools.Core
 {
     public static class ViewPreviewCacheManager
     {
-        private static readonly string TempDir = Path.Combine(Path.GetTempPath(), "RevitViewPreviews");
+        private static readonly string TempDir = Path.Combine(global::DevelopmentTools.Core.InstallLocation.TempDir, "RevitViewPreviews");
 
         static ViewPreviewCacheManager()
         {

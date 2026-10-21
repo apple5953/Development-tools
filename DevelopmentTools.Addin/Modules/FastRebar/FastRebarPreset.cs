@@ -164,7 +164,8 @@ namespace DevelopmentTools.FastRebar
         {
             get
             {
-                string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DevelopmentTools", "FastRebar");
+                string dir = global::DevelopmentTools.Core.InstallLocation.DataFolder("FastRebar",
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DevelopmentTools", "FastRebar"));
                 return Path.Combine(dir, "presets.json");
             }
         }
