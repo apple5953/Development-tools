@@ -42,6 +42,12 @@ function doPost(e) {
       durationIdx = headers.indexOf("TotalDurationMinutes");
     }
 
+    // 若無「已知同事」與「最後通知時間」欄位，自動加在最後面（依標題對應，不影響既有欄位）
+    ensureColumn(userSheet, headers, "KnownColleague");
+    ensureColumn(userSheet, headers, "LastAlertTime");
+    var knownIdx = headers.indexOf("KnownColleague");
+    var lastAlertIdx = headers.indexOf("LastAlertTime");
+
     // 1. 中轉交換授權代碼 (Token Exchange)
     if (action === "exchange_code") {
       var code = requestData.code;
@@ -114,9 +120,11 @@ function doPost(e) {
           else if (c === lastActiveIdx) newRow.push(new Date());
           else if (c === usageCountIdx) newRow.push(1);
           else if (c === durationIdx) newRow.push(0);
+          else if (c === lastAlertIdx) newRow.push(new Date());
           else newRow.push("");
         }
         userSheet.appendRow(newRow);
+        notifyUnknownLogin(email, tool, true, 1);
 
         response = {
           status: "success",
@@ -133,9 +141,15 @@ function doPost(e) {
         if (lastActiveIdx !== -1) {
           userSheet.getRange(userRowIndex, lastActiveIdx + 1).setValue(new Date());
         }
+        var curCount = usageCountIdx !== -1 ? (parseInt(rowData[usageCountIdx]) || 0) : 0;
         if (usageCountIdx !== -1) {
-          var curCount = parseInt(rowData[usageCountIdx]) || 0;
           userSheet.getRange(userRowIndex, usageCountIdx + 1).setValue(curCount + 1);
+        }
+
+        // 不是已知同事：每個帳號每 24 小時最多通知一次
+        if (!isKnownColleague(rowData[knownIdx]) && alertDue(rowData[lastAlertIdx])) {
+          userSheet.getRange(userRowIndex, lastAlertIdx + 1).setValue(new Date());
+          notifyUnknownLogin(email, tool, false, curCount + 1, statusVal);
         }
 
         if (statusVal.toLowerCase() !== "allowed") {
@@ -233,6 +247,53 @@ function getEmailFromToken(token) {
     console.error("Token verification failed: " + err.toString());
   }
   return null;
+}
+
+// 輔助函式：標題列沒有該欄位時加在最後一欄，並同步更新 headers 陣列
+function ensureColumn(sheet, headers, name) {
+  if (headers.indexOf(name) !== -1) return;
+  sheet.getRange(1, headers.length + 1).setValue(name);
+  headers.push(name);
+}
+
+// 「KnownColleague」填 Y、Yes、是、V 或打勾（TRUE）都算已知同事
+function isKnownColleague(value) {
+  if (value === true) return true;
+  var v = (value === undefined || value === null) ? "" : value.toString().trim().toLowerCase();
+  return ["y", "yes", "true", "是", "v", "✓", "✔"].indexOf(v) !== -1;
+}
+
+function alertDue(lastAlert) {
+  if (!(lastAlert instanceof Date)) return true;
+  return new Date().getTime() - lastAlert.getTime() >= 24 * 60 * 60 * 1000;
+}
+
+// 寄信給管理員：收件人取指令碼屬性 ADMIN_EMAIL，沒設定時寄給部署者本人。
+// 通知失敗（例如每日寄信額度用完）不影響使用者登入。
+function notifyUnknownLogin(email, tool, isNew, usageCount, status) {
+  try {
+    var admin = PropertiesService.getScriptProperties().getProperty("ADMIN_EMAIL") ||
+                Session.getEffectiveUser().getEmail();
+    if (!admin) return;
+    var sheetUrl = SpreadsheetApp.getActiveSpreadsheet().getUrl();
+    var subject = (isNew ? "【RTS 外掛】新帳號登入：" : "【RTS 外掛】非已知同事使用：") + email;
+    var body = [
+      isNew ? "有一個新的 Google 帳號第一次登入外掛，已自動註冊。" : "一個未標記為已知同事的帳號正在使用外掛。",
+      "",
+      "帳號：" + email,
+      "使用工具：" + tool,
+      "目前狀態：" + (isNew ? "Allowed（自動註冊）" : (status || "")),
+      "累計使用次數：" + usageCount,
+      "時間：" + new Date(),
+      "",
+      "是同事：在 Users 表的 KnownColleague 欄填 Y，之後不再通知。",
+      "不認識：把 Status 改成 Blocked，即可停止使用。",
+      "授權表：" + sheetUrl
+    ].join("\n");
+    MailApp.sendEmail(admin, subject, body);
+  } catch (err) {
+    console.error("Unknown-login notification failed: " + err.toString());
+  }
 }
 
 // 輔助函式：建立標準 JSON 回傳
