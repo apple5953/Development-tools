@@ -1,12 +1,12 @@
 {
-  "published_at": "2026-10-21T00:43:01.236841Z",
-  "app_id": "development_tools",
-  "latest_version": "3.2.13",
-  "sha256": "03d0d4141fb506ad2cc9dd69965dad979b26b9698fc3613751b44fd856251ddf",
-  "channel": "stable",
-  "minimum_supported_version": "1.0.0",
+  "release_note": "RTS 3.2.16 將 BIM MCP 直接整合至既有 BEAI Reality Bridge；新增 RTS Ribbon 的 Bridge 狀態、啟停、規則重載與背景處理器控制；發行包內含 MCP stdio runtime，並可設定既有 Codex、Claude 與 Antigravity Client。維持 loopback-only、ExternalEvent 與 V0.1 唯讀安全邊界。",
   "product_name": "Room Tile System v3",
   "force_update": false,
-  "release_note": "修正穩定更新頻道停留在 3.2.8 與候選版本無法晉升問題；加入 AI Agent 單一按鈕與子工具選單架構、rfi-deck-agent 0.3.0，並保留既有 Updater、授權、Reality Bridge 與回退機制。",
-  "release_url": "https://github.com/apple5953/Development-tools/releases/download/v3.2.13/DevelopmentTools_v3.2.13.zip"
+  "sha256": "680236426bcd65c9ea611341191fb7f434fa89f7e33bf6dee73419b3c117dcab",
+  "minimum_supported_version": "1.0.0",
+  "release_url": "https://github.com/apple5953/Development-tools/releases/download/v3.2.16/DevelopmentTools_v3.2.16.zip",
+  "channel": "stable",
+  "app_id": "development_tools",
+  "latest_version": "3.2.16",
+  "published_at": "2026-10-27T08:57:55.698461Z"
 }
