@@ -11,6 +11,7 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
 using DevelopmentTools.Core;
 using DevelopmentTools.FastRebar;
+using DevelopmentTools.FastRebar.Saving;
 
 namespace DevelopmentTools.Commands
 {
@@ -121,7 +122,12 @@ namespace DevelopmentTools.Commands
                 var checker = new RebarModelChecker(doc);
                 checker.Run(created);
 
-                ShowReport(uiDoc, engine.Result, checker, frames.Count, skipped, skippedExisting, sw.Elapsed.TotalSeconds);
+                // 5. 減料估算：剛建立的鋼筋用定尺怎麼裁最省
+                SavingResult saving = null;
+                try { saving = RebarSavingReport.Analyze(doc, created, RebarSavingOptionsStore.Load()); }
+                catch (Exception ex) { FastRebarLogBridge.Write("減料估算失敗：" + ex); }
+
+                ShowReport(uiDoc, engine.Result, checker, saving, frames.Count, skipped, skippedExisting, sw.Elapsed.TotalSeconds);
                 return Result.Succeeded;
             }
             catch (Autodesk.Revit.Exceptions.OperationCanceledException)
@@ -183,7 +189,7 @@ namespace DevelopmentTools.Commands
             return input;
         }
 
-        private static void ShowReport(UIDocument uiDoc, FastRebarResult r, RebarModelChecker checker, int memberCount,
+        private static void ShowReport(UIDocument uiDoc, FastRebarResult r, RebarModelChecker checker, SavingResult saving, int memberCount,
                                        List<string> skipped, int skippedExisting, double seconds)
         {
             var sb = new StringBuilder();
@@ -195,6 +201,14 @@ namespace DevelopmentTools.Commands
             sb.AppendLine();
             sb.AppendLine("【建立後檢核】");
             sb.AppendLine(checker.Summary(8));
+            string cutListPath = null;
+            if (saving != null && saving.Sizes.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("【減料估算】");
+                sb.AppendLine(RebarSavingReport.Summary(saving, 5));
+                cutListPath = RebarSavingReport.WriteCsv(saving, uiDoc.Document.Title, "下料單");
+            }
             if (r.Messages.Count > 0)
             {
                 sb.AppendLine("【訊息】");
@@ -214,12 +228,14 @@ namespace DevelopmentTools.Commands
             };
             if (r.Created.Count > 0) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "選取剛建立的鋼筋");
             if (problemIds.Count > 0) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, $"選取需要確認的元素（{problemIds.Count}）");
+            if (cutListPath != null) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink3, "開啟下料單", cutListPath);
             td.CommonButtons = TaskDialogCommonButtons.Close;
             TaskDialogResult res = td.Show();
             try
             {
                 if (res == TaskDialogResult.CommandLink1) uiDoc.Selection.SetElementIds(r.Created);
                 else if (res == TaskDialogResult.CommandLink2) uiDoc.Selection.SetElementIds(problemIds);
+                else if (res == TaskDialogResult.CommandLink3) RebarSavingReport.Open(cutListPath);
             }
             catch { }
         }
@@ -244,7 +260,7 @@ namespace DevelopmentTools.Commands
         }
     }
 
-    /// <summary>鋼筋檢核：只讀不改，檢查選取構件（或整個模型）的鋼筋。</summary>
+    /// <summary>鋼筋檢核：只讀不改，檢查選取構件（或整個模型）的鋼筋，並估算定尺裁切減料。</summary>
     [Transaction(TransactionMode.ReadOnly)]
     [Regeneration(RegenerationOption.Manual)]
     public class Cmd_RebarCheck : IExternalCommand
@@ -301,15 +317,43 @@ namespace DevelopmentTools.Commands
                 catch { path = null; }
 
                 var ids = checker.Issues.SelectMany(i => i.Ids).Distinct().ToList();
-                var td = new TaskDialog("鋼筋檢核")
+                SavingOptions options = RebarSavingOptionsStore.Load();
+                while (true)
                 {
-                    MainInstruction = ids.Count == 0 ? $"{scope}：沒有發現問題" : $"{scope}：發現 {checker.Issues.Count} 項需要確認",
-                    MainContent = checker.Summary(12) + $"\n（{sw.Elapsed.TotalSeconds:0.0} 秒）",
-                    FooterText = path != null ? "報告：" + path : null
-                };
-                if (ids.Count > 0) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, $"選取有問題的鋼筋（{ids.Count}）");
-                td.CommonButtons = TaskDialogCommonButtons.Close;
-                if (td.Show() == TaskDialogResult.CommandLink1) uiDoc.Selection.SetElementIds(ids);
+                    SavingResult saving = null;
+                    string savingError = null;
+                    try { saving = RebarSavingReport.Analyze(doc, rebars, options); }
+                    catch (Exception ex) { savingError = ex.Message; FastRebarLogBridge.Write("減料估算失敗：" + ex); }
+                    string cutListPath = saving != null && saving.Sizes.Count > 0 ? RebarSavingReport.WriteCsv(saving, doc.Title, "下料單") : null;
+
+                    string content = checker.Summary(12) + $"\n（{sw.Elapsed.TotalSeconds:0.0} 秒）\n\n【減料估算】\n" +
+                                     (saving != null ? RebarSavingReport.Summary(saving, 6) : "無法計算：" + savingError);
+                    var td = new TaskDialog("鋼筋檢核")
+                    {
+                        MainInstruction = ids.Count == 0 ? $"{scope}：沒有發現問題" : $"{scope}：發現 {checker.Issues.Count} 項需要確認",
+                        MainContent = content,
+                        FooterText = string.Join("\n", new[] { path != null ? "報告：" + path : null, cutListPath != null ? "下料單：" + cutListPath : null }.Where(x => x != null))
+                    };
+                    if (ids.Count > 0) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, $"選取有問題的鋼筋（{ids.Count}）");
+                    if (cutListPath != null) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "開啟下料單");
+                    td.AddCommandLink(TaskDialogCommandLinkId.CommandLink3, "調整減料參數並重算", "定尺長度、搭接倍數、刀口損耗、可回收餘料下限");
+                    td.CommonButtons = TaskDialogCommonButtons.Close;
+                    TaskDialogResult res = td.Show();
+                    if (res == TaskDialogResult.CommandLink1) uiDoc.Selection.SetElementIds(ids);
+                    else if (res == TaskDialogResult.CommandLink2) RebarSavingReport.Open(cutListPath);
+                    else if (res == TaskDialogResult.CommandLink3)
+                    {
+                        var win = new RebarSavingOptionsWindow(options);
+                        new System.Windows.Interop.WindowInteropHelper(win).Owner = commandData.Application.MainWindowHandle;
+                        if (win.ShowDialog() == true && win.Options != null)
+                        {
+                            options = win.Options;
+                            RebarSavingOptionsStore.Save(options);
+                        }
+                        continue;
+                    }
+                    break;
+                }
                 return Result.Succeeded;
             }
             catch (Autodesk.Revit.Exceptions.OperationCanceledException)
