@@ -46,6 +46,11 @@ Source: "..\..\DevelopmentTools.Addin\bin\Release\net48\Agents\*"; DestDir: "{ap
 Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\DevelopmentTools.Updater.exe"; DestDir: "{app}\Updater"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\*.dll"; DestDir: "{app}\Updater"; Flags: ignoreversion
 Source: "..\..\DevelopmentTools.Updater\bin\Release\net48\DevelopmentTools.Updater.exe.config"; DestDir: "{app}\Updater"; Flags: ignoreversion
+Source: "..\..\dist\mcp-runtime\*"; DestDir: "{app}\App\MCP"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\setup-mcp-clients.ps1"; DestDir: "{app}"; Flags: ignoreversion
+
+[Run]
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\setup-mcp-clients.ps1"" -InstallRoot ""{app}"""; Flags: runhidden waituntilterminated; StatusMsg: "偵測並設定 MCP 客戶端..."
 
 [Code]
 const

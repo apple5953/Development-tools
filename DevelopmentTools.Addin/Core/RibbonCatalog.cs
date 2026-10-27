@@ -124,12 +124,6 @@ namespace DevelopmentTools.Core
                         Btn("AIAssistant", C + "Cmd_AIAssistant", "AI 模型分析", "🤖", "#6E40C9"),
                         Btn("HotAgentCenter", C + "Cmd_HotAgentCenter", "Agent 中心", "⚡", "#7D3C98",
                             "載入經核准與 SHA-256 驗證的獨立 Agent Worker；更新 Worker 後不需關閉 Revit。"),
-                        new ButtonDef
-                        {
-                            Name = "BEAIQueryStatus", ClassName = typeof(BEAI.QueryHost.Commands.ShowStatusCommand).FullName,
-                            AssemblyOverride = () => typeof(BEAI.QueryHost.Commands.ShowStatusCommand).Assembly.Location,
-                            Text = "AI 查詢狀態", Tip = "確認唯讀模型查詢服務與目前模型是否可供 ChatGPT 使用", Emoji = "✓", Bg = "#18864B"
-                        },
                         Sep(),
                         Btn("GoogleLogin", C + "LoginCommand", "Google 登入", "🔑", "#4285F4"),
                         Btn("SystemFeedback", C + "FeedbackCommand", "問題與反饋", "💬", "#34A853"),
@@ -139,65 +133,31 @@ namespace DevelopmentTools.Core
                         Btn("LanguageEN", C + "Cmd_LanguageEN", "English", "EN", "#3498DB"),
                         Btn("LanguageJA", C + "Cmd_LanguageJA", "日本語", "日", "#3498DB"))),
 
-                    // ═════════════ BIM MCP：AI 助理連接 Revit（另一個外掛 Horizun.Revit.dll 的命令；沒安裝就不顯示） ═════════════
-                    One(Menu("CatBimMcp", "BIM MCP", "🔌", "#18864B", "AI 助理（Claude、Codex 等）操作 Revit 的連接狀態、權限與紀錄",
-                        Mcp("McpBridgeStatus", "BridgeStatusCommand", "連線狀態", "✓", "#18864B", "AI 助理能否操作這個 Revit、BIM MCP 版本與紀錄檔位置。遇到問題先看這裡。"),
-                        Mcp("McpOpenHub", "OpenHubCommand", "開啟 BIM MCP 網站", "🌐", "#2471A3", "在瀏覽器開啟 BIM MCP：模型稽核、族群標準化、交付品質管控等現成工作流程。"),
+                    // ═════════════ BIM MCP：內建 Reality Bridge，隨 RTS 一起部署 ═════════════
+                    One(Menu("CatBimMcp", "BIM MCP", "🔌", "#18864B", "透過內建唯讀 Reality Bridge，讓 Codex、Claude 等本機 AI Client 安全查詢 Revit",
+                        Bridge("McpBridgeStatus", typeof(BEAI.QueryHost.Commands.ShowStatusCommand), "連線狀態", "✓", "#18864B", "確認 Reality Bridge、目前模型、背景處理器與本機 MCP 查詢服務狀態。"),
+                        Bridge("McpStartBridge", typeof(BEAI.QueryHost.Commands.StartServerCommand), "啟動 Bridge", "▶", "#2471A3", "啟動只綁定 127.0.0.1 的 Reality Bridge 唯讀查詢服務。"),
+                        Bridge("McpStopBridge", typeof(BEAI.QueryHost.Commands.StopServerCommand), "停止 Bridge", "■", "#C0392B", "停止 Reality Bridge 本機查詢服務；不影響 RTS 其他功能。"),
                         Sep(),
-                        Mcp("McpPause", "PauseMcpCommand", "暫停／恢復助理", "⏸", "#C0392B", "暫停後助理不能操作 Revit；再按一次恢復。"),
-                        Mcp("McpBimMode", "BimModeCommand", "助理可以做什麼", "🛡", "#6C3483", "設定助理的權限：只能查看、可修改開啟中的模型，或可匯出與開關文件。"),
-                        Mcp("McpCentralProtection", "CentralProtectionCommand", "保護共用模型", "🔒", "#7B241C", "啟用後，工作共用（中央檔）模型只能被助理查看。"),
-                        Mcp("McpSyncCentral", "SyncCentralPermissionCommand", "允許與中央檔同步", "⇅", "#1F618D", "是否允許助理執行「與中央檔同步」。"),
-                        Mcp("McpPython", "PythonPermissionCommand", "Python 權限", "🐍", "#2C3E50", "是否允許助理在 Revit 中執行 Python。"),
-                        Sep(),
-                        Mcp("McpAuditHistory", "AuditHistoryCommand", "助理做了什麼", "📜", "#AF601A", "查看助理的變更紀錄，並可復原 BIM MCP 的變更。"),
-                        Mcp("McpOperationsPane", "Ui.ShowOperationsPaneCommand", "操作窗格", "📋", "#1A5276", "開啟操作窗格：佇列、已套用的動作與變更內容。"),
-                        Mcp("McpAdvanced", "AdvancedOptionsCommand", "進階選項", "⚙", "#7F8C8D", "BIM MCP 進階選項。")))),
+                        Bridge("McpReloadRules", typeof(BEAI.QueryHost.Commands.ReloadRulesCommand), "重新載入規則", "↻", "#6C3483", "重新載入已核准的 Reality Bridge 查詢規則；失敗時保留上一份可用規則。"),
+                        Bridge("McpRestartWorker", typeof(BEAI.QueryHost.Commands.RestartWorkerCommand), "重啟背景處理器", "⚙", "#AF601A", "重新啟動內建唯讀背景處理器，並保留安全回復機制。")))),
             };
             AddGeneratedModules(panels);
             return panels;
         }
 
-        // ───── 外部外掛：BIM MCP ─────
-        public const string BimMcpTabTitle = "BIM MCP";
-        public static bool BimMcpMerged { get; private set; }
-
-        /// <summary>BIM MCP 外掛主程式位置；沒安裝時回傳 null（選單就不建立）。</summary>
-        public static string BimMcpAssembly()
-        {
-            try
+        // ───── 內建 Reality Bridge：命令隨 RTS 主外掛一起部署，不依賴第二套 Revit Bridge ─────
+        private static ButtonDef Bridge(string name, Type commandType, string text, string emoji, string bg, string tip)
+            => new ButtonDef
             {
-                var loaded = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == "Horizun.Revit");
-                if (loaded != null && !string.IsNullOrEmpty(loaded.Location) && File.Exists(loaded.Location)) return loaded.Location;
-                string p = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "Autodesk", "Revit", "Addins", "2024", "BIM-MCP", "Horizun.Revit.dll");
-                return File.Exists(p) ? p : null;
-            }
-            catch { return null; }
-        }
-
-        private static ButtonDef Mcp(string name, string cls, string text, string emoji, string bg, string tip)
-            => new ButtonDef { Name = name, ClassName = "Horizun.Revit." + cls, AssemblyOverride = BimMcpAssembly, Text = text, Emoji = emoji, Bg = bg, Tip = tip };
-
-        /// <summary>
-        /// BIM MCP 已併入 RTS 頁籤時，把它自己的「BIM MCP」頁籤隱藏（只是不顯示，外掛照常運作）。
-        /// 在所有外掛載入完成後（ApplicationInitialized）呼叫。
-        /// </summary>
-        public static void HideMergedTabs()
-        {
-            if (!BimMcpMerged) return;
-            try
-            {
-                foreach (var tab in Autodesk.Windows.ComponentManager.Ribbon.Tabs)
-                {
-                    if (tab == null || TabKeys.ContainsKey(tab.Id ?? "")) continue;
-                    if (string.Equals((tab.Title ?? "").Trim(), BimMcpTabTitle, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals((tab.Id ?? "").Trim(), BimMcpTabTitle, StringComparison.OrdinalIgnoreCase))
-                        tab.IsVisible = false;
-                }
-            }
-            catch { }
-        }
+                Name = name,
+                ClassName = commandType.FullName,
+                AssemblyOverride = () => commandType.Assembly.Location,
+                Text = text,
+                Emoji = emoji,
+                Bg = bg,
+                Tip = tip
+            };
 
         private static ButtonDef WithIcon(this ButtonDef b, string file) { b.IconFile = file; return b; }
 
@@ -267,7 +227,6 @@ namespace DevelopmentTools.Core
                                     log?.Invoke($"略過選單 {b.Name}：相關外掛未安裝。");
                                     continue;
                                 }
-                                if (b.Name == "CatBimMcp") BimMcpMerged = true;
                                 var data = new PulldownButtonData(b.Name, Label(lm, b));
                                 Decorate(data, b, lm, large: true);
                                 var pd = panel.AddItem(data) as PulldownButton;

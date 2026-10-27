@@ -491,9 +491,6 @@ namespace DevelopmentTools
                     }
                     catch { }
 
-                    // BIM MCP 已併入 RTS 頁籤的下拉選單，隱藏它自己的頁籤（外掛照常運作）
-                    RibbonCatalog.HideMergedTabs();
-
                     // 每次 Revit 啟動就檢查更新，不再等使用者點特定按鈕
                     TriggerSilentUpdateCheck();
                 };
