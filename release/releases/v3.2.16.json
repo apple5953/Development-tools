@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "version": "3.2.16",
+  "sourceSha": "e1b32d9afdb4e4274131c65d97b9bd239bc5148f",
+  "runId": "40472602210",
+  "artifactName": "development-tools-candidate-v3.2.16-e1b32d9",
+  "zipName": "DevelopmentTools_v3.2.16.zip",
+  "zipSha256": "680236426bcd65c9ea611341191fb7f434fa89f7e33bf6dee73419b3c117dcab",
+  "installerName": "DevelopmentTools_Setup.exe",
+  "installerSha256": "966310b6c7f23f226eacbf3d4b7b829c1b34e331dec3d971cfbae828b0d5f922",
+  "generatedAtUtc": "2026-10-27T08:30:27.528231Z",
+  "revitVersions": [
+    "2024"
+  ],
+  "modules": [
+    {
+      "id": "example-agent",
+      "version": "0.1.0",
+      "assembly": "ExampleAgent.dll",
+      "toolId": "DT_ExampleAgent"
+    },
+    {
+      "id": "rfi-deck-agent",
+      "version": "0.3.1",
+      "assembly": "RfiDeckAgent.dll",
+      "toolId": "DT_RfiDeckAgent"
+    }
+  ],
+  "releaseNotes": "RTS 3.2.16 將 BIM MCP 直接整合至既有 BEAI Reality Bridge；新增 RTS Ribbon 的 Bridge 狀態、啟停、規則重載與背景處理器控制；發行包內含 MCP stdio runtime，並可設定既有 Codex、Claude 與 Antigravity Client。維持 loopback-only、ExternalEvent 與 V0.1 唯讀安全邊界。",
+  "approvedAtUtc": "2026-10-27T08:57:55.698641Z"
+}
