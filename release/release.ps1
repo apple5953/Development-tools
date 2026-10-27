@@ -140,6 +140,23 @@ if (Test-Path (Join-Path $releaseDir "Agents")) {
 # Copy install.bat to ZIP
 Copy-Item -LiteralPath (Join-Path $parentRoot "installer\install.bat") -Destination $zipTempDir
 
+# Package the existing Reality Bridge MCP adapter and its production dependencies.
+$mcpSource = Join-Path $parentRoot 'BEAI\MCP'
+$mcpStage = Join-Path $parentRoot 'dist\mcp-runtime'
+& npm.cmd ci --prefix $mcpSource
+if ($LASTEXITCODE -ne 0) { throw 'MCP npm ci failed.' }
+& npm.cmd run build --prefix $mcpSource
+if ($LASTEXITCODE -ne 0) { throw 'MCP build failed.' }
+if (Test-Path -LiteralPath $mcpStage) { Remove-Item -LiteralPath $mcpStage -Recurse -Force }
+New-Item -ItemType Directory -Path (Join-Path $mcpStage 'dist') -Force | Out-Null
+Copy-Item -Path (Join-Path $mcpSource 'dist\*') -Destination (Join-Path $mcpStage 'dist') -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $mcpSource 'package.json') -Destination $mcpStage
+Copy-Item -LiteralPath (Join-Path $mcpSource 'package-lock.json') -Destination $mcpStage
+& npm.cmd ci --omit=dev --prefix $mcpStage
+if ($LASTEXITCODE -ne 0) { throw 'MCP production dependency install failed.' }
+Copy-Item -LiteralPath $mcpStage -Destination (Join-Path $zipTempDir 'MCP') -Recurse
+Copy-Item -LiteralPath (Join-Path $parentRoot 'installer\setup-mcp-clients.ps1') -Destination $zipTempDir
+
 # Generate version.json
 $versionJson = @{
     "app_id" = "development_tools"

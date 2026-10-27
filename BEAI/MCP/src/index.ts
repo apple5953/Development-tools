@@ -2,6 +2,16 @@ import { createServer } from "node:http";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { localhostHostValidation, localhostOriginValidation, toNodeHandler } from "@modelcontextprotocol/node";
 import { createBeaiServer } from "./server.js";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
+
+if (process.argv.includes("--stdio")) {
+  // Client processes own this transport. Keep stdout exclusively for MCP frames.
+  console.log = (...args) => console.error(...args);
+  console.info = (...args) => console.error(...args);
+  serveStdio(() => createBeaiServer(), {
+    onerror: (error) => console.error(JSON.stringify({ level: "ERROR", source: "stdio", message: error.message })),
+  });
+} else {
 
 const host = "127.0.0.1";
 const port = Number(process.env.BEAI_MCP_PORT ?? 3000);
@@ -42,4 +52,5 @@ function shutdown() {
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+}
 

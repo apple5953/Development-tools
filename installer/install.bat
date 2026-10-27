@@ -82,6 +82,10 @@ if exist "Config" (
 if exist "Runtime" (
     xcopy /Y /E /Q "Runtime\*" "%TARGET_DIR%\App\Runtime\" >nul
 )
+if exist "MCP\dist\index.js" (
+    if not exist "%TARGET_DIR%\App\MCP" mkdir "%TARGET_DIR%\App\MCP"
+    xcopy /Y /E /Q "MCP\*" "%TARGET_DIR%\App\MCP\" >nul
+)
 
 echo   Cleaning conflicting system DLLs from App folder...
 del /F /Q "%TARGET_DIR%\App\System.Buffers.dll" >nul 2>nul
@@ -156,6 +160,12 @@ if exist "%TARGET_DIR%\Updater\RoomTileSystem.Updater.exe" (
 )
 
 del "%TARGET_DIR%\%ADDIN_NAME%"
+
+if exist "setup-mcp-clients.ps1" if exist "%TARGET_DIR%\App\MCP\dist\index.js" (
+    echo 5. Detecting and registering MCP clients...
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "setup-mcp-clients.ps1" -InstallRoot "%TARGET_DIR%"
+    if errorlevel 1 echo [WARNING] MCP client setup incomplete. See "%TARGET_DIR%\Logs\mcp-client-setup.log".
+)
 
 echo ====================================================
 echo   Installation complete! Please open Revit to start using the plugin.
