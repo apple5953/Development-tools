@@ -158,6 +158,8 @@ internal static class CuttingOptimizerTests
     {
         Eq(0.994, RebarWeights.KgPerM(12.7), "D13");
         Eq(3.98, RebarWeights.KgPerM(25.0), "D25（25mm 族群）");
+        Eq(15.5, RebarWeights.KgPerM(50.2), "D50");
+        Eq(20.2, RebarWeights.KgPerM(57.3), "D57");
         Eq(7850 * Math.PI * 20 * 20 / 4 / 1e6, RebarWeights.KgPerM(20), "非標準直徑");
     }
 
