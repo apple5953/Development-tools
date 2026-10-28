@@ -127,7 +127,7 @@ procedure CleanupLegacyBeaiManifests(RootPath: string);
 var
   FindRec: TFindRec;
   ManifestPath: string;
-  ManifestContent: string;
+  ManifestContent: AnsiString;
 begin
   if not DirExists(RootPath) then
     Exit;
