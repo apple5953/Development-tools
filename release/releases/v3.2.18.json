@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "version": "3.2.18",
+  "sourceSha": "b7c8ebca1fdef727ac4e6095a361af20c3166fce",
+  "runId": "40678853206",
+  "artifactName": "development-tools-candidate-v3.2.18-b7c8ebc",
+  "zipName": "DevelopmentTools_v3.2.18.zip",
+  "zipSha256": "a6e0ecd1bb934679977bdeebe15f2b9c27486f08eecf023ea686abf0b94afc89",
+  "installerName": "DevelopmentTools_Setup.exe",
+  "installerSha256": "83e02cae13763eace0b0a1b161f7b781a178e1b3ef37f544ae15543d11fb1697",
+  "generatedAtUtc": "2026-10-28T11:19:56.883689Z",
+  "revitVersions": [
+    "2024"
+  ],
+  "modules": [
+    {
+      "id": "example-agent",
+      "version": "0.1.0",
+      "assembly": "ExampleAgent.dll",
+      "toolId": "DT_ExampleAgent"
+    },
+    {
+      "id": "rfi-deck-agent",
+      "version": "0.3.1",
+      "assembly": "RfiDeckAgent.dll",
+      "toolId": "DT_RfiDeckAgent"
+    }
+  ],
+  "releaseNotes": "修正舊版 BEAI Runtime Revit 註冊殘留造成的 TypeLoadException；更新時自動清理錯誤 DevelopmentTools.Addin.App manifest，並重建 Revit 2024 正確註冊。",
+  "approvedAtUtc": "2026-10-28T11:23:31.101660Z"
+}
