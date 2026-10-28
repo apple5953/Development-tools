@@ -129,6 +129,7 @@ echo ^</RevitAddIns^>
 ) > "%TARGET_DIR%\%ADDIN_NAME%"
 
 set REVIT_ADDINS_BASE=%APPDATA%\Autodesk\Revit\Addins
+set REVIT_COMMON_ADDINS_BASE=%ProgramData%\Autodesk\Revit\Addins
 rem The add-in is built for Revit 2024 (.NET Framework 4.8). Revit 2025+ runs on .NET 8 and cannot load it,
 rem so remove any registration left there by older installers.
 for %%V in (2025 2026) do (
@@ -138,6 +139,15 @@ for %%V in (2025 2026) do (
     )
 )
 for %%V in (2024) do (
+    rem Remove legacy BEAI Runtime manifests regardless of their old filename or registration scope.
+    for %%R in ("%REVIT_ADDINS_BASE%\%%V" "%REVIT_COMMON_ADDINS_BASE%\%%V") do (
+        if exist "%%~R" (
+            for %%F in ("%%~R\*.addin") do (
+                findstr /I /C:"DevelopmentTools.Addin.App" /C:"BEAI Runtime (DevelopmentTools)" "%%~fF" >nul 2>nul
+                if not errorlevel 1 del /F "%%~fF" >nul 2>nul
+            )
+        )
+    )
     if exist "%REVIT_ADDINS_BASE%\%%V" (
         copy /Y "%TARGET_DIR%\%ADDIN_NAME%" "%REVIT_ADDINS_BASE%\%%V\" >nul
         echo   [Registered] Revit %%V Addin
