@@ -234,6 +234,11 @@ namespace DevelopmentTools.Updater
                     }
                 }
 
+                // 5.2 每次更新都修復 Revit 註冊。舊版曾以 DevelopmentTools.Addin.App
+                // 註冊獨立的「BEAI Runtime」，即使原地更新 DLL，殘留 manifest 仍會讓 Revit
+                // 在啟動時拋出 TypeLoadException。
+                RepairAddinRegistrations(info.install_dir);
+
                 // 6. 清理 Staging 壓縮包與 pending_update.json
                 Console.WriteLine("Cleaning up temporary update configuration...");
                 if (File.Exists(info.zip_path)) File.Delete(info.zip_path);
@@ -506,6 +511,106 @@ namespace DevelopmentTools.Updater
                     if (match) yield return file;
                 }
             }
+        }
+
+        private static readonly Regex LegacyBeaiManifestPattern =
+            new Regex(@"<FullClassName>\s*DevelopmentTools\.Addin\.App\s*</FullClassName>|<Name>\s*BEAI Runtime \(DevelopmentTools\)\s*</Name>", RegexOptions.IgnoreCase);
+
+        private static void RepairAddinRegistrations(string installDir)
+        {
+            string userRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Autodesk", "Revit", "Addins");
+            string commonRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "Autodesk", "Revit", "Addins");
+
+            foreach (string root in new[] { userRoot, commonRoot })
+            {
+                string[] manifests;
+                try
+                {
+                    manifests = Directory.Exists(root)
+                        ? Directory.GetFiles(root, "*.addin", SearchOption.AllDirectories)
+                        : Array.Empty<string>();
+                }
+                catch (Exception ex)
+                {
+                    LogError("Warning: could not inspect Revit add-in registrations under " + root, ex);
+                    continue;
+                }
+
+                foreach (string manifest in manifests)
+                {
+                    try
+                    {
+                        string xml = File.ReadAllText(manifest);
+                        bool legacyBeai = LegacyBeaiManifestPattern.IsMatch(xml)
+                            || string.Equals(Path.GetFileName(manifest), "BEAI.QueryHost.addin", StringComparison.OrdinalIgnoreCase);
+                        bool duplicateCommonRegistration = SamePath(root, commonRoot)
+                            && AddinAssemblyPattern.IsMatch(xml);
+                        if (!legacyBeai && !duplicateCommonRegistration) continue;
+
+                        File.Delete(manifest);
+                        Console.WriteLine("Removed stale Revit add-in registration: " + manifest);
+                    }
+                    catch (Exception ex)
+                    {
+                        // ProgramData 通常需要系統管理員權限。不要因此回滾已完成的安全更新，
+                        // 但必須留下可供 IT 排查的明確記錄。
+                        LogError("Warning: could not remove stale Revit add-in registration: " + manifest, ex);
+                    }
+                }
+            }
+
+            foreach (string unsupportedVersion in new[] { "2025", "2026", "2027" })
+            {
+                TryDeleteManifest(Path.Combine(userRoot, unsupportedVersion, "DevelopmentTools.addin"));
+            }
+
+            string revit2024Dir = Path.Combine(userRoot, "2024");
+            try
+            {
+                Directory.CreateDirectory(revit2024Dir);
+                string canonicalPath = Path.Combine(revit2024Dir, "DevelopmentTools.addin");
+                File.WriteAllText(
+                    canonicalPath,
+                    BuildCanonicalAddinManifest(Path.Combine(installDir, "DevelopmentTools.Addin.dll")),
+                    new UTF8Encoding(false));
+                Console.WriteLine("Repaired Revit 2024 add-in registration: " + canonicalPath);
+            }
+            catch (Exception ex)
+            {
+                LogError("Warning: could not repair the Revit 2024 add-in registration. Re-run DevelopmentTools_Setup.exe.", ex);
+            }
+        }
+
+        private static void TryDeleteManifest(string path)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                LogError("Warning: could not remove unsupported Revit registration: " + path, ex);
+            }
+        }
+
+        internal static string BuildCanonicalAddinManifest(string assemblyPath)
+        {
+            string escaped = System.Security.SecurityElement.Escape(assemblyPath) ?? assemblyPath;
+            return "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n"
+                + "<RevitAddIns>\r\n"
+                + "  <AddIn Type=\"Application\">\r\n"
+                + "    <Name>Development Tools</Name>\r\n"
+                + "    <Assembly>" + escaped + "</Assembly>\r\n"
+                + "    <FullClassName>DevelopmentTools.App</FullClassName>\r\n"
+                + "    <ClientId>c2d5d85c-4d33-4f9e-a89e-21ef1ea3b361</ClientId>\r\n"
+                + "    <VendorId>RoomTileSystem</VendorId>\r\n"
+                + "    <VendorDescription>Room Tile System v3</VendorDescription>\r\n"
+                + "  </AddIn>\r\n"
+                + "</RevitAddIns>\r\n";
         }
 
         private static bool CanRewrite(string path)

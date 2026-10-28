@@ -123,6 +123,40 @@ begin
   end;
 end;
 
+procedure CleanupLegacyBeaiManifests(RootPath: string);
+var
+  FindRec: TFindRec;
+  ManifestPath: string;
+  ManifestContent: string;
+begin
+  if not DirExists(RootPath) then
+    Exit;
+
+  if FindFirst(RootPath + '\*.addin', FindRec) then
+  begin
+    try
+      repeat
+        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) = 0 then
+        begin
+          ManifestPath := RootPath + '\' + FindRec.Name;
+          if LoadStringFromFile(ManifestPath, ManifestContent) and
+             ((Pos('DevelopmentTools.Addin.App', ManifestContent) > 0) or
+              (Pos('BEAI Runtime (DevelopmentTools)', ManifestContent) > 0) or
+              (CompareText(FindRec.Name, 'BEAI.QueryHost.addin') = 0)) then
+          begin
+            if DeleteFile(ManifestPath) then
+              Log('Removed stale BEAI Runtime registration: ' + ManifestPath)
+            else
+              Log('WARNING: Unable to remove stale BEAI Runtime registration: ' + ManifestPath);
+          end;
+        end;
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   AddinContent: string;
@@ -155,6 +189,9 @@ begin
     for I := 0 to 2 do
     begin
       RevitVersion := RevitVersions[I];
+
+      CleanupLegacyBeaiManifests(ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersion);
+      CleanupLegacyBeaiManifests(ExpandConstant('{commonappdata}') + '\Autodesk\Revit\Addins\' + RevitVersion);
       
       // 清理 ProgramData 殘留
       OldAddinPath := 'C:\ProgramData\Autodesk\Revit\Addins\' + RevitVersion + '\RoomTileSystem.addin';
