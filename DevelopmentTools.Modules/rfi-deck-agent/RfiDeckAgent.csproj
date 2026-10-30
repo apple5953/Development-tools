@@ -10,7 +10,8 @@
     <Reference Include="System.Web.Extensions" />
   </ItemGroup>
   <ItemGroup>
-    <!-- 查圖規則內嵌在 DLL：模組更新＝規則更新。執行時由 src/ScriptStore.cs 寫到 %LOCALAPPDATA%\DT_AIAgent\py\ -->
-    <EmbeddedResource Include="py\seek_lookup.py" LogicalName="seek_lookup.py" />
+    <!-- Python 程式（查圖、產生簡報、問題庫）全部內嵌在 DLL：模組更新＝程式更新，新同事不必另外拿 AI AGENT 資料夾。
+         執行時由 src/ScriptStore.cs 寫到 <RTS 資料位置>\DT_AIAgent\py\ -->
+    <EmbeddedResource Include="py\*.py" LogicalName="%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

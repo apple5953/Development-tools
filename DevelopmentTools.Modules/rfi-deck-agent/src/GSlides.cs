@@ -54,6 +54,28 @@ namespace RfiDeckAgent.Core
             return new GsConfig();
         }
 
+        public const string BundleFile = "共用簡報連線.json";
+
+        /// <summary>圖說包裡附的 Google 共用簡報連線（網址＋密鑰）：自己還沒設定時帶入</summary>
+        public static bool ImportFromBundle(string dir)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(dir)) return false;
+                string f = Path.Combine(dir, BundleFile);
+                if (!File.Exists(f)) return false;
+                GsConfig cur = Load();
+                if (cur.Url.Trim().Length > 0 && cur.Secret.Trim().Length > 0) return false;
+                GsConfig b = Json.Deserialize<GsConfig>(File.ReadAllText(f, Encoding.UTF8));
+                if (b == null || b.Url.Trim().Length == 0 || b.Secret.Trim().Length == 0) return false;
+                cur.Url = b.Url; cur.Secret = b.Secret;
+                if (b.DeckUrl.Trim().Length > 0) cur.DeckUrl = b.DeckUrl;
+                Save(cur);
+                return true;
+            }
+            catch { return false; }
+        }
+
         public static void Save(GsConfig c)
         {
             File.WriteAllText(ConfigFile, Json.Serialize(c), new UTF8Encoding(false));
@@ -61,7 +83,13 @@ namespace RfiDeckAgent.Core
 
         public static bool Configured
         {
-            get { GsConfig c = Load(); return c.Url.Trim().Length > 0 && c.Secret.Trim().Length > 0; }
+            get
+            {
+                GsConfig c = Load();
+                if (c.Url.Trim().Length > 0 && c.Secret.Trim().Length > 0) return true;
+                if (ImportFromBundle(Config.DrawingDir)) return true;
+                return false;
+            }
         }
 
         // ------------------------------------------------------------ HTTP
@@ -138,9 +166,9 @@ namespace RfiDeckAgent.Core
         /// <summary>把收件匣的一筆送到共用簡報；成功時在資料夾寫 _gslides.json</summary>
         public static Dictionary<string, object> Send(string folder, RfiDraft d)
         {
+            if (!Configured)
+                return Fail("還沒設定 Google 簡報連線（按「設定」填網址與密鑰，或選擇附有連線檔的圖說包）。");
             GsConfig c = Load();
-            if (c.Url.Trim().Length == 0 || c.Secret.Trim().Length == 0)
-                return Fail("還沒設定 Google 簡報連線（按「設定」填網址與密鑰）。");
             Dictionary<string, object> item = new Dictionary<string, object>();
             item["uid"] = Path.GetFileName(folder);
             item["category"] = d.Category;
@@ -203,6 +231,7 @@ namespace RfiDeckAgent.Core
         {
             if (string.IsNullOrEmpty(url))
             {
+                bool dummy = Configured;      // 自己沒設定時先從圖說包帶入
                 GsConfig c = Load();
                 url = c.DeckUrl;
             }

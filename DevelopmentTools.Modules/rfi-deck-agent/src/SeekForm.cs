@@ -164,8 +164,15 @@ namespace RfiDeckAgent.Core
         /// <summary>執行 seek_lookup.py，回傳結果（錯誤時含 error）</summary>
         public static Dictionary<string, object> Run(RfiDraft d, string building)
         {
-            // 查圖規則內嵌在外掛裡（外掛更新即更新規則）；--root 告訴它 AI AGENT 資料夾（索引、PDF、專案設定所在）
+            // 查圖規則內嵌在外掛裡（外掛更新即更新規則）；--root 工作資料夾、--dwg 圖說包（索引、PDF、專案設定）
             string script = ScriptStore.Resolve("seek_lookup.py");
+            if (!PyRunner.HasPython)
+            {
+                Dictionary<string, object> e1 = new Dictionary<string, object>();
+                e1["ok"] = false;
+                e1["error"] = "這台電腦還沒有 Python。";
+                return e1;
+            }
             string pkg = PyRunner.EnsureSeekPackages();
             if (pkg != null)
             {
@@ -178,6 +185,7 @@ namespace RfiDeckAgent.Core
             List<string> a = new List<string>();
             a.Add(PyRunner.Q(script));
             a.Add("--root " + PyRunner.Q(Config.Root));
+            if (Config.DrawingDir.Length > 0) a.Add("--dwg " + PyRunner.Q(Config.DrawingDir));
             a.Add("--out " + PyRunner.Q(outDir));
             if (!string.IsNullOrEmpty(building)) a.Add("--building " + PyRunner.Q(building));
             if (!string.IsNullOrEmpty(d.Level)) a.Add("--level " + PyRunner.Q(d.Level));

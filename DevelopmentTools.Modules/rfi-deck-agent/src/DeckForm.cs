@@ -319,12 +319,14 @@ namespace RfiDeckAgent.Core
         {
             List<string> sel = Checked();
             if (sel.Count == 0) return;
-            string script = Path.Combine(PyRunner.ScriptDir, "revit_deck.py");
+            // 產生簡報的程式內嵌在外掛裡；工作資料夾（收件匣、問題庫、成果）以 --root 傳入
+            string script = ScriptStore.Resolve("revit_deck.py");
             if (!File.Exists(script))
             {
-                MessageBox.Show(this, "找不到 " + script + "\n請到「設定」確認 AI AGENT 資料夾位置。", Text);
+                MessageBox.Show(this, "找不到產生簡報的程式：" + script, Text);
                 return;
             }
+            if (!PythonSetupForm.EnsureInteractive(this)) return;
             UseWaitCursor = true;
             btnGo.Enabled = false;
             try
@@ -337,7 +339,7 @@ namespace RfiDeckAgent.Core
                     return;
                 }
                 Status(string.Format("產生簡報中（{0} 筆）…", sel.Count));
-                string args = PyRunner.Q(script) + " --items " + string.Join(" ", sel.Select(d => PyRunner.Q(Path.GetFileName(d))).ToArray()) +
+                string args = PyRunner.Q(script) + " --root " + PyRunner.Q(Config.Root) + " --items " + string.Join(" ", sel.Select(d => PyRunner.Q(Path.GetFileName(d))).ToArray()) +
                               " --title " + PyRunner.Q(txtTitle.Text.Trim()) + " --date " + PyRunner.Q(txtDate.Text.Trim()) +
                               (chkDb.Checked ? "" : " --no-db");
                 PyResult r = PyRunner.Run(args, 300000);
@@ -349,7 +351,7 @@ namespace RfiDeckAgent.Core
                     object o;
                     if (r.Result.TryGetValue("tids", out o) && o is System.Collections.ArrayList && ((System.Collections.ArrayList)o).Count > 0)
                         tids = "　追蹤編號：" + string.Join("、", ((System.Collections.ArrayList)o).Cast<object>().Select(x => x.ToString()).ToArray());
-                    Status("✔ 已產出：" + Path.GetFileName(pptx) + tids + "　（已排入 Canva 待上傳）");
+                    Status("✔ 已產出：" + Path.GetFileName(pptx) + tids);
                     if (chkOpen.Checked && File.Exists(pptx)) Process.Start(pptx);
                     Reload();
                 }

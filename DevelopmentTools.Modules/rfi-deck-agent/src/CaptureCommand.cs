@@ -29,12 +29,35 @@ namespace RfiDeckAgent.Core
                 return Result.Cancelled;
             }
             Document doc = uidoc.Document;
-            View view = uidoc.ActiveView;
-            if (view is ViewSchedule || view.ViewType == ViewType.ProjectBrowser || view.ViewType == ViewType.SystemBrowser)
+            // 專案瀏覽器有焦點時 ActiveView 是瀏覽器本身 → 改用最後一個繪圖視窗；另外看瀏覽器裡有沒有勾選視圖
+            View view = Capture.TargetView(uidoc);
+            List<View> browserViews = Capture.SelectedViews(uidoc);
+            bool captureActive = view != null;
+            if (browserViews.Count > 0)
             {
-                TaskDialog.Show("釋疑擷取", "請切換到 3D、平面、剖面或立面視圖再擷取。");
+                bool onlyActive = view != null && browserViews.Count == 1 && browserViews[0].Id == view.Id;
+                if (!onlyActive)
+                {
+                    TaskDialog ask = new TaskDialog("釋疑擷取");
+                    ask.MainInstruction = string.Format("專案瀏覽器裡選了 {0} 個視圖／圖紙／明細表", browserViews.Count);
+                    ask.MainContent = string.Join("、", browserViews.Take(6).Select(x => x.Name).ToArray()) + (browserViews.Count > 6 ? " 等" : "");
+                    ask.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "擷取這些視圖", "不用打開，直接匯出影像（明細表會畫成表格圖）");
+                    if (view != null)
+                        ask.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "只擷取目前畫面", view.Name);
+                    ask.CommonButtons = TaskDialogCommonButtons.Cancel;
+                    TaskDialogResult ar = ask.Show();
+                    if (ar == TaskDialogResult.Cancel) return Result.Cancelled;
+                    if (ar == TaskDialogResult.CommandLink1) captureActive = browserViews.Any(x => view != null && x.Id == view.Id);
+                    else browserViews.Clear();
+                }
+                else browserViews.Clear();
+            }
+            if (!captureActive && browserViews.Count == 0)
+            {
+                TaskDialog.Show("釋疑擷取", "請先打開要擷取的視圖，或在專案瀏覽器選取視圖／圖紙／明細表後再按擷取。");
                 return Result.Cancelled;
             }
+            if (view == null) view = browserViews[0];
 
             RfiDraft d = Inbox.LoadDraft();
             bool isNew = d == null;
@@ -107,19 +130,24 @@ namespace RfiDeckAgent.Core
             foreach (string s in c.ElementDescriptions) if (!d.Elements.Contains(s)) d.Elements.Add(s);
 
             // 截圖
-            string shotPath = Inbox.NewShotPath(d);
-            string got = null;
-            try { got = Capture.ActiveView(uidoc, shotPath); }
-            catch (Exception ex) { TaskDialog.Show("釋疑擷取", "截圖失敗：" + ex.Message); }
-            if (got != null)
+            List<string> failed = new List<string>();
+            if (captureActive)
             {
-                ShotInfo si = new ShotInfo();
-                si.File = Path.GetFileName(got);
-                si.View = view.Name;
-                si.Time = DateTime.Now.ToString("HH:mm:ss");
-                si.Caption = DefaultCaption(view);
-                d.Shots.Add(si);
+                string got = null;
+                try { got = Capture.CaptureView(uidoc, view, Inbox.NewShotPath(d), true); }
+                catch (Exception ex) { failed.Add(view.Name + "：" + ex.Message); }
+                if (got != null) AddShot(d, got, view);
             }
+            foreach (View bv in browserViews)
+            {
+                if (captureActive && bv.Id == view.Id) continue;       // 目前畫面已經抓過
+                string got = null;
+                try { got = Capture.CaptureView(uidoc, bv, Inbox.NewShotPath(d), false); }
+                catch (Exception ex) { failed.Add(bv.Name + "：" + ex.Message); }
+                if (got != null) AddShot(d, got, bv);
+                else if (failed.Count == 0 || !failed[failed.Count - 1].StartsWith(bv.Name)) failed.Add(bv.Name + "：無法匯出影像");
+            }
+            if (failed.Count > 0) TaskDialog.Show("釋疑擷取", "部分視圖沒有擷取成功：\n" + string.Join("\n", failed.ToArray()));
             string history = AutoAddDrawing(d);
             Inbox.SaveDraft(d);
 
@@ -173,6 +201,8 @@ namespace RfiDeckAgent.Core
             return Result.Succeeded;
         }
 
+        static bool askedDrawing, askedPython;      // 每次開 Revit 只問一次
+
         /// <summary>自動加入對照圖說：索引最相關、且已對到柱線的平面圖（每筆擷取只自動加一次）</summary>
         static string AutoAddDrawing(RfiDraft d)
         {
@@ -181,8 +211,21 @@ namespace RfiDeckAgent.Core
             {
                 if (string.IsNullOrEmpty(d.Grid)) return "";
                 bool already = d.Shots.Exists(s => s.View == "圖說(自動)");
-                string idx = Path.Combine(Config.Root, @"03_資料庫\圖說\圖說查找索引.db");
-                if (!File.Exists(idx) && !File.Exists(DtStorage.File(@"DT_AIAgent\seek.json", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DT_AIAgent\seek.json")))) return "";
+                // 圖說包：還沒選過就問一次（新同事第一次擷取時）；Python：沒有就跳安裝教學一次
+                IWin32Window owner = new RevitWindow(Process.GetCurrentProcess().MainWindowHandle);
+                if (Config.DrawingDir.Length == 0 &&
+                    !File.Exists(DtStorage.File(@"DT_AIAgent\seek.json", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DT_AIAgent\seek.json"))))
+                {
+                    if (askedDrawing) return "";
+                    askedDrawing = true;
+                    if (!Config.EnsureDrawingDir(owner, true)) return "";
+                }
+                if (!PyRunner.HasPython)
+                {
+                    if (askedPython) return "";
+                    askedPython = true;
+                    if (!PythonSetupForm.EnsureInteractive(owner)) return "";
+                }
                 Dictionary<string, object> r = SeekForm.Run(d, d.Building);
                 object ok, cs;
                 if (r == null || !r.TryGetValue("ok", out ok) || !(ok is bool) || !(bool)ok) return "";
@@ -232,17 +275,14 @@ namespace RfiDeckAgent.Core
             return DateTime.TryParse(d.CreatedAt, out t) && (DateTime.Now - t).TotalHours > 2;
         }
 
-        static string DefaultCaption(View v)
+        static void AddShot(RfiDraft d, string file, View v)
         {
-            switch (v.ViewType)
-            {
-                case ViewType.ThreeD: return "3D 透視圖";
-                case ViewType.FloorPlan: return "平面圖 - " + v.Name;
-                case ViewType.CeilingPlan: return "天花平面圖 - " + v.Name;
-                case ViewType.Section: return "剖面圖 - " + v.Name;
-                case ViewType.Elevation: return "立面圖 - " + v.Name;
-                default: return v.Name;
-            }
+            ShotInfo si = new ShotInfo();
+            si.File = Path.GetFileName(file);
+            si.View = v.Name;
+            si.Time = DateTime.Now.ToString("HH:mm:ss");
+            si.Caption = Capture.DefaultCaption(v);
+            d.Shots.Add(si);
         }
     }
 }

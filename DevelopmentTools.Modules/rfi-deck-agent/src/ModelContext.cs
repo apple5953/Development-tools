@@ -37,7 +37,7 @@ namespace RfiDeckAgent.Core
         public static ModelContext Collect(UIDocument uidoc)
         {
             Document doc = uidoc.Document;
-            View view = uidoc.ActiveView;
+            View view = Capture.TargetView(uidoc) ?? uidoc.ActiveView;      // 專案瀏覽器有焦點時取繪圖視窗
             ModelContext c = new ModelContext();
             c.ProjectTitle = doc.Title;
             c.ProjectPath = doc.PathName;
@@ -49,7 +49,7 @@ namespace RfiDeckAgent.Core
             foreach (ElementId id in uidoc.Selection.GetElementIds())
             {
                 Element e = doc.GetElement(id);
-                if (e == null) continue;
+                if (e == null || e is View) continue;              // 專案瀏覽器勾選的視圖不是問題元件
                 Group grp = e as Group;
                 if (grp != null)
                 {

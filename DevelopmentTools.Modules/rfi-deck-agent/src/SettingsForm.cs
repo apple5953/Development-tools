@@ -1,4 +1,4 @@
-// 設定：AI AGENT 資料夾＋Google 簡報連線。C# 5。
+// 設定：工作資料夾、圖說包、Python＋Google 簡報連線。C# 5。
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -12,6 +12,8 @@ namespace RfiDeckAgent.Core
     public class SettingsForm : Form
     {
         readonly TextBox txtRoot = new TextBox();
+        readonly TextBox txtDwg = new TextBox();
+        readonly TextBox txtPy = new TextBox();
         readonly TextBox txtUrl = new TextBox();
         readonly TextBox txtSecret = new TextBox();
         readonly TextBox txtDeck = new TextBox();
@@ -23,7 +25,7 @@ namespace RfiDeckAgent.Core
             Text = "設定 - DT AI AGENT";
             Font = new Font("Microsoft JhengHei UI", 10f);
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(760, 470);
+            Size = new Size(820, 600);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = MinimizeBox = false;
 
@@ -37,7 +39,11 @@ namespace RfiDeckAgent.Core
             Controls.Add(t);
 
             GsConfig c = GSlides.Load();
-            txtRoot.Text = Config.Root;
+            txtRoot.Text = Config.HasCustomRoot ? Config.Root : "";
+            txtDwg.Text = Config.DrawingDir;
+            string pfx;
+            txtPy.Text = PyRunner.FindPython(out pfx) ?? "（尚未安裝）";
+            txtPy.ReadOnly = true;
             txtUrl.Text = c.Url;
             txtSecret.Text = c.Secret;
             txtDeck.Text = c.DeckUrl;
@@ -55,7 +61,34 @@ namespace RfiDeckAgent.Core
                     if (dlg.ShowDialog(this) == DialogResult.OK) txtRoot.Text = dlg.SelectedPath;
                 }
             };
-            Row(t, "AI AGENT 資料夾", txtRoot, browse);
+            Row(t, "工作資料夾", txtRoot, browse);
+            Label rootNote = new Label();
+            rootNote.Text = "收件匣、釋疑問題庫、產出的簡報放這裡。留空＝自動使用 " + Config.DefaultRoot + "\n（舊版的 AI AGENT 資料夾可以直接指定在這裡）";
+            rootNote.ForeColor = Color.DimGray; rootNote.AutoSize = false; rootNote.Height = 40;
+            Row(t, "", rootNote, null);
+            Button browseDwg = new Button();
+            browseDwg.Text = "瀏覽…";
+            browseDwg.Click += delegate
+            {
+                using (FolderBrowserDialog dlg = new FolderBrowserDialog())
+                {
+                    dlg.Description = "選擇圖說包資料夾（內有 " + Config.IndexFile + "）";
+                    dlg.SelectedPath = txtDwg.Text;
+                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                    string dir = Config.FindIndexDir(dlg.SelectedPath);
+                    if (dir == null) { MessageBox.Show(this, "這個資料夾裡找不到 " + Config.IndexFile + "。", Text); return; }
+                    txtDwg.Text = dir;
+                }
+            };
+            Row(t, "圖說包資料夾", txtDwg, browseDwg);
+            Button pySetup = new Button();
+            pySetup.Text = "安裝教學…";
+            pySetup.Click += delegate
+            {
+                using (PythonSetupForm f = new PythonSetupForm()) f.ShowDialog(this);
+                txtPy.Text = PyRunner.FindPython(out pfx) ?? "（尚未安裝）";
+            };
+            Row(t, "Python", txtPy, pySetup);
             Header(t, "Google 共用簡報（多人同步）");
             Row(t, "網頁應用程式網址", txtUrl, null);
             Row(t, "密鑰", txtSecret, null);
@@ -148,8 +181,15 @@ namespace RfiDeckAgent.Core
 
         void SaveAll()
         {
-            if (txtRoot.Text.Trim().Length > 0) Config.Root = txtRoot.Text.Trim();
+            Config.Root = txtRoot.Text.Trim();          // 留空＝使用預設工作資料夾
+            Config.EnsureWorkFolders();
             GSlides.Save(Current());
+            string dwg = txtDwg.Text.Trim();
+            if (dwg.Length > 0 && dwg != Config.DrawingDir)
+            {
+                string dir = Config.FindIndexDir(dwg);
+                if (dir != null) { Config.DrawingDir = dir; GSlides.ImportFromBundle(dir); }
+            }
         }
     }
 }

@@ -6,7 +6,7 @@
 
 輸出：out/seek_result.json ＋ out/cand_N.png（裁切圖，紅框＝柱線範圍、紅圈＝物件位置；有結構柱時自動校正圖說偏移）
 另外回傳 history：釋疑問題庫中同棟、同樓層、柱線 ±1 格內的舊問題。
-索引與 PDF 位置：預設 <AI AGENT>/03_資料庫/圖說/圖說查找索引.db 與該資料夾下放 PDF 的子資料夾；
+索引與 PDF 位置：--dwg 圖說包資料夾（沒給時為 <AI AGENT>/03_資料庫/圖說）裡的 圖說查找索引.db 與放 PDF 的子資料夾；
 專案設定（棟別名稱、柱線對應棟別、柱線座標檔、釋疑問題庫）：<AI AGENT>/03_資料庫/圖說/查圖設定.json。
 本程式也內嵌在 Revit 外掛裡（外掛更新即更新規則），外掛會以 --root 傳入 AI AGENT 資料夾。
 別台電腦 PDF 放別處 → <DEVELOPMENTTOOLS_DATA 或 %APPDATA%>/DT_AIAgent/seek.json 寫 {"pdf_dir": "...", "index": "..."}。
@@ -24,11 +24,12 @@ ROOT = DWG = DEFAULT_INDEX = DEFAULT_PDF = ""
 CFG = {}
 
 
-def set_root(root):
-    """AI AGENT 資料夾 → 各路徑與專案設定（查圖設定.json）"""
+def set_root(root, dwg=""):
+    """工作資料夾（AI AGENT 資料夾）＋圖說包資料夾 → 各路徑與專案設定（查圖設定.json）
+    dwg：圖說包資料夾（內有 圖說查找索引.db、查圖設定.json、柱線座標檔、PDF 子資料夾）；沒給就用 <root>/03_資料庫/圖說"""
     global ROOT, DWG, DEFAULT_INDEX, DEFAULT_PDF, CFG, _MASTER, LV_TXT
     ROOT = os.path.normpath(root)
-    DWG = os.path.join(ROOT, "03_資料庫", "圖說")
+    DWG = os.path.normpath(dwg) if dwg else os.path.join(ROOT, "03_資料庫", "圖說")
     DEFAULT_INDEX = os.path.join(DWG, "圖說查找索引.db")
     try:
         CFG = json.load(open(os.path.join(DWG, "查圖設定.json"), encoding="utf-8-sig"))
@@ -762,8 +763,9 @@ def _text_levels(text):
 
 def find_history(building, level, gparts, limit=10):
     """在釋疑問題庫找同棟、同樓層、柱線相近（±1 格）的舊問題"""
-    db = os.path.join(ROOT, CFG["rfi_db"]) if CFG.get("rfi_db") else \
-        first_file(os.path.join(ROOT, "03_資料庫", "釋疑問題庫"), "釋疑問題庫.xlsx")
+    db = os.path.join(ROOT, CFG["rfi_db"]) if CFG.get("rfi_db") else ""
+    if not db or not os.path.exists(db):
+        db = first_file(os.path.join(ROOT, "03_資料庫", "釋疑問題庫"), "釋疑問題庫.xlsx") or first_file(DWG, "釋疑問題庫.xlsx")
     if not gparts or not os.path.exists(db):
         return []
     try:
@@ -846,7 +848,8 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--item")
-    ap.add_argument("--root", default="", help="AI AGENT 資料夾（外掛執行內嵌版本時傳入）")
+    ap.add_argument("--root", default="", help="工作資料夾（外掛執行內嵌版本時傳入）")
+    ap.add_argument("--dwg", default="", help="圖說包資料夾（索引、查圖設定、PDF）")
     ap.add_argument("--building", default="")
     ap.add_argument("--level", default="")
     ap.add_argument("--grid", default="")
@@ -860,8 +863,8 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--top", type=int, default=4)
     a = ap.parse_args()
-    if a.root:
-        set_root(a.root)
+    if a.root or a.dwg:
+        set_root(a.root or ROOT, a.dwg)
     st = settings()
     index = st.get("index") or DEFAULT_INDEX
     pdf_dir = st.get("pdf_dir") or DEFAULT_PDF
