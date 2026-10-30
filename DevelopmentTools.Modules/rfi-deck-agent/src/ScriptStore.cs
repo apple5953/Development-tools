@@ -1,5 +1,6 @@
-// 內嵌在外掛裡的 Python 程式（查圖規則 seek_lookup.py）：外掛更新，規則就一起更新，不必另外發給同事。C# 5。
-// 執行前寫到 %LOCALAPPDATA%\DT_AIAgent\py\（內容不同才覆寫）；找不到內嵌資源時退回 AI AGENT 資料夾的版本。
+// 內嵌在外掛裡的 Python 程式（查圖、產生簡報、問題庫）：外掛更新，程式就一起更新，不必另外發給同事。C# 5。
+// 執行前全部寫到 <RTS 資料位置>\DT_AIAgent\py\（內容不同才覆寫；彼此會 import，所以放同一個資料夾）。
+// 找不到內嵌資源時退回舊版 AI AGENT 資料夾的 01_AI運行本體\程式。
 using System;
 using System.IO;
 using System.Reflection;
@@ -39,9 +40,23 @@ namespace RfiDeckAgent.Core
             catch { return null; }
         }
 
-        /// <summary>內嵌版本優先，沒有就用 AI AGENT 資料夾 01_AI運行本體\程式 的同名檔</summary>
+        /// <summary>把所有內嵌的 .py 寫出（程式之間會互相 import）</summary>
+        public static void EnsureAll()
+        {
+            try
+            {
+                foreach (string n in typeof(ScriptStore).Assembly.GetManifestResourceNames())
+                    if (n.EndsWith(".py", StringComparison.OrdinalIgnoreCase)) Ensure(n);
+            }
+            catch { }
+        }
+
+        /// <summary>內嵌版本優先，沒有就用舊版 AI AGENT 資料夾 01_AI運行本體\程式 的同名檔</summary>
         public static string Resolve(string name)
         {
+            EnsureAll();
+            string p = Path.Combine(Dir, name);
+            if (File.Exists(p)) return p;
             return Ensure(name) ?? Path.Combine(PyRunner.ScriptDir, name);
         }
 

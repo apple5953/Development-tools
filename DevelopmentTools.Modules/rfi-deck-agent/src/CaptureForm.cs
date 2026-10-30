@@ -242,11 +242,8 @@ namespace RfiDeckAgent.Core
         void SeekDrawings()
         {
             Collect(false);
-            if (!File.Exists(Path.Combine(PyRunner.ScriptDir, "seek_lookup.py")))
-            {
-                MessageBox.Show(this, "找不到 seek_lookup.py，請確認 AI AGENT 資料夾設定。", "對照圖說");
-                return;
-            }
+            if (!Config.EnsureDrawingDir(this, true)) return;          // 圖說包：沒選過就請使用者選一次
+            if (!PythonSetupForm.EnsureInteractive(this)) return;     // 沒有 Python 就跳安裝教學
             Cursor = Cursors.WaitCursor;
             Dictionary<string, object> r;
             try { r = SeekForm.Run(d, d.Building); }

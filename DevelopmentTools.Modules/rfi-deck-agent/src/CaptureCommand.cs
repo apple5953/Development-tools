@@ -173,6 +173,8 @@ namespace RfiDeckAgent.Core
             return Result.Succeeded;
         }
 
+        static bool askedDrawing, askedPython;      // 每次開 Revit 只問一次
+
         /// <summary>自動加入對照圖說：索引最相關、且已對到柱線的平面圖（每筆擷取只自動加一次）</summary>
         static string AutoAddDrawing(RfiDraft d)
         {
@@ -181,8 +183,21 @@ namespace RfiDeckAgent.Core
             {
                 if (string.IsNullOrEmpty(d.Grid)) return "";
                 bool already = d.Shots.Exists(s => s.View == "圖說(自動)");
-                string idx = Path.Combine(Config.Root, @"03_資料庫\圖說\圖說查找索引.db");
-                if (!File.Exists(idx) && !File.Exists(DtStorage.File(@"DT_AIAgent\seek.json", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DT_AIAgent\seek.json")))) return "";
+                // 圖說包：還沒選過就問一次（新同事第一次擷取時）；Python：沒有就跳安裝教學一次
+                IWin32Window owner = new RevitWindow(Process.GetCurrentProcess().MainWindowHandle);
+                if (Config.DrawingDir.Length == 0 &&
+                    !File.Exists(DtStorage.File(@"DT_AIAgent\seek.json", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DT_AIAgent\seek.json"))))
+                {
+                    if (askedDrawing) return "";
+                    askedDrawing = true;
+                    if (!Config.EnsureDrawingDir(owner, true)) return "";
+                }
+                if (!PyRunner.HasPython)
+                {
+                    if (askedPython) return "";
+                    askedPython = true;
+                    if (!PythonSetupForm.EnsureInteractive(owner)) return "";
+                }
                 Dictionary<string, object> r = SeekForm.Run(d, d.Building);
                 object ok, cs;
                 if (r == null || !r.TryGetValue("ok", out ok) || !(ok is bool) || !(bool)ok) return "";

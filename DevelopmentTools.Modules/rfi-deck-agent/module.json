@@ -1,6 +1,6 @@
 {
   "id": "rfi-deck-agent",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "hostVersion": "3.2.4",
   "RevitVersion": ["2024"],
   "assembly": "RfiDeckAgent.dll",
@@ -47,7 +47,7 @@
         "name": "RfiSettings",
         "text": "設定",
         "entryClass": "RfiDeckAgent.Commands.SettingsToolCommand",
-        "tooltip": "設定 AI AGENT 資料夾、Python 與共用簡報連線"
+        "tooltip": "設定工作資料夾、圖說包、Python 與共用簡報連線"
       }
     ]
   },
@@ -56,7 +56,11 @@
   "tests": [
     "Revit 2024：RTS › AI Agents 只有一顆「釋疑簡報」下拉大按鈕，內含六個小工具",
     "Revit 2024：未授權 DT_RfiDeckAgent 時六個小工具都被擋下；核准一次後皆可執行",
-    "Revit 2024：未設定 AI AGENT 資料夾時先開啟設定",
+    "Revit 2024：新電腦（沒有 AI AGENT 資料夾）直接按釋疑擷取／產生簡報可使用，工作資料夾自動建在 <RTS 資料位置>\\DT_AIAgent\\工作區",
+    "Revit 2024：第一次擷取或按「找對照圖說」時請使用者選圖說包資料夾，選一次後記住；圖說包附 共用簡報連線.json 時自動帶入 Google 連線",
+    "Revit 2024：沒有 Python 時跳出安裝教學，預設裝到 C 槽以外（D:\\Python312），安裝後自動安裝套件（圖說包有離線套件時不需網路）",
+    "Revit 2024：新電腦第一次產生簡報時自動建立 釋疑問題庫.xlsx 並給追蹤編號",
+    "Revit 2024：已指定舊版 AI AGENT 資料夾的使用者，收件匣、問題庫、圖說索引照舊可用",
     "Revit 2024：釋疑擷取截圖成功，樓層／柱線／選取元件正確，模型未被修改",
     "Revit 2024：產生簡報輸出 PPT 可開啟；收件匣、成果資料夾、共用簡報可開啟",
     "Revit 2024：選取結構柱／梁擷取，對照圖說為整張結構與建築平面圖（含圖框），紅圈落在選取構件位置",
