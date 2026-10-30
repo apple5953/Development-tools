@@ -60,7 +60,8 @@ namespace DevelopmentTools.FastRebar.Saving
         {
             double dia = group.Max(p => p.DiameterMm);
             var sr = new SizeResult { BarSize = size, DiameterMm = dia, UnitKgPerM = RebarWeights.KgPerM(dia) };
-            double lap = o.LapFactor * dia;
+            bool coupler = !RebarCode.LapAllowed(dia);
+            double lap = coupler ? 0 : o.LapMm(dia);
             double maxStock = o.MaxStock;
 
             // 展開成每一根下料長度；同長度合併計數，避免大量鋼筋時排序過慢
@@ -79,6 +80,7 @@ namespace DevelopmentTools.FastRebar.Saving
                 {
                     sr.SplicedBars += p.Quantity;
                     sr.LapMm += (segs.Count - 1) * lap * p.Quantity;
+                    if (coupler) sr.Couplers += (segs.Count - 1) * p.Quantity;
                 }
                 foreach (double s in segs)
                 {

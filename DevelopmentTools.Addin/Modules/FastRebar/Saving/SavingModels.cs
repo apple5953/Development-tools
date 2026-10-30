@@ -21,8 +21,25 @@ namespace DevelopmentTools.FastRebar.Saving
     {
         /// <summary>可採購的定尺長度（mm）。</summary>
         public List<double> StockLengthsMm = new List<double> { 10000, 11000, 12000 };
-        /// <summary>超過最長定尺時，搭接長度 = 倍數 × 標稱直徑。僅為估算，應依結構圖搭接表調整。</summary>
-        public double LapFactor = 50;
+        /// <summary>
+        /// 超過最長定尺時的搭接長度：0 = 依規範公式（受拉乙級 1.3 ld，見 RebarCode）；
+        /// &gt;0 = 倍數 × 標稱直徑。D36 以上不得搭接，一律改計續接器。
+        /// </summary>
+        public double LapFactor = 0;
+        /// <summary>依規範計算搭接長度用的 fc′、fy（kgf/cm²）。</summary>
+        public double FcKgf = 280;
+        public double FyKgf = 4200;
+
+        public double LapMm(double diameterMm)
+        {
+            return LapFactor > 0 ? LapFactor * diameterMm : RebarCode.LapClassBMm(diameterMm, FcKgf, FyKgf, false);
+        }
+
+        public string LapText()
+        {
+            return LapFactor > 0 ? LapFactor.ToString("0.#") + " db（估算）"
+                : "依規範受拉乙級 1.3 ld（fc′=" + FcKgf.ToString("0") + "、fy=" + FyKgf.ToString("0") + "）";
+        }
         /// <summary>每刀損耗（mm）；剪斷機一般為 0。</summary>
         public double KerfMm = 0;
         /// <summary>餘料長度達此值視為可回收再利用，不計入損耗（mm）。</summary>
@@ -37,6 +54,7 @@ namespace DevelopmentTools.FastRebar.Saving
             if (LapFactor < 0) throw new ArgumentException("搭接倍數不可為負。");
             if (KerfMm < 0) throw new ArgumentException("每刀損耗不可為負。");
             if (MinReusableOffcutMm < 0) throw new ArgumentException("可回收餘料下限不可為負。");
+            if (FcKgf <= 0 || FyKgf <= 0) throw new ArgumentException("fc′、fy 需大於 0。");
         }
 
         public string ToText()
@@ -45,7 +63,9 @@ namespace DevelopmentTools.FastRebar.Saving
             return "stock=" + string.Join(",", StockLengthsMm.Select(x => x.ToString(c))) + "\n" +
                    "lap=" + LapFactor.ToString(c) + "\n" +
                    "kerf=" + KerfMm.ToString(c) + "\n" +
-                   "offcut=" + MinReusableOffcutMm.ToString(c) + "\n";
+                   "offcut=" + MinReusableOffcutMm.ToString(c) + "\n" +
+                   "fc=" + FcKgf.ToString(c) + "\n" +
+                   "fy=" + FyKgf.ToString(c) + "\n";
         }
 
         public static SavingOptions FromText(string text)
@@ -69,6 +89,8 @@ namespace DevelopmentTools.FastRebar.Saving
                     case "lap": if (double.TryParse(value, NumberStyles.Float, c, out d)) o.LapFactor = d; break;
                     case "kerf": if (double.TryParse(value, NumberStyles.Float, c, out d)) o.KerfMm = d; break;
                     case "offcut": if (double.TryParse(value, NumberStyles.Float, c, out d)) o.MinReusableOffcutMm = d; break;
+                    case "fc": if (double.TryParse(value, NumberStyles.Float, c, out d)) o.FcKgf = d; break;
+                    case "fy": if (double.TryParse(value, NumberStyles.Float, c, out d)) o.FyKgf = d; break;
                 }
             }
             return o;
@@ -113,6 +135,7 @@ namespace DevelopmentTools.FastRebar.Saving
         public int ModelBars;           // 模型根數
         public int CutPieces;           // 含搭接分段後的下料根數
         public int SplicedBars;         // 超過最長定尺、需要搭接的根數
+        public int Couplers;            // D36 以上超過定尺時改用的續接器個數
         public double NetMm;            // 下料淨長（含搭接）
         public double LapMm;            // 因搭接增加的長度
         public Dictionary<double, int> StockCount = new Dictionary<double, int>();

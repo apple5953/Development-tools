@@ -22,6 +22,9 @@ internal static class CuttingOptimizerTests
         Run("設定文字往返", OptionsRoundTrip);
         Run("下料單 CSV 含合計與組合", CsvHasSections);
         Run("重量統計表：樓層×號數", QuantityTableTotals);
+        Run("規範搭接長度與 D36 以上改續接器", CodeLapAndCouplers);
+        Run("規範觀念配筋：梁", RuleBeam);
+        Run("規範觀念配筋：柱", RuleColumn);
         Console.WriteLine(_failed == 0 ? "ALL PASSED" : _failed + " FAILED");
         return _failed == 0 ? 0 : 1;
     }
@@ -44,7 +47,7 @@ internal static class CuttingOptimizerTests
 
     private static SavingOptions Opt(params double[] stocks)
     {
-        var o = new SavingOptions { MinReusableOffcutMm = 1000 };
+        var o = new SavingOptions { MinReusableOffcutMm = 1000, LapFactor = 50 };
         if (stocks.Length > 0) o.StockLengthsMm = stocks.ToList();
         return o;
     }
@@ -190,6 +193,67 @@ internal static class CuttingOptimizerTests
         string[] lines = sb.ToString().Trim().Split('\n');
         if (!lines[1].StartsWith("1F,5.0,4.0,9.0")) throw new Exception("1F 列：" + lines[1]);
         if (!lines[3].StartsWith("合計,5.0,43.8,48.8")) throw new Exception("合計列：" + lines[3]);
+    }
+
+    private static readonly BarSize[] Bars =
+    {
+        new BarSize("D10", 9.53), new BarSize("D13", 12.7), new BarSize("D16", 15.9), new BarSize("D19", 19.1),
+        new BarSize("D22", 22.2), new BarSize("D25", 25.4), new BarSize("D29", 28.7), new BarSize("D32", 32.2),
+        new BarSize("D36", 35.8), new BarSize("D39", 39.4)
+    };
+
+    private static void CodeLapAndCouplers()
+    {
+        // fc′=280、fy=4200：D25 ld = 0.19×4200/√280×25.4 = 1211 mm，乙級 ×1.3 = 1574 mm
+        Eq(0.19 * 4200 / Math.Sqrt(280) * 25.4 * 1.3, RebarCode.LapClassBMm(25.4, 280, 4200, false), "D25 乙級搭接");
+        Eq(0.15 * 4200 / Math.Sqrt(280) * 12.7 * 1.3, RebarCode.LapClassBMm(12.7, 280, 4200, false), "D13 乙級搭接");
+        // ld 本身不小於 300 mm，乙級搭接為 1.3 × 300 = 390 mm
+        Eq(390, RebarCode.LapClassBMm(9.53, 1000, 2800, false), "ld 最小值 × 1.3");
+        if (RebarCode.LapAllowed(39.4) || !RebarCode.LapAllowed(35.8)) throw new Exception("D36 可搭接、D39 不可");
+
+        var o = new SavingOptions { StockLengthsMm = new List<double> { 12000 } };   // LapFactor 0 = 依規範
+        var s = CuttingOptimizer.Optimize(new[] { P("D25", 25.4, 15000, 1) }, o).Sizes.Single();
+        Eq(Math.Round(15000 + RebarCode.LapClassBMm(25.4, 280, 4200, false) - 12000, 1) + 12000, s.NetMm, "依規範搭接的淨長（下料長度取到 0.1 mm）");
+        var big = CuttingOptimizer.Optimize(new[] { P("D39", 39.4, 15000, 2) }, o).Sizes.Single();
+        Eq(2, big.Couplers, "D39 續接器");
+        Eq(30000, big.NetMm, "續接器不加搭接長度");
+    }
+
+    private static void RuleBeam()
+    {
+        var o = new DesignOptions();
+        var b = RuleDesigner.Beam(400, 700, Bars, o);
+        // D22：一層可放 6 支；上層 0.8%×400×636 = 2036 mm² → 6 支；下層 0.5% → 4 支
+        if (b.Main.Name != "D22") throw new Exception("主筋 " + b.Main.Name);
+        if (!b.TopLayers.SequenceEqual(new[] { 6 }) || !b.BottomLayers.SequenceEqual(new[] { 4 })) throw new Exception("支數");
+        if (b.Stirrup.Name != "D13") throw new Exception("梁深 ≥ 60 cm 用 D13 箍筋");
+        Eq(150, b.EndZoneSpacingMm, "端部箍距 ≤ d/4");
+        Eq(300, b.MidSpacingMm, "中段箍距 ≤ d/2");
+        Eq(0, b.SideBarsPerFace, "梁深 ≤ 90 cm 不加腰筋");
+
+        var deep = RuleDesigner.Beam(600, 1000, Bars, o);
+        if (deep.SideBarsPerFace < 1) throw new Exception("梁深 > 90 cm 要加腰筋");
+        int top = deep.TopLayers.Sum(), btm = deep.BottomLayers.Sum();
+        if (btm * 2 < top) throw new Exception("下層筋少於上層一半");
+        double d = 1000 - 40 - 12.7 - deep.Main.DiameterMm / 2;
+        if (btm * deep.Main.AreaMm2 < RebarCode.MinFlexuralRatio(280, 4200) * 600 * d) throw new Exception("低於最小鋼筋量");
+    }
+
+    private static void RuleColumn()
+    {
+        var o = new DesignOptions();
+        var c = RuleDesigner.Column(600, 600, 3000, Bars, o);
+        if (c.TotalBars != 12 || c.Main.Name != "D25") throw new Exception("60×60 柱 " + c.TotalBars + "-" + c.Main.Name);
+        Eq(600, c.ConfinedZoneMinMm, "圍束區長度");
+        Eq(110, c.ConfinedSpacingMm, "圍束區箍距");
+        Eq(150, c.MidSpacingMm, "中段箍距");
+        foreach (var size in new[] { new[] { 400.0, 400 }, new[] { 500.0, 1000 }, new[] { 800.0, 800 } })
+        {
+            var x = RuleDesigner.Column(size[0], size[1], 3200, Bars, o);
+            double rho = x.TotalBars * x.Main.AreaMm2 / (size[0] * size[1]);
+            if (rho < 0.015 - 1e-9 || rho > 0.06) throw new Exception(size[0] + "×" + size[1] + " 配筋率 " + rho);
+            if (x.ConfinedSpacingMm > Math.Min(size[0], size[1]) / 4 || x.ConfinedSpacingMm > 6 * x.Main.DiameterMm) throw new Exception("圍束區箍距超過上限");
+        }
     }
 
     private static void CsvHasSections()

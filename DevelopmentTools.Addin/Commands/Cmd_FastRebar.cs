@@ -93,8 +93,32 @@ namespace DevelopmentTools.Commands
                     return Result.Cancelled;
                 }
 
-                // 2. 設定視窗
+                // 2. 配筋方式：每支依斷面自動計算，或全部套同一組樣板
+                var mode = new TaskDialog("快速配筋")
+                {
+                    MainInstruction = "配筋支數與間距怎麼決定？",
+                    MainContent = $"共 {frames.Count} 支構件。"
+                };
+                mode.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "每支依斷面自動計算（規範配筋觀念）",
+                    "依各自斷面算主筋、箍筋、圍束區與搭接；沒有載重資料，主筋量為推估，會輸出配筋計算書");
+                mode.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "全部套用同一組樣板", "原本的做法");
+                mode.CommonButtons = TaskDialogCommonButtons.Cancel;
+                TaskDialogResult modeResult = mode.Show();
+                if (modeResult != TaskDialogResult.CommandLink1 && modeResult != TaskDialogResult.CommandLink2) return Result.Cancelled;
+                DesignOptions designOptions = null;
+                if (modeResult == TaskDialogResult.CommandLink1)
+                {
+                    var dw = new RuleDesignOptionsWindow(RuleDesignOptionsStore.Load());
+                    new System.Windows.Interop.WindowInteropHelper(dw).Owner = commandData.Application.MainWindowHandle;
+                    if (dw.ShowDialog() != true || dw.Options == null) return Result.Cancelled;
+                    designOptions = dw.Options;
+                    RuleDesignOptionsStore.Save(designOptions);
+                }
+
+                // 3. 設定視窗（自動計算時只採用做法：穿柱或錨定、箍筋型式、彎鉤、保護層、已有鋼筋處理）
                 var input = BuildInput(doc, frames, skipped);
+                if (designOptions != null)
+                    input.SelectionSummary += "\n【依斷面自動計算】主筋支數、號數、箍筋間距會依每支構件斷面重算，這裡只採用做法設定。";
                 var win = new FastRebarWindow(input);
                 new System.Windows.Interop.WindowInteropHelper(win).Owner = commandData.Application.MainWindowHandle;
                 if (win.ShowDialog() != true || !win.Confirmed) return Result.Cancelled;
@@ -103,8 +127,9 @@ namespace DevelopmentTools.Commands
                 ExistingRebarPolicy policy = win.Policy;
                 var sw = Stopwatch.StartNew();
 
-                // 3. 建立
+                // 4. 建立
                 var engine = new FastRebarEngine(doc, preset);
+                RuleDesignApplier applier = designOptions != null ? new RuleDesignApplier(doc, preset, designOptions) : null;
                 int skippedExisting = 0;
                 using (var t = new Transaction(doc, "快速配筋"))
                 {
@@ -127,9 +152,23 @@ namespace DevelopmentTools.Commands
                             }
                         }
 
+                        if (applier != null)
+                        {
+                            try { applier.Prepare(f); }
+                            catch (Exception ex)
+                            {
+                                engine.Result.Messages.Add($"{RuleDesignApplier.Mark(f.Element)}：無法自動計算配筋（{ex.Message}），已略過。");
+                                engine.Result.Problem.Add(f.Element.Id);
+                                continue;
+                            }
+                        }
+                        int createdBefore = engine.Result.Created.Count;
                         if (f.Kind == MemberKind.Beam) engine.BuildBeam(f);
                         else engine.BuildColumn(f);
+                        if (applier != null)
+                            RuleDesignApplier.Tag(doc, engine.Result.Created.Skip(createdBefore), RuleDesignApplier.SourceTag);
                     }
+                    applier?.Restore();
 
                     doc.Regenerate();
                     engine.FixUp();
@@ -137,18 +176,21 @@ namespace DevelopmentTools.Commands
                     engine.Result.WarningsSuppressed = swallow.Count;
                 }
                 sw.Stop();
+                string designSheet = applier != null && applier.Members > 0 ? applier.WriteSheet(doc.Title) : null;
+                if (designSheet != null)
+                    engine.Result.Messages.Insert(0, $"已依斷面自動計算 {applier.Members} 支構件的配筋（推估，非結構計算），配筋計算書：{designSheet}");
 
-                // 4. 檢核剛建立的鋼筋
+                // 5. 檢核剛建立的鋼筋
                 var created = engine.Result.Created.Select(id => doc.GetElement(id) as Rebar).Where(r => r != null).ToList();
                 var checker = new RebarModelChecker(doc);
                 checker.Run(created);
 
-                // 5. 減料估算：剛建立的鋼筋用定尺怎麼裁最省
+                // 6. 減料估算：剛建立的鋼筋用定尺怎麼裁最省
                 SavingResult saving = null;
                 try { saving = RebarSavingReport.Analyze(doc, created, RebarSavingOptionsStore.Load()); }
                 catch (Exception ex) { FastRebarLogBridge.Write("減料估算失敗：" + ex); }
 
-                // 6. 鋼筋明細表：沒有的才建立，已有的會隨模型自動更新
+                // 7. 鋼筋明細表：沒有的才建立，已有的會隨模型自動更新
                 RebarScheduleBuilder.Outcome schedules = null;
                 if (created.Count > 0)
                 {

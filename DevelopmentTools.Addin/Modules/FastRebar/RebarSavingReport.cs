@@ -103,11 +103,11 @@ namespace DevelopmentTools.FastRebar
             sb.AppendLine($"可少買約 {r.SavingKg:0} kg");
             foreach (SizeResult s in r.Sizes.OrderByDescending(x => x.SavingKg).Take(maxLines))
             {
-                string lap = s.SplicedBars > 0 ? $"，需搭接 {s.SplicedBars} 根" : "";
+                string lap = s.Couplers > 0 ? $"，需續接器 {s.Couplers} 個" : s.SplicedBars > 0 ? $"，需搭接 {s.SplicedBars} 根" : "";
                 sb.AppendLine($"・{s.BarSize}：{s.CutPieces} 段 → 定尺 {s.StockBars} 支，損耗 {s.WasteRate:P1}，少買 {s.SavingKg:0} kg{lap}");
             }
             if (r.Sizes.Count > maxLines) sb.AppendLine($"…另有 {r.Sizes.Count - maxLines} 種號數，見下料單。");
-            if (r.Sizes.Any(s => s.SplicedBars > 0)) sb.AppendLine($"搭接長度以 {o.LapFactor:0} db 估算，請依結構圖搭接表確認。");
+            if (r.Sizes.Any(s => s.SplicedBars > 0)) sb.AppendLine($"搭接長度：{o.LapText()}，請依結構圖搭接表確認。");
             foreach (string w in r.Warnings.Take(3)) sb.AppendLine("・" + w);
             return sb.ToString();
         }

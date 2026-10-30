@@ -77,7 +77,7 @@ namespace DevelopmentTools.FastRebar
         }
 
         /// <summary>主體所在樓層：先用 LevelId，再查參考樓層／底部樓層參數。</summary>
-        private static string LevelName(Document doc, Element host)
+        internal static string LevelName(Document doc, Element host)
         {
             if (host == null) return "（無主體）";
             ElementId id = host.LevelId;
