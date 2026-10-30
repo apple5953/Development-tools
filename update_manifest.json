@@ -1,12 +1,12 @@
 {
-  "release_note": "RTS 3.2.16 將 BIM MCP 直接整合至既有 BEAI Reality Bridge；新增 RTS Ribbon 的 Bridge 狀態、啟停、規則重載與背景處理器控制；發行包內含 MCP stdio runtime，並可設定既有 Codex、Claude 與 Antigravity Client。維持 loopback-only、ExternalEvent 與 V0.1 唯讀安全邊界。",
+  "latest_version": "3.2.18",
+  "published_at": "2026-10-28T11:23:31.101528Z",
   "product_name": "Room Tile System v3",
+  "release_url": "https://github.com/apple5953/Development-tools/releases/download/v3.2.18/DevelopmentTools_v3.2.18.zip",
   "force_update": false,
-  "sha256": "680236426bcd65c9ea611341191fb7f434fa89f7e33bf6dee73419b3c117dcab",
-  "minimum_supported_version": "1.0.0",
-  "release_url": "https://github.com/apple5953/Development-tools/releases/download/v3.2.16/DevelopmentTools_v3.2.16.zip",
-  "channel": "stable",
   "app_id": "development_tools",
-  "latest_version": "3.2.16",
-  "published_at": "2026-10-27T08:57:55.698461Z"
+  "sha256": "a6e0ecd1bb934679977bdeebe15f2b9c27486f08eecf023ea686abf0b94afc89",
+  "channel": "stable",
+  "release_note": "修正舊版 BEAI Runtime Revit 註冊殘留造成的 TypeLoadException；更新時自動清理錯誤 DevelopmentTools.Addin.App manifest，並重建 Revit 2024 正確註冊。",
+  "minimum_supported_version": "1.0.0"
 }
