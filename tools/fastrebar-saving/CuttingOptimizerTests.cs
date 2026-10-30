@@ -21,6 +21,7 @@ internal static class CuttingOptimizerTests
         Run("CNS 560 單位重", Weights);
         Run("設定文字往返", OptionsRoundTrip);
         Run("下料單 CSV 含合計與組合", CsvHasSections);
+        Run("重量統計表：樓層×號數", QuantityTableTotals);
         Console.WriteLine(_failed == 0 ? "ALL PASSED" : _failed + " FAILED");
         return _failed == 0 ? 0 : 1;
     }
@@ -173,6 +174,22 @@ internal static class CuttingOptimizerTests
         Eq(3, b.KerfMm, "刀口");
         Eq(800, b.MinReusableOffcutMm, "餘料");
         if (SavingOptions.ParseLengths("10000，11000 12000").Count != 3) throw new Exception("全形逗號");
+    }
+
+    private static void QuantityTableTotals()
+    {
+        var t = new QuantityTable("樓層");
+        t.Add("2F", "D25", 25.4, 10000, 2);   // 10 m × 3.98 = 39.8 kg
+        t.Add("1F", "D13", 12.7, 5000, 5);    // 5 m × 0.994 = 4.97 kg
+        t.Add("1F", "D25", 25.4, 1000, 1);    // 3.98 kg
+        Eq(39.8, t.Kg("2F", "D25"), "2F D25");
+        Eq(39.8 + 4.97 + 3.98, t.TotalKg, "合計");
+        if (!t.Sizes.SequenceEqual(new[] { "D13", "D25" })) throw new Exception("號數依直徑排序");
+        var sb = new System.Text.StringBuilder();
+        t.AppendCsv(sb, StringComparer.Ordinal);
+        string[] lines = sb.ToString().Trim().Split('\n');
+        if (!lines[1].StartsWith("1F,5.0,4.0,9.0")) throw new Exception("1F 列：" + lines[1]);
+        if (!lines[3].StartsWith("合計,5.0,43.8,48.8")) throw new Exception("合計列：" + lines[3]);
     }
 
     private static void CsvHasSections()

@@ -47,9 +47,30 @@ namespace DevelopmentTools.Commands
                     .ToList();
                 if (picked.Count == 0)
                 {
-                    IList<Reference> refs = uiDoc.Selection.PickObjects(ObjectType.Element, new ConcreteMemberFilter(),
-                        "選取要配筋的混凝土梁、柱（可框選多支），按「完成」");
-                    picked = refs.Select(r => doc.GetElement(r)).Where(e => e != null).ToList();
+                    var filter = new ConcreteMemberFilter();
+                    List<Element> all = new FilteredElementCollector(doc).WhereElementIsNotElementType()
+                        .WherePasses(new LogicalOrFilter(new ElementCategoryFilter(BuiltInCategory.OST_StructuralFraming),
+                                                         new ElementCategoryFilter(BuiltInCategory.OST_StructuralColumns)))
+                        .Where(e => filter.AllowElement(e)).ToList();
+                    var scope = new TaskDialog("快速配筋")
+                    {
+                        MainInstruction = "要配哪些構件？",
+                        MainContent = $"模型中有 {all.Count} 支混凝土梁、柱。"
+                    };
+                    scope.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "框選構件");
+                    if (all.Count > 0)
+                        scope.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, $"整個模型的混凝土梁柱（{all.Count} 支）",
+                            "下一步可選擇已有鋼筋的構件要略過或取代");
+                    scope.CommonButtons = TaskDialogCommonButtons.Cancel;
+                    TaskDialogResult pick = scope.Show();
+                    if (pick == TaskDialogResult.CommandLink2) picked = all;
+                    else if (pick == TaskDialogResult.CommandLink1)
+                    {
+                        IList<Reference> refs = uiDoc.Selection.PickObjects(ObjectType.Element, filter,
+                            "選取要配筋的混凝土梁、柱（可框選多支），按「完成」");
+                        picked = refs.Select(r => doc.GetElement(r)).Where(e => e != null).ToList();
+                    }
+                    else return Result.Cancelled;
                 }
                 if (picked.Count == 0) return Result.Cancelled;
 
@@ -127,7 +148,23 @@ namespace DevelopmentTools.Commands
                 try { saving = RebarSavingReport.Analyze(doc, created, RebarSavingOptionsStore.Load()); }
                 catch (Exception ex) { FastRebarLogBridge.Write("減料估算失敗：" + ex); }
 
-                ShowReport(uiDoc, engine.Result, checker, saving, frames.Count, skipped, skippedExisting, sw.Elapsed.TotalSeconds);
+                // 6. 鋼筋明細表：沒有的才建立，已有的會隨模型自動更新
+                RebarScheduleBuilder.Outcome schedules = null;
+                if (created.Count > 0)
+                {
+                    try
+                    {
+                        using (var t = new Transaction(doc, "建立鋼筋明細表"))
+                        {
+                            t.Start();
+                            schedules = RebarScheduleBuilder.EnsureSchedules(doc);
+                            t.Commit();
+                        }
+                    }
+                    catch (Exception ex) { FastRebarLogBridge.Write("建立鋼筋明細表失敗：" + ex); }
+                }
+
+                ShowReport(uiDoc, engine.Result, checker, saving, schedules, frames.Count, skipped, skippedExisting, sw.Elapsed.TotalSeconds);
                 return Result.Succeeded;
             }
             catch (Autodesk.Revit.Exceptions.OperationCanceledException)
@@ -189,7 +226,8 @@ namespace DevelopmentTools.Commands
             return input;
         }
 
-        private static void ShowReport(UIDocument uiDoc, FastRebarResult r, RebarModelChecker checker, SavingResult saving, int memberCount,
+        private static void ShowReport(UIDocument uiDoc, FastRebarResult r, RebarModelChecker checker, SavingResult saving,
+                                       RebarScheduleBuilder.Outcome schedules, int memberCount,
                                        List<string> skipped, int skippedExisting, double seconds)
         {
             var sb = new StringBuilder();
@@ -208,6 +246,14 @@ namespace DevelopmentTools.Commands
                 sb.AppendLine("【減料估算】");
                 sb.AppendLine(RebarSavingReport.Summary(saving, 5));
                 cutListPath = RebarSavingReport.WriteCsv(saving, uiDoc.Document.Title, "下料單");
+            }
+            if (schedules != null && schedules.Created.Count + schedules.Existing.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("【鋼筋明細表】");
+                if (schedules.Created.Count > 0) sb.AppendLine("已建立：" + string.Join("、", schedules.Created));
+                if (schedules.Existing.Count > 0) sb.AppendLine("已更新：" + string.Join("、", schedules.Existing));
+                foreach (string m in schedules.Messages.Take(3)) sb.AppendLine("・" + m);
             }
             if (r.Messages.Count > 0)
             {
@@ -229,6 +275,7 @@ namespace DevelopmentTools.Commands
             if (r.Created.Count > 0) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "選取剛建立的鋼筋");
             if (problemIds.Count > 0) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, $"選取需要確認的元素（{problemIds.Count}）");
             if (cutListPath != null) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink3, "開啟下料單", cutListPath);
+            if (schedules != null && schedules.ScheduleIds.Count > 0) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink4, "開啟鋼筋明細表");
             td.CommonButtons = TaskDialogCommonButtons.Close;
             TaskDialogResult res = td.Show();
             try
@@ -236,6 +283,7 @@ namespace DevelopmentTools.Commands
                 if (res == TaskDialogResult.CommandLink1) uiDoc.Selection.SetElementIds(r.Created);
                 else if (res == TaskDialogResult.CommandLink2) uiDoc.Selection.SetElementIds(problemIds);
                 else if (res == TaskDialogResult.CommandLink3) RebarSavingReport.Open(cutListPath);
+                else if (res == TaskDialogResult.CommandLink4) uiDoc.ActiveView = (View)uiDoc.Document.GetElement(schedules.ScheduleIds[0]);
             }
             catch { }
         }
@@ -260,8 +308,11 @@ namespace DevelopmentTools.Commands
         }
     }
 
-    /// <summary>鋼筋檢核：只讀不改，檢查選取構件（或整個模型）的鋼筋，並估算定尺裁切減料。</summary>
-    [Transaction(TransactionMode.ReadOnly)]
+    /// <summary>
+    /// 鋼筋檢核：檢查選取構件（或整個模型）的鋼筋並估算定尺裁切減料（只讀）；
+    /// 使用者按「建立鋼筋明細表」時才開 Transaction 新增明細表視圖，不改動鋼筋。
+    /// </summary>
+    [Transaction(TransactionMode.Manual)]
     [Regeneration(RegenerationOption.Manual)]
     public class Cmd_RebarCheck : IExternalCommand
     {
@@ -337,6 +388,8 @@ namespace DevelopmentTools.Commands
                     if (ids.Count > 0) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, $"選取有問題的鋼筋（{ids.Count}）");
                     if (cutListPath != null) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "開啟下料單");
                     td.AddCommandLink(TaskDialogCommandLinkId.CommandLink3, "調整減料參數並重算", "定尺長度、搭接倍數、刀口損耗、可回收餘料下限");
+                    td.AddCommandLink(TaskDialogCommandLinkId.CommandLink4, "建立鋼筋明細表與重量統計",
+                        "在模型新增鋼筋明細表（依號數、依構件、依分區），並輸出樓層×號數重量統計 CSV");
                     td.CommonButtons = TaskDialogCommonButtons.Close;
                     TaskDialogResult res = td.Show();
                     if (res == TaskDialogResult.CommandLink1) uiDoc.Selection.SetElementIds(ids);
@@ -352,6 +405,10 @@ namespace DevelopmentTools.Commands
                         }
                         continue;
                     }
+                    else if (res == TaskDialogResult.CommandLink4)
+                    {
+                        RebarScheduleCommand.Run(uiDoc, rebars);
+                    }
                     break;
                 }
                 return Result.Succeeded;
@@ -366,6 +423,44 @@ namespace DevelopmentTools.Commands
                 TaskDialog.Show("鋼筋檢核", "執行失敗：" + ex.Message);
                 return Result.Failed;
             }
+        }
+    }
+
+    internal static class RebarScheduleCommand
+    {
+        public static void Run(UIDocument uiDoc, IList<Rebar> rebars)
+        {
+            Document doc = uiDoc.Document;
+            RebarScheduleBuilder.Outcome outcome;
+            using (var t = new Transaction(doc, "建立鋼筋明細表"))
+            {
+                t.Start();
+                outcome = RebarScheduleBuilder.EnsureSchedules(doc);
+                t.Commit();
+            }
+            RebarQuantityReport.Result q = RebarQuantityReport.Build(doc, rebars);
+            string csv = RebarQuantityReport.WriteCsv(q, doc.Title);
+
+            var sb = new StringBuilder();
+            if (outcome.Created.Count > 0) sb.AppendLine("已建立：" + string.Join("、", outcome.Created));
+            if (outcome.Existing.Count > 0) sb.AppendLine("已存在（會隨模型自動更新）：" + string.Join("、", outcome.Existing));
+            foreach (string m in outcome.Messages.Take(5)) sb.AppendLine("・" + m);
+            sb.AppendLine();
+            sb.AppendLine($"重量統計：{q.Rebars} 組鋼筋，合計 {q.ByLevel.TotalKg / 1000:0.00} t（未含搭接與損耗）");
+            if (q.Failed > 0) sb.AppendLine($"有 {q.Failed} 組鋼筋無法讀取長度。");
+
+            var td = new TaskDialog("鋼筋明細表")
+            {
+                MainInstruction = "鋼筋明細表已就緒",
+                MainContent = sb.ToString(),
+                FooterText = csv != null ? "重量統計：" + csv : null
+            };
+            if (outcome.ScheduleIds.Count > 0) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "開啟明細表");
+            if (csv != null) td.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "開啟重量統計");
+            td.CommonButtons = TaskDialogCommonButtons.Close;
+            TaskDialogResult res = td.Show();
+            if (res == TaskDialogResult.CommandLink1) uiDoc.ActiveView = (View)doc.GetElement(outcome.ScheduleIds[0]);
+            else if (res == TaskDialogResult.CommandLink2) RebarSavingReport.Open(csv);
         }
     }
 
