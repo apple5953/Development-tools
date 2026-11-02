@@ -150,7 +150,14 @@ begin
             if DeleteFile(ManifestPath) then
               Log('Removed stale BEAI Runtime registration: ' + ManifestPath)
             else
+            begin
+              // 常見於舊版由系統管理員安裝到 ProgramData 的註冊檔：一般權限刪不掉，
+              // Revit 啟動時就會出現「無法初始化增益集 ... 找不到類別 DevelopmentTools.Addin.App」。
               Log('WARNING: Unable to remove stale BEAI Runtime registration: ' + ManifestPath);
+              SuppressibleMsgBox('發現舊版 BEAI 註冊檔，但沒有權限刪除：' + #13#10 + ManifestPath + #13#10 + #13#10 +
+                '這個檔案會讓 Revit 顯示「無法初始化增益集」。請請 IT 或系統管理員刪除它，然後重新開啟 Revit。',
+                mbError, MB_OK, IDOK);
+            end;
           end;
         end;
       until not FindNext(FindRec);
