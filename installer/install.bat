@@ -11,7 +11,7 @@ rem IT can force a location with the DEVELOPMENTTOOLS_ROOT environment variable.
 set TARGET_DIR=
 if defined DEVELOPMENTTOOLS_ROOT set "TARGET_DIR=%DEVELOPMENTTOOLS_ROOT%"
 if not defined TARGET_DIR (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "$sys=$env:SystemDrive; foreach($d in [System.IO.DriveInfo]::GetDrives()){ try { if($d.DriveType -eq 'Fixed' -and $d.IsReady -and $d.Name.Substring(0,2) -ne $sys){ $p=Join-Path $d.Name 'DevelopmentTools'; New-Item -ItemType Directory -Force -Path $p | Out-Null; $f=Join-Path $p '.write_probe'; Set-Content -Path $f -Value ok -ErrorAction Stop; Remove-Item $f; Write-Output $p; break } } catch {} }" > "%~dp0dt_install_root.txt" 2>nul
+    powershell -NoProfile -Command "$sys=$env:SystemDrive; foreach($d in [System.IO.DriveInfo]::GetDrives()){ try { if($d.DriveType -eq 'Fixed' -and $d.IsReady -and $d.Name.Substring(0,2) -ne $sys){ $p=Join-Path $d.Name 'DevelopmentTools'; New-Item -ItemType Directory -Force -Path $p | Out-Null; $f=Join-Path $p '.write_probe'; Set-Content -Path $f -Value ok -ErrorAction Stop; Remove-Item $f; Write-Output $p; break } } catch {} }" > "%~dp0dt_install_root.txt" 2>nul
     if exist "%~dp0dt_install_root.txt" (
         set /p TARGET_DIR=<"%~dp0dt_install_root.txt"
         del /F /Q "%~dp0dt_install_root.txt" >nul 2>nul
@@ -53,6 +53,21 @@ if not exist "Runtime\Worker\v0001\BEAI.QueryWorker.exe" (
     echo.
     pause
     exit /b 1
+)
+
+rem Files extracted from a browser-downloaded ZIP carry the Mark-of-the-Web (Zone.Identifier).
+rem "copy" keeps that stream, so Windows/antivirus treat the installed DLL/EXE files as internet files.
+more < "DevelopmentTools.Addin.dll:Zone.Identifier" >nul 2>nul
+if not errorlevel 1 (
+    echo.
+    echo [WARNING] These files are still marked as downloaded from the internet.
+    echo Antivirus or Windows may block the add-in. Recommended:
+    echo   1. Right-click the ZIP file - Properties - check "Unblock" - OK
+    echo   2. Delete this folder, extract the ZIP again, then run install.bat
+    echo   or use DevelopmentTools_Setup.exe instead.
+    echo.
+    choice /C YN /N /M "Continue installing anyway? [Y/N] "
+    if errorlevel 2 exit /b 1
 )
 
 echo 1. Creating target directories...
@@ -138,6 +153,8 @@ for %%V in (2025 2026) do (
         echo   [Removed] Revit %%V registration - not supported
     )
 )
+rem Revit may not have created the per-user Addins folder yet; without it the add-in was silently not registered.
+if not exist "%REVIT_ADDINS_BASE%\2024" mkdir "%REVIT_ADDINS_BASE%\2024"
 for %%V in (2024) do (
     rem Remove legacy BEAI Runtime manifests regardless of their old filename or registration scope.
     for %%R in ("%REVIT_ADDINS_BASE%\%%V" "%REVIT_COMMON_ADDINS_BASE%\%%V") do (
@@ -171,8 +188,16 @@ if exist "%TARGET_DIR%\Updater\RoomTileSystem.Updater.exe" (
 
 del "%TARGET_DIR%\%ADDIN_NAME%"
 
+rem MCP client setup is optional and no longer runs automatically: an installer silently launching
+rem "powershell -ExecutionPolicy Bypass" that edits other programs' config files is a common antivirus trigger.
+set RUN_MCP_SETUP=N
 if exist "setup-mcp-clients.ps1" if exist "%TARGET_DIR%\App\MCP\dist\index.js" (
-    echo 5. Detecting and registering MCP clients...
+    echo.
+    choice /C YN /N /M "5. Optional: register BEAI MCP with Codex/Claude/Antigravity (needs Node.js 22+)? [Y/N] "
+    if not errorlevel 2 set RUN_MCP_SETUP=Y
+)
+if /I "%RUN_MCP_SETUP%"=="Y" (
+    echo   Detecting and registering MCP clients...
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "setup-mcp-clients.ps1" -InstallRoot "%TARGET_DIR%"
     if errorlevel 1 echo [WARNING] MCP client setup incomplete. See "%TARGET_DIR%\Logs\mcp-client-setup.log".
 )
