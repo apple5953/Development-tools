@@ -50,7 +50,10 @@ Source: "..\..\dist\mcp-runtime\*"; DestDir: "{app}\App\MCP"; Flags: ignoreversi
 Source: "..\setup-mcp-clients.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\setup-mcp-clients.ps1"" -InstallRoot ""{app}"""; Flags: runhidden waituntilterminated; StatusMsg: "偵測並設定 MCP 客戶端..."
+; 安裝程式不再自動在背景執行 PowerShell。未簽章安裝檔以隱藏視窗啟動
+; `powershell -ExecutionPolicy Bypass` 並改寫其他程式（Claude/Codex/Antigravity）的設定檔，
+; 是防毒與 EDR 的典型攔截特徵。MCP 客戶端設定改為完成頁的選用勾選項目，預設不勾選。
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\setup-mcp-clients.ps1"" -InstallRoot ""{app}"""; Description: "設定 AI 客戶端 MCP（選用，需要 Node.js 22 以上）"; Flags: postinstall unchecked skipifsilent runhidden waituntilterminated
 
 [Code]
 const
@@ -248,11 +251,19 @@ begin
       end;
     end;
 
+    // 使用者的 Revit 2024 Addins 資料夾不一定存在（例如 Revit 尚未以此帳號啟動過）。
+    // 以前資料夾不存在時會「安靜地」略過註冊，安裝成功但 Revit 看不到外掛。
     AddinPath := ExpandConstant('{userappdata}') + '\Autodesk\Revit\Addins\' + RevitVersions[0];
-    if DirExists(AddinPath) then
+    if not DirExists(AddinPath) then
+      ForceDirectories(AddinPath);
+    if SaveStringToFile(AddinPath + '\DevelopmentTools.addin', AddinContent, False) then
+      Log('Registered DevelopmentTools.addin for Revit ' + RevitVersions[0])
+    else
     begin
-      SaveStringToFile(AddinPath + '\DevelopmentTools.addin', AddinContent, False);
-      Log('Registered DevelopmentTools.addin for Revit ' + RevitVersions[0]);
+      Log('ERROR: Unable to register DevelopmentTools.addin in ' + AddinPath);
+      SuppressibleMsgBox('無法寫入 Revit 2024 外掛註冊檔：' + #13#10 + AddinPath + '\DevelopmentTools.addin' + #13#10 +
+        '外掛已複製，但 Revit 不會載入。請確認防毒或公司政策沒有封鎖此資料夾，再重新執行安裝程式。',
+        mbError, MB_OK, IDOK);
     end;
   end;
 end;
