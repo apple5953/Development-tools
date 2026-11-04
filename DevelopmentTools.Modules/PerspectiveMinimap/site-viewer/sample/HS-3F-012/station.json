@@ -1,0 +1,11 @@
+{
+  "stationId": "HS-3F-012",
+  "token": "REPLACE_WITH_RANDOM_TOKEN",
+  "project": "示範專案",
+  "level": { "name": "3F", "displayElevationMm": 8400 },
+  "eye": { "xMm": 12500, "yMm": 4300, "heightAboveFloorMm": 1500 },
+  "direction": { "yawDeg": 90, "pitchDeg": 0, "fovDeg": 65 },
+  "note": "面向 C3 柱，檢查梁下管線高程與開口位置",
+  "modelRevision": { "file": "示範模型.rvt", "exportedAt": "2026-11-04 10:00" },
+  "images": { "perspective": "perspective.jpg", "locator": "locator.png" }
+}
