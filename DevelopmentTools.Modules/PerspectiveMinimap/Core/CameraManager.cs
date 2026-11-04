@@ -47,6 +47,8 @@ namespace RevitPerspectiveMinimap.Core
                     model.UpDirection = up;
                     model.AbsoluteElevationMm = eye.Z * FeetToMm;
                     model.EyeHeightAboveFloorMm = (eye.Z - detected.BaseElevationFeet) * FeetToMm;
+                    model.LevelDisplayElevationMm = detected.DisplayElevationFeet * FeetToMm;
+                    model.LevelInternalElevationMm = detected.BaseElevationFeet * FeetToMm;
                     model.AssociatedLevelId = (detected.Level != null) ? detected.Level.Id : null;
                     model.AssociatedLevelName = (detected.Level != null) ? detected.Level.Name : "未指定";
                     model.DetectedSource = detected.DetectionMethod;
@@ -126,7 +128,7 @@ namespace RevitPerspectiveMinimap.Core
                 Level lvl = doc.GetElement(explicitLevelId) as Level;
                 if (lvl != null)
                 {
-                    baseElevationFeet = lvl.Elevation;
+                    baseElevationFeet = SmartLevelDetector.GetInternalElevationFeet(lvl);
                 }
                 else
                 {

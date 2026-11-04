@@ -43,7 +43,7 @@ namespace RevitPerspectiveMinimap.UI.ViewModels
                     OnPropertyChanged("TotalCameraElevationDisplay");
                     if (_selectedCamera != null)
                     {
-                        _selectedCamera.AbsoluteElevationMm = value + _inputEyeHeightMm;
+                        _selectedCamera.AbsoluteElevationMm = value + GetInternalOffsetMm() + _inputEyeHeightMm;
                     }
                     if (!_isUpdatingFromRevit && _isLiveSyncEnabled && _selectedCamera != null)
                     {
@@ -51,6 +51,20 @@ namespace RevitPerspectiveMinimap.UI.ViewModels
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 樓層頭標高 (FL，使用者看到的數字) 換算成 Revit 內部座標 Z 的差值 (mm)。
+        /// 相機 EyePosition 為內部座標；當樓層「高程基準」為專案基準點/測量點且其高程不為 0 時，
+        /// 若直接用 FL + 視高 當作 Z，相機會整體偏高或偏低該基準點高程。
+        /// </summary>
+        private double GetInternalOffsetMm()
+        {
+            if (_selectedCamera != null && _selectedCamera.AssociatedLevelId != null)
+            {
+                return _selectedCamera.LevelInternalElevationMm - _selectedCamera.LevelDisplayElevationMm;
+            }
+            return (_selectedLevel != null) ? _selectedLevel.InternalOffsetMm : 0;
         }
 
         public string TotalCameraElevationDisplay
@@ -162,11 +176,11 @@ namespace RevitPerspectiveMinimap.UI.ViewModels
                 {
                     _inputEyeHeightMm = value;
                     OnPropertyChanged("InputEyeHeightMm");
+                    OnPropertyChanged("TotalCameraElevationDisplay");
                     if (_selectedCamera != null)
                     {
                         _selectedCamera.EyeHeightAboveFloorMm = value;
-                        double baseElev = (SelectedLevel != null) ? SelectedLevel.ElevationMm : 0;
-                        _selectedCamera.AbsoluteElevationMm = baseElev + value;
+                        _selectedCamera.AbsoluteElevationMm = _customBaseElevationMm + GetInternalOffsetMm() + value;
                     }
                     if (!_isUpdatingFromRevit && _isLiveSyncEnabled && _selectedCamera != null)
                     {
@@ -298,6 +312,10 @@ namespace RevitPerspectiveMinimap.UI.ViewModels
 
         public void HandleCameraPlaced(XYZ eyeWorld, XYZ targetWorld)
         {
+            // 在 UI 執行緒先擷取數值，避免 ExternalEvent 執行時讀到已變動的 UI 狀態
+            double offsetMm = (_selectedLevel != null) ? _selectedLevel.InternalOffsetMm : 0;
+            double totalElevMm = CustomBaseElevationMm + offsetMm + InputEyeHeightMm;
+
             RevitEventDispatcher.Instance.Enqueue(delegate(UIApplication app)
             {
                 UIDocument uiDoc = app.ActiveUIDocument;
@@ -314,7 +332,6 @@ namespace RevitPerspectiveMinimap.UI.ViewModels
                     level = new FilteredElementCollector(doc).OfClass(typeof(Level)).Cast<Level>().FirstOrDefault();
                 }
 
-                double totalElevMm = CustomBaseElevationMm + InputEyeHeightMm;
                 double eyeZ = totalElevMm / 304.8;
                 double targetZ = totalElevMm / 304.8;
 
@@ -520,7 +537,9 @@ namespace RevitPerspectiveMinimap.UI.ViewModels
             try
             {
                 _isUpdatingFromRevit = true;
-                _customBaseElevationMm = _selectedCamera.AbsoluteElevationMm - _selectedCamera.EyeHeightAboveFloorMm;
+                _customBaseElevationMm = (_selectedCamera.AssociatedLevelId != null)
+                    ? _selectedCamera.LevelDisplayElevationMm
+                    : _selectedCamera.AbsoluteElevationMm - _selectedCamera.EyeHeightAboveFloorMm;
                 OnPropertyChanged("CustomBaseElevationMm");
                 OnPropertyChanged("TotalCameraElevationDisplay");
 
@@ -567,7 +586,7 @@ namespace RevitPerspectiveMinimap.UI.ViewModels
         {
             if (_selectedCamera == null) return;
             ElementId viewId = _selectedCamera.ViewId;
-            double totalZFeet = (CustomBaseElevationMm + InputEyeHeightMm) / 304.8;
+            double totalZFeet = (CustomBaseElevationMm + GetInternalOffsetMm() + InputEyeHeightMm) / 304.8;
 
             RevitEventDispatcher.Instance.Enqueue(delegate(UIApplication app)
             {

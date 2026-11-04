@@ -82,6 +82,15 @@ namespace RevitPerspectiveMinimap.Models
             }
         }
 
+        /// <summary>
+        /// 樓層頭標高 → Revit 內部座標的換算差值 (mm)。
+        /// 內部 Z = 樓層頭標高 + InternalOffsetMm。高程基準為專案基準點/測量點且其高程不為 0 時，此值不為 0。
+        /// </summary>
+        public double InternalOffsetMm
+        {
+            get { return _projectElevationMm - _elevationMm; }
+        }
+
         public int CameraCount
         {
             get { return _cameraCount; }
@@ -97,8 +106,8 @@ namespace RevitPerspectiveMinimap.Models
         {
             get
             {
-                double displayElevMm = (_projectElevationMm != 0 || _elevationMm == 0) ? _projectElevationMm : _elevationMm;
-                return string.Format("{0} (FL {1:+0.00;-0.00;0.00}m) [{2} 個視角]", _name, displayElevMm / 1000.0, _cameraCount);
+                // 顯示與 Revit 樓層頭相同的標高 (Level.Elevation)，計算相機 Z 時另用 InternalOffsetMm 換算
+                return string.Format("{0} (FL {1:+0.00;-0.00;0.00}m) [{2} 個視角]", _name, _elevationMm / 1000.0, _cameraCount);
             }
         }
 

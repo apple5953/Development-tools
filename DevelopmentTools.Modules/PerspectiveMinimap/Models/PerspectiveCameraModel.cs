@@ -14,6 +14,8 @@ namespace RevitPerspectiveMinimap.Models
         private XYZ _upDirection;
         private double _eyeHeightAboveFloorMm;
         private double _absoluteElevationMm;
+        private double _levelDisplayElevationMm;
+        private double _levelInternalElevationMm;
         private double _fovDegrees = 65.0;
         private ElementId _associatedLevelId;
         private string _associatedLevelName;
@@ -78,6 +80,20 @@ namespace RevitPerspectiveMinimap.Models
                 OnPropertyChanged("AbsoluteElevationMm");
                 OnPropertyChanged("AbsoluteElevationDisplay");
             }
+        }
+
+        /// <summary>所屬樓層的樓層頭標高 (Level.Elevation，相對高程基準)。</summary>
+        public double LevelDisplayElevationMm
+        {
+            get { return _levelDisplayElevationMm; }
+            set { _levelDisplayElevationMm = value; OnPropertyChanged("LevelDisplayElevationMm"); }
+        }
+
+        /// <summary>所屬樓層的內部座標 Z (Level.ProjectElevation)。</summary>
+        public double LevelInternalElevationMm
+        {
+            get { return _levelInternalElevationMm; }
+            set { _levelInternalElevationMm = value; OnPropertyChanged("LevelInternalElevationMm"); }
         }
 
         public string EyeHeightDisplay
