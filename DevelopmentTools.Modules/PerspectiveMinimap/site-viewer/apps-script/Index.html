@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root { --bg:#0f172a; --card:#1e293b; --fg:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8; --warn:#f59e0b; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif; background:var(--bg); color:var(--fg); }
+    header { padding:12px 16px; background:var(--card); position:sticky; top:0; z-index:5; }
+    h1 { margin:0; font-size:18px; }
+    .meta { color:var(--muted); font-size:13px; margin-top:4px; line-height:1.5; }
+    .rev { margin:8px 16px; padding:8px 10px; border-left:3px solid var(--warn); background:#422006; font-size:13px; }
+    .tabs { display:flex; gap:6px; padding:8px 16px; }
+    .tabs button { flex:1; padding:10px 4px; border:0; border-radius:8px; background:var(--card); color:var(--fg); font-size:14px; }
+    .tabs button.on { background:var(--accent); color:#0f172a; font-weight:700; }
+    section { display:none; padding:0 16px 24px; }
+    section.on { display:block; }
+    img.full { width:100%; border-radius:8px; display:block; }
+    .stage { position:relative; width:100%; border-radius:8px; overflow:hidden; background:#000; min-height:200px; }
+    .stage video, .stage img.photo { width:100%; display:block; }
+    .stage img.model { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+    .row { display:flex; gap:8px; align-items:center; margin:10px 0; }
+    .row input[type=range] { flex:1; }
+    .btn { display:inline-block; padding:10px 14px; border-radius:8px; background:var(--card); color:var(--fg); border:1px solid #334155; font-size:14px; }
+    .hint { color:var(--muted); font-size:13px; line-height:1.6; }
+    .arrow { display:inline-block; font-size:20px; }
+    .err { margin:40px 16px; padding:16px; background:var(--card); border-radius:8px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    var VIEW = <?!= viewJson ?>;
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+      });
+    }
+
+    function render() {
+      var app = document.getElementById('app');
+      if (VIEW.error) {
+        app.innerHTML = '<div class="err">⚠️ ' + esc(VIEW.error) + '</div>';
+        return;
+      }
+      var s = VIEW.station, lv = s.level || {}, eye = s.eye || {}, dir = s.direction || {}, rev = s.modelRevision || {};
+      var fl = (lv.displayElevationMm != null) ? (lv.displayElevationMm / 1000).toFixed(2) + ' m' : '-';
+      var h = (eye.heightAboveFloorMm != null) ? (eye.heightAboveFloorMm / 1000).toFixed(2) + ' m' : '-';
+
+      app.innerHTML =
+        '<header><h1>📍 ' + esc(s.stationId) + '　' + esc(lv.name || '') + '</h1>' +
+        '<div class="meta">' + esc(s.project) + '<br>樓層 FL ' + esc(fl) + '　·　手機高度離地 <b>' + esc(h) + '</b>' +
+        (s.note ? '<br>' + esc(s.note) : '') + '</div></header>' +
+        '<div class="rev">模型版本：' + esc(rev.exportedAt || '未標示') + (rev.file ? '（' + esc(rev.file) + '）' : '') +
+        '<br>請以此日期的模型為準，若與最新圖說不符請回報 BIM。</div>' +
+        '<div class="tabs">' +
+          '<button data-t="p" class="on">模型透視</button>' +
+          '<button data-t="m">站立位置</button>' +
+          '<button data-t="c">疊圖比對</button>' +
+        '</div>' +
+        '<section id="t-p" class="on">' +
+          (VIEW.perspective ? '<img class="full" src="' + VIEW.perspective + '" alt="模型透視圖">' : '<p class="hint">尚未上傳透視圖。</p>') +
+          '<p class="hint">站在地面標示點，手機直拿、高度約 ' + esc(h) + '，朝向如「站立位置」頁箭頭所示。</p>' +
+        '</section>' +
+        '<section id="t-m">' +
+          (VIEW.locator ? '<img class="full" src="' + VIEW.locator + '" alt="平面定位圖">' : '<p class="hint">尚未上傳平面定位圖。</p>') +
+          '<p class="hint">紅點為站立點、箭頭為面向方向。' + (dir.yawDeg != null ? '（方位角 ' + Number(dir.yawDeg).toFixed(0) + '°）' : '') + '</p>' +
+        '</section>' +
+        '<section id="t-c">' +
+          '<div class="stage" id="stage"><p class="hint" style="padding:16px">按下方按鈕開啟相機，或拍一張照片後與模型疊圖比對。</p></div>' +
+          '<div class="row"><span>模型</span><input id="op" type="range" min="0" max="100" value="50"><span id="opv">50%</span></div>' +
+          '<div class="row">' +
+            '<button class="btn" id="live">📹 即時相機</button>' +
+            '<label class="btn">📷 拍照比對<input id="shot" type="file" accept="image/*" capture="environment" hidden></label>' +
+          '</div>' +
+          '<p class="hint">對齊方式：先對齊一根柱或牆角，再微調站位。模型透明度拉到 0% 看現場、100% 看模型。</p>' +
+        '</section>';
+
+      Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (b) {
+        b.onclick = function () {
+          document.querySelectorAll('.tabs button').forEach(function (x) { x.classList.toggle('on', x === b); });
+          document.querySelectorAll('section').forEach(function (x) { x.classList.toggle('on', x.id === 't-' + b.dataset.t); });
+        };
+      });
+
+      var op = document.getElementById('op');
+      op.oninput = function () { document.getElementById('opv').textContent = op.value + '%'; applyOpacity(); };
+      document.getElementById('shot').onchange = onPhoto;
+      document.getElementById('live').onclick = startLive;
+    }
+
+    function modelOverlay() {
+      if (!VIEW.perspective) return '';
+      return '<img class="model" id="model" src="' + VIEW.perspective + '" alt="">';
+    }
+
+    function applyOpacity() {
+      var m = document.getElementById('model');
+      if (m) m.style.opacity = document.getElementById('op').value / 100;
+    }
+
+    function onPhoto(ev) {
+      var f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      stopLive();
+      var url = URL.createObjectURL(f);
+      document.getElementById('stage').innerHTML = '<img class="photo" src="' + url + '" alt="現場照片">' + modelOverlay();
+      applyOpacity();
+    }
+
+    var stream = null;
+    function startLive() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alertHint('此瀏覽器無法開啟即時相機，請改用「拍照比對」。');
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+        .then(function (s) {
+          stream = s;
+          var stage = document.getElementById('stage');
+          stage.innerHTML = '<video id="vid" autoplay playsinline muted></video>' + modelOverlay();
+          document.getElementById('vid').srcObject = s;
+          applyOpacity();
+        })
+        .catch(function () { alertHint('無法開啟即時相機（可能被瀏覽器封鎖），請改用「拍照比對」。'); });
+    }
+
+    function stopLive() {
+      if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    }
+
+    function alertHint(msg) {
+      document.getElementById('stage').innerHTML = '<p class="hint" style="padding:16px">' + esc(msg) + '</p>';
+    }
+
+    render();
+  </script>
+</body>
+</html>
