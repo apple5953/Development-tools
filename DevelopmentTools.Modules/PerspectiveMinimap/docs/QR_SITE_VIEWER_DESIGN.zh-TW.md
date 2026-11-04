@@ -1,6 +1,6 @@
 # 透視圖 × 現場 QR Code 檢核 — 設計草案 v0.1
 
-> 狀態：草案，待負責人確認「託管方式」等決策後才開始實作。
+> 狀態：草案。託管方式已決定：**Google Apps Script + Google Drive**（2026-11-04）。
 > 所屬模組：`DevelopmentTools.Modules/PerspectiveMinimap`（不新增 RealityBridge，不經 MCP）。
 
 ## 1. 目標
@@ -81,11 +81,30 @@ QR Code 只放 `https://<host>/s/<stationId>?t=<token>`：
 - 網頁端：純靜態檔案（HTML + 圖片 + json），不需要後端即可運作；回報問題為 P3 才需要寫入端。
 - 安全：圖說屬業主機密，網址需帶隨機 token；不可用公開 GitHub Pages。
 
-## 7. 待決策
+## 7. 託管：Google Apps Script + Drive（已決定）
 
-1. **託管方式**（影響 P1 開始）：
-   - Google Drive + Apps Script 網頁（已有 rts-auth 的 Apps Script 經驗，免費、可限制網域）
-   - 公司 NAS / SharePoint（需現場手機可連線）
-   - 雲端物件儲存（S3/R2 + 簽名網址）
-2. 現場網路：若地下室無訊號，需改為「離線包」（手機預先下載整層站點）。
-3. 站點由誰放、放多少：建議每層依「檢核項目」放 10–30 點，由 BIM 工程師在面板中標記為「現場檢核點」。
+```
+Drive/
+  BIM現場檢核/<專案>/
+    stations.json            ← 站點索引 (stationId → token、資料夾 id、版本)
+    HS-3F-012/
+      station.json
+      perspective.jpg
+      locator.png
+      history/<日期>/...     ← 舊版保留，頁面可切換
+
+Apps Script Web App (doGet)
+  ?s=<stationId>&t=<token>
+    1. 驗證 token（與 stations.json 比對）
+    2. 讀 station.json，圖片以 base64 內嵌或 Drive 縮圖網址回傳
+    3. HtmlService 輸出手機版頁面（透視圖 / 定位圖 / 疊圖 / 版本）
+```
+
+- **上傳**：P1 先由 Revit 外掛輸出到本機資料夾，再用 Google Drive 桌面版同步到上述資料夾（不在外掛內存 Google 憑證）；之後再評估外掛直接呼叫 Apps Script 上傳端點。
+- **存取權**：Web App 部署為「以我身分執行」，存取對象選「組織內」或「任何人（持連結）」＋ token；若現場有協力廠商無公司帳號，需選後者。
+- **限制**：Apps Script 單次執行 6 分鐘、回應大小有上限，圖片需壓到 1–2 MB 以內；HtmlService 頁面在 iframe 內，手機相機疊圖 (`getUserMedia`) 需實測，若被擋則 P2 改為頁面內「開啟相機拍照後疊圖比對」。
+
+## 8. 其他待決策
+
+1. 現場網路：若地下室無訊號，需改為「離線包」（手機預先下載整層站點）。
+2. 站點由誰放、放多少：建議每層依「檢核項目」放 10–30 點，由 BIM 工程師在面板中標記為「現場檢核點」。
