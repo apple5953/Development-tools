@@ -8,7 +8,7 @@
 2. **外掛功能變成「無介面工具」。** 每個外掛拆成兩層：
    - `XxxRunner`：純流程，輸入參數物件、輸出結果物件，不開視窗、不跳 TaskDialog、不 PickObject。
    - 人用的 `Cmd_Xxx` 視窗與 agent 用的 `XxxAgentTool` 共用同一個 Runner，兩邊結果一致，維護一份程式。
-3. **工具在 Addin 啟動時註冊到 `RealityToolRegistry`。** HTTP 端不能新增或替換工具；工具名稱、模型影響（`none`／`temporary-rollback`）、逾時都寫死在程式中，MCP 端另有白名單，CI（`scripts/validate-beai-mcp.py`）檢查兩邊一致。
+3. **工具在 Addin 啟動時註冊到 `RealityToolRegistry`**（集中在 `Modules/AgentTools/AgentToolRegistration.cs`，授權檢查共用 `AgentToolAccess`）。 HTTP 端不能新增或替換工具；工具名稱、模型影響（`none`／`temporary-rollback`）、逾時都寫死在程式中，MCP 端另有白名單，CI（`scripts/validate-beai-mcp.py`）檢查兩邊一致。
 4. **Bridge 本身不開交易。** 需要暫存元素（暫時 3D 視圖、暫時連結）的分析工具，交易寫在模組 Runner 內且一律 `RollBack()`，並宣告 `temporary-rollback`。
 5. **模組分析工具預設關閉。** 需由人把 `Config/feature-flags.json` 的 `analysis` 改為 `true` 才會執行。
 6. **授權不繞過、不跳窗。** agent 工具沿用原本 ToolId（例如 `CodeReview`）與白名單；尚未登入時回傳 `BEAI_PERMISSION_DENIED`，由人在 Revit 登入一次。
@@ -20,7 +20,7 @@
 | 階段 | 內容 | 狀態 |
 |---|---|---|
 | 1 | 工具註冊機制＋`code_check.run`（全條文法規檢討） | 本 PR |
-| 2 | 其他唯讀／回復型分析：`rebar.check`、`project_standards.compare`、`design_review.summary` | 待做，同一模式，各一個 PR |
+| 2 | 其他唯讀／回復型分析：`rebar.check`、`project_standards.compare`、`parameters.compare`（皆已做，接在第 1 階段 PR 之後） | 完成，待審 |
 | 3 | 受控寫入合約（plan → 人核准 → commit → 驗證），ADR＋Bridge 版本升級 | 需主管核准設計 |
 | 4 | 出圖、建模類寫入工具逐一搬上受控寫入合約 | 依第 3 階段 |
 | 5 | 視窗降級為「檢視 agent 結果與核准」的介面；確定不需要的指令下架 | 依本文件第 4 節的人工決定 |
@@ -34,8 +34,8 @@
 | Ribbon 功能 | 指令類別 | 類型 | agent 工具 | 改法 |
 |---|---|---|---|---|
 | 全條文法規檢討 | `Cmd_CodeCheck` | 唯讀分析（暫存後回復） | `code_check.run` / `run_code_check` | **本 PR 完成**：抽出 `CodeCheckRunner`，`CodeCheckAgentTool` 註冊；專案條件可用 `args.settings` 單次覆寫，不寫回設定檔 |
-| 專案標準比對 | `Cmd_ProjectStandards`（`DevelopmentTools.Modules/ProjectStandards`） | 唯讀分析 | `project_standards.compare` | 把比對結果做成結構化清單（類型、族群、參數差異），視窗只顯示 |
-| 參數比對複製 | `Cmd_ProjectCompareCopy` | 比對＝唯讀；複製＝寫入 | `parameters.compare`（階段 2）＋`parameters.copy`（階段 4） | 比對與複製拆開，複製走受控寫入 |
+| 專案標準比對 | `Cmd_ProjectStandards`（`DevelopmentTools.Modules/ProjectStandards`） | 唯讀分析 | `project_standards.compare` / `compare_project_standards` | **已做**：同一掃描器與 DiffEngine，比較兩個已開啟文件；同步到目標模型留待受控寫入 |
+| 參數比對複製 | `Cmd_ProjectCompareCopy` | 比對＝唯讀；複製＝寫入 | `parameters.compare` / `compare_parameters`（**已做**）＋`parameters.copy`（階段 4） | 比對用同一個 `CompareAnalyzer`；複製走受控寫入 |
 | AI 模型分析 | `Cmd_AIAssistant` | 介面＋外部 LLM | 不建立 | 見 4.5，建議下架 |
 | Agent 中心 | `Cmd_HotAgentCenter` | 背景 worker 啟動 | 保留，改由 MCP 列出／觸發已核准 worker | worker 已有 SHA-256 白名單，不改授權 |
 | Google 登入／問題與反饋／檢查更新 | `LoginCommand`、`FeedbackCommand`、`CheckUpdateCommand` | 純介面／系統 | 不建立 | 留給人；agent 只回報「需登入」 |
@@ -68,7 +68,7 @@
 | 降梁降板增築 | `Cmd_FinishBuildUp` | 寫入 | `finish_build_up.apply` | |
 | 展開圖生成 | `DT_TileElevationGeneratorCommand` | 寫入 | `tiles.elevations` | |
 | 快速配筋 | `Cmd_FastRebar` | 寫入 | `rebar.place` | 結構類，結果需技師審查 |
-| 鋼筋檢核 | `Cmd_RebarCheck` | 唯讀分析 | `rebar.check` | **階段 2 第一個**：`RebarModelChecker` 已有摘要，直接包成工具 |
+| 鋼筋檢核 | `Cmd_RebarCheck` | 唯讀分析 | `rebar.check` / `check_rebar` | **已做**：`RebarCheckAgentTool` 用同一個 `RebarModelChecker`；`elementIds` 指定梁柱或鋼筋，不給就檢查整個模型 |
 | 門族群批量深化 | `Cmd_BatchDoorUpdater` | 寫入（族群） | `doors.batch_update` | 共用參數檔挑選（`DoorSharedParamFilePicker`）改為參數 |
 | 智慧剖面框 | `Cmd_AdaptiveRegion` | 純介面（DockablePane） | 不建立 | 見 4.4 |
 | 透視圖索引面板 | `Cmd_PerspectiveMinimap` | 純介面 | 不建立 | 見 4.4 |

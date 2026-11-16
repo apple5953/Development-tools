@@ -5,11 +5,10 @@ using System.Linq;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.Json.Nodes;
-using System.Threading.Tasks;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using BEAI.QueryHost.Core;
-using DevelopmentTools.Core;
+using DevelopmentTools.AgentTools;
 
 namespace DevelopmentTools.CodeCheck
 {
@@ -44,7 +43,7 @@ namespace DevelopmentTools.CodeCheck
             if (doc.IsModifiable)
                 return RealityToolResult.Fail("BEAI_REVIT_API_ERROR", "The document is already inside a transaction or edit mode; finish it in Revit and retry.");
 
-            string denied = CheckAccess();
+            string denied = AgentToolAccess.Check("CodeReview", "法規檢討");
             if (denied != null) return RealityToolResult.Fail("BEAI_PERMISSION_DENIED", denied);
 
             JsonObject args;
@@ -140,26 +139,6 @@ namespace DevelopmentTools.CodeCheck
             RealityToolResult ok = RealityToolResult.Ok(result);
             ok.Warnings.AddRange(warnings);
             return ok;
-        }
-
-        /// <summary>
-        /// 與人用指令相同的授權規則，但不跳出任何對話框：尚未登入或未在白名單時直接回報，由人到 Revit 中登入。
-        /// </summary>
-        private static string CheckAccess()
-        {
-            if (!GoogleAuthManager.IsAuthEnabled()) return null;
-            string token = GoogleAuthManager.CurrentUserAccessToken;
-            if (string.IsNullOrEmpty(token))
-                return "Not signed in. Sign in once from the RTS ribbon in Revit (法規檢討 or 登入), then retry.";
-            try
-            {
-                WhiteListCheckResult check = Task.Run(async () => await GoogleAuthManager.CheckEmailInWhiteListAsync(token, "CodeReview").ConfigureAwait(false)).GetAwaiter().GetResult();
-                return check != null && check.IsAllowed ? null : "This account is not authorized for 法規檢討: " + (check?.ErrorMessage ?? "unknown");
-            }
-            catch (Exception ex)
-            {
-                return "Authorization check failed: " + ex.Message;
-            }
         }
 
         private static Dictionary<string, object> Summary(CodeCheckEngine engine)
