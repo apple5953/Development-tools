@@ -8,12 +8,14 @@ const ALLOWED_TOOLS = new Set<RealityTool>([
   "element.query",
   "element.get_parameters",
   "code_check.run",
+  "rebar.check",
 ]);
 
 // Module tools run whole analyses on the Revit UI thread; the bridge allows them a longer declared
 // timeout, so the gateway waits a little longer than the bridge before giving up.
 const TOOL_TIMEOUT_MS: Partial<Record<RealityTool, number>> = {
   "code_check.run": 310_000,
+  "rebar.check": 190_000,
 };
 
 export function timeoutFor(tool: RealityTool, defaultTimeoutMs: number): number {

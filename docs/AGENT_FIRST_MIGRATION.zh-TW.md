@@ -8,7 +8,7 @@
 2. **外掛功能變成「無介面工具」。** 每個外掛拆成兩層：
    - `XxxRunner`：純流程，輸入參數物件、輸出結果物件，不開視窗、不跳 TaskDialog、不 PickObject。
    - 人用的 `Cmd_Xxx` 視窗與 agent 用的 `XxxAgentTool` 共用同一個 Runner，兩邊結果一致，維護一份程式。
-3. **工具在 Addin 啟動時註冊到 `RealityToolRegistry`。** HTTP 端不能新增或替換工具；工具名稱、模型影響（`none`／`temporary-rollback`）、逾時都寫死在程式中，MCP 端另有白名單，CI（`scripts/validate-beai-mcp.py`）檢查兩邊一致。
+3. **工具在 Addin 啟動時註冊到 `RealityToolRegistry`**（集中在 `Modules/AgentTools/AgentToolRegistration.cs`，授權檢查共用 `AgentToolAccess`）。 HTTP 端不能新增或替換工具；工具名稱、模型影響（`none`／`temporary-rollback`）、逾時都寫死在程式中，MCP 端另有白名單，CI（`scripts/validate-beai-mcp.py`）檢查兩邊一致。
 4. **Bridge 本身不開交易。** 需要暫存元素（暫時 3D 視圖、暫時連結）的分析工具，交易寫在模組 Runner 內且一律 `RollBack()`，並宣告 `temporary-rollback`。
 5. **模組分析工具預設關閉。** 需由人把 `Config/feature-flags.json` 的 `analysis` 改為 `true` 才會執行。
 6. **授權不繞過、不跳窗。** agent 工具沿用原本 ToolId（例如 `CodeReview`）與白名單；尚未登入時回傳 `BEAI_PERMISSION_DENIED`，由人在 Revit 登入一次。
@@ -20,7 +20,7 @@
 | 階段 | 內容 | 狀態 |
 |---|---|---|
 | 1 | 工具註冊機制＋`code_check.run`（全條文法規檢討） | 本 PR |
-| 2 | 其他唯讀／回復型分析：`rebar.check`、`project_standards.compare`、`design_review.summary` | 待做，同一模式，各一個 PR |
+| 2 | 其他唯讀／回復型分析：`rebar.check`（已做，接在第 1 階段 PR 之後）、`project_standards.compare`、`parameters.compare` | 進行中，同一模式，各一個 PR |
 | 3 | 受控寫入合約（plan → 人核准 → commit → 驗證），ADR＋Bridge 版本升級 | 需主管核准設計 |
 | 4 | 出圖、建模類寫入工具逐一搬上受控寫入合約 | 依第 3 階段 |
 | 5 | 視窗降級為「檢視 agent 結果與核准」的介面；確定不需要的指令下架 | 依本文件第 4 節的人工決定 |
@@ -68,7 +68,7 @@
 | 降梁降板增築 | `Cmd_FinishBuildUp` | 寫入 | `finish_build_up.apply` | |
 | 展開圖生成 | `DT_TileElevationGeneratorCommand` | 寫入 | `tiles.elevations` | |
 | 快速配筋 | `Cmd_FastRebar` | 寫入 | `rebar.place` | 結構類，結果需技師審查 |
-| 鋼筋檢核 | `Cmd_RebarCheck` | 唯讀分析 | `rebar.check` | **階段 2 第一個**：`RebarModelChecker` 已有摘要，直接包成工具 |
+| 鋼筋檢核 | `Cmd_RebarCheck` | 唯讀分析 | `rebar.check` / `check_rebar` | **已做**：`RebarCheckAgentTool` 用同一個 `RebarModelChecker`；`elementIds` 指定梁柱或鋼筋，不給就檢查整個模型 |
 | 門族群批量深化 | `Cmd_BatchDoorUpdater` | 寫入（族群） | `doors.batch_update` | 共用參數檔挑選（`DoorSharedParamFilePicker`）改為參數 |
 | 智慧剖面框 | `Cmd_AdaptiveRegion` | 純介面（DockablePane） | 不建立 | 見 4.4 |
 | 透視圖索引面板 | `Cmd_PerspectiveMinimap` | 純介面 | 不建立 | 見 4.4 |

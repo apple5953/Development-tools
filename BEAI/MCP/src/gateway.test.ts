@@ -80,5 +80,20 @@ test("gateway forwards the code-check module tool with its longer timeout", asyn
   assert.deepEqual(captured?.args, { maxItems: 10 });
   assert.deepEqual(response.data, { summary: { failed: 1 } });
   assert.equal(timeoutFor("code_check.run", 30_000), 310_000);
+  assert.equal(timeoutFor("rebar.check", 30_000), 190_000);
   assert.equal(timeoutFor("system.health", 30_000), 30_000);
+});
+
+test("gateway forwards the rebar-check module tool", async () => {
+  let captured: Record<string, unknown> | undefined;
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    captured = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return Response.json({ requestId: captured.requestId, success: true, durationMs: 3, data: { issueCount: 0 }, warnings: [], errors: [] });
+  };
+  const gateway = new BridgeGateway({ fetchImpl });
+  const response = await gateway.call("rebar.check", { elementIds: [101, 202] });
+
+  assert.equal(captured?.tool, "rebar.check");
+  assert.deepEqual(captured?.args, { elementIds: [101, 202] });
+  assert.deepEqual(response.data, { issueCount: 0 });
 });

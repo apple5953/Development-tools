@@ -15,12 +15,14 @@ EXPECTED_MCP_TOOLS = {
     "query_elements",
     "get_element_parameters",
     "run_code_check",
+    "check_rebar",
 }
 
 # Module analysis tools served through the same Reality Bridge registry. Each must be registered by
 # DevelopmentTools.Addin, allowed by the MCP gateway, and declare a rolled-back or read-only model effect.
 EXPECTED_MODULE_TOOLS = {
     "code_check.run": "RealityModelEffect.TemporaryRollback",
+    "rebar.check": "RealityModelEffect.None",
 }
 
 

@@ -158,6 +158,29 @@ export function createBeaiServer(gateway = new BridgeGateway()): McpServer {
     },
   );
 
+  server.registerTool(
+    "check_rebar",
+    {
+      title: "鋼筋檢核",
+      description:
+        "Check rebar in the given beams, columns or rebar elements (or the whole model when elementIds is omitted) and return issues with element IDs. " +
+        "Read-only. Results support, but never replace, the structural engineer's review and signature.",
+      inputSchema: z.object({
+        elementIds: z.array(z.number().int().positive()).max(2000).optional(),
+        maxItems: z.number().int().min(1).max(2000).default(200),
+        writeReport: z.boolean().default(false),
+      }),
+      annotations: readOnlyAnnotations,
+    },
+    async (args) => {
+      try {
+        const response = await gateway.call("rebar.check", args);
+        return toolResult({ ...(response.data as Record<string, unknown>), bridgeWarnings: response.warnings });
+      }
+      catch (error) { return toolError(error); }
+    },
+  );
+
   return server;
 }
 
