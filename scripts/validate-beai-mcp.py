@@ -14,6 +14,13 @@ EXPECTED_MCP_TOOLS = {
     "list_levels",
     "query_elements",
     "get_element_parameters",
+    "run_code_check",
+}
+
+# Module analysis tools served through the same Reality Bridge registry. Each must be registered by
+# DevelopmentTools.Addin, allowed by the MCP gateway, and declare a rolled-back or read-only model effect.
+EXPECTED_MODULE_TOOLS = {
+    "code_check.run": "RealityModelEffect.TemporaryRollback",
 }
 
 
@@ -58,6 +65,20 @@ def main():
     require(not re.search(r"\bnew\s+Transaction\s*\(", bridge_sources),
             "Reality Bridge V0.1 must not open a Revit Transaction")
 
+    registry = read(BRIDGE / "Core" / "RealityToolRegistry.cs")
+    reality_dispatcher = read(BRIDGE / "Core" / "RealityDispatcher.cs")
+    require("Registered tools may not change the model." in registry,
+            "Module tool registry must reject model-changing effects")
+    require("if (!flags.Analysis)" in reality_dispatcher,
+            "Module analysis tools must be gated by the analysis feature flag")
+    addin_sources = "\n".join(read(path) for path in (ROOT / "DevelopmentTools.Addin").rglob("*.cs"))
+    for name, effect in EXPECTED_MODULE_TOOLS.items():
+        require(f'"{name}"' in gateway, f"MCP gateway must allow module tool {name}")
+        require(f'ToolName = "{name}"' in addin_sources and effect in addin_sources,
+                f"DevelopmentTools.Addin must register {name} with {effect}")
+    require(addin_sources.count("t.RollBack();") >= 1 and "CodeCheckRunner.Run(" in addin_sources,
+            "Code check scratch transaction must stay in the Addin runner and be rolled back")
+
     require(addin_project.count("BEAI.QueryHost.csproj") == 1,
             "DevelopmentTools.Addin must reference exactly one Reality Bridge project")
     require("BEAI.RevitAdapter" not in addin_project, "Inactive legacy adapter must not be referenced")
@@ -78,7 +99,8 @@ def main():
     print("BEAI MCP compliance PASS")
     print("- one embedded Reality Bridge")
     print("- loopback-only MCP and HTTP bridge")
-    print("- five explicitly registered read-only MCP tools")
+    print(f"- {len(EXPECTED_MCP_TOOLS)} explicitly registered read-only MCP tools")
+    print(f"- {len(EXPECTED_MODULE_TOOLS)} module analysis tool(s), analysis-flag gated, rollback only")
     print("- Revit API access through the existing ExternalEvent queue")
     print("- no Reality Bridge Transaction or TransactionMode.Manual")
     print("- legacy read endpoints preserved; maintenance endpoints policy-gated")

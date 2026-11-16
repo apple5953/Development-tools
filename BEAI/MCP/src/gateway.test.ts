@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BridgeGateway, BridgeGatewayError } from "./gateway.js";
+import { BridgeGateway, BridgeGatewayError, timeoutFor } from "./gateway.js";
 
 test("gateway creates the canonical Reality Bridge envelope", async () => {
   let captured: Record<string, unknown> | undefined;
@@ -59,3 +59,26 @@ test("gateway rejects mismatched response identities", async () => {
   );
 });
 
+
+test("gateway forwards the code-check module tool with its longer timeout", async () => {
+  let captured: Record<string, unknown> | undefined;
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    captured = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return Response.json({
+      requestId: captured.requestId,
+      success: true,
+      durationMs: 5,
+      data: { summary: { failed: 1 } },
+      warnings: ["Scratch elements were created inside a transaction that was rolled back; the saved model is unchanged."],
+      errors: [],
+    });
+  };
+  const gateway = new BridgeGateway({ fetchImpl });
+  const response = await gateway.call("code_check.run", { maxItems: 10 });
+
+  assert.equal(captured?.tool, "code_check.run");
+  assert.deepEqual(captured?.args, { maxItems: 10 });
+  assert.deepEqual(response.data, { summary: { failed: 1 } });
+  assert.equal(timeoutFor("code_check.run", 30_000), 310_000);
+  assert.equal(timeoutFor("system.health", 30_000), 30_000);
+});

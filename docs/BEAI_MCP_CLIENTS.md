@@ -26,4 +26,6 @@ Claude Code：
 claude mcp add beai-reality-bridge --scope user -- node "$env:LOCALAPPDATA\DevelopmentTools\App\MCP\dist\index.js" --stdio
 ```
 
-驗證時先啟動 Revit 2024 並開啟模型，再呼叫 `system_health`、`get_active_document`、`list_levels`、`query_elements` 或 `get_element_parameters`。若 Revit 尚未啟動，Client 仍可列出工具，但模型請求會回傳 Bridge 不可用錯誤。
+驗證時先啟動 Revit 2024 並開啟模型，再呼叫 `system_health`、`get_active_document`、`list_levels`、`query_elements` 或 `get_element_parameters`。
+
+`run_code_check`（全條文法規檢討）是模組分析工具：需在 `Config/feature-flags.json` 將 `analysis` 設為 `true` 才會執行，否則回傳 `BEAI_PERMISSION_DENIED`。它會在一個一律回復的 Revit 交易中建立暫存視圖，存檔的模型不變；大型模型可能需要數分鐘（Bridge 逾時 300 秒）。詳見 [AGENT_FIRST_MIGRATION.zh-TW.md](AGENT_FIRST_MIGRATION.zh-TW.md)。若 Revit 尚未啟動，Client 仍可列出工具，但模型請求會回傳 Bridge 不可用錯誤。

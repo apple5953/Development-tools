@@ -117,6 +117,47 @@ export function createBeaiServer(gateway = new BridgeGateway()): McpServer {
     },
   );
 
+  server.registerTool(
+    "run_code_check",
+    {
+      title: "法規檢討（全條文）",
+      description:
+        "Run the full Taiwan building-code check (建築技術規則、無障礙、消防、建築法) on the active Revit model and return failed, warning and no-data items with element IDs. " +
+        "Temporary views and links are created inside a Revit transaction that is always rolled back, so the saved model is unchanged. " +
+        "Project conditions come from the saved 法規檢討 settings; pass settings to override them for this run only. Can take several minutes on large models. " +
+        "Results support, but never replace, the registered architect's review and signature.",
+      inputSchema: z.object({
+        maxItems: z.number().int().min(1).max(2000).default(200),
+        writeReport: z.boolean().default(false),
+        settings: z
+          .object({
+            useGroups: z.array(z.string().min(1)).max(20).optional(),
+            zone: z.string().optional(),
+            inUrbanPlan: z.boolean().optional(),
+            roadWidthM: z.number().nonnegative().optional(),
+            siteAreaM2: z.number().nonnegative().optional(),
+            buildingAreaM2: z.number().nonnegative().optional(),
+            maxCoverageRatio: z.number().nonnegative().optional(),
+            maxFarRatio: z.number().nonnegative().optional(),
+            fireproof: z.boolean().optional(),
+            sprinklerMode: z.enum(["auto", "yes", "no"]).optional(),
+            accessibilityApplies: z.boolean().optional(),
+            travelDistance: z.boolean().optional(),
+          })
+          .passthrough()
+          .optional(),
+      }),
+      annotations: readOnlyAnnotations,
+    },
+    async (args) => {
+      try {
+        const response = await gateway.call("code_check.run", args);
+        return toolResult({ ...(response.data as Record<string, unknown>), bridgeWarnings: response.warnings });
+      }
+      catch (error) { return toolError(error); }
+    },
+  );
+
   return server;
 }
 

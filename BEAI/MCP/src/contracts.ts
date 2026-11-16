@@ -3,7 +3,8 @@ export type RealityTool =
   | "document.get_active"
   | "level.list"
   | "element.query"
-  | "element.get_parameters";
+  | "element.get_parameters"
+  | "code_check.run";
 
 export interface RealityRequest {
   requestId: string;
