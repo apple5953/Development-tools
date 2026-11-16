@@ -20,7 +20,7 @@
 | 階段 | 內容 | 狀態 |
 |---|---|---|
 | 1 | 工具註冊機制＋`code_check.run`（全條文法規檢討） | 本 PR |
-| 2 | 其他唯讀／回復型分析：`rebar.check`（已做，接在第 1 階段 PR 之後）、`project_standards.compare`、`parameters.compare` | 進行中，同一模式，各一個 PR |
+| 2 | 其他唯讀／回復型分析：`rebar.check`、`project_standards.compare`、`parameters.compare`（皆已做，接在第 1 階段 PR 之後） | 完成，待審 |
 | 3 | 受控寫入合約（plan → 人核准 → commit → 驗證），ADR＋Bridge 版本升級 | 需主管核准設計 |
 | 4 | 出圖、建模類寫入工具逐一搬上受控寫入合約 | 依第 3 階段 |
 | 5 | 視窗降級為「檢視 agent 結果與核准」的介面；確定不需要的指令下架 | 依本文件第 4 節的人工決定 |
@@ -34,8 +34,8 @@
 | Ribbon 功能 | 指令類別 | 類型 | agent 工具 | 改法 |
 |---|---|---|---|---|
 | 全條文法規檢討 | `Cmd_CodeCheck` | 唯讀分析（暫存後回復） | `code_check.run` / `run_code_check` | **本 PR 完成**：抽出 `CodeCheckRunner`，`CodeCheckAgentTool` 註冊；專案條件可用 `args.settings` 單次覆寫，不寫回設定檔 |
-| 專案標準比對 | `Cmd_ProjectStandards`（`DevelopmentTools.Modules/ProjectStandards`） | 唯讀分析 | `project_standards.compare` | 把比對結果做成結構化清單（類型、族群、參數差異），視窗只顯示 |
-| 參數比對複製 | `Cmd_ProjectCompareCopy` | 比對＝唯讀；複製＝寫入 | `parameters.compare`（階段 2）＋`parameters.copy`（階段 4） | 比對與複製拆開，複製走受控寫入 |
+| 專案標準比對 | `Cmd_ProjectStandards`（`DevelopmentTools.Modules/ProjectStandards`） | 唯讀分析 | `project_standards.compare` / `compare_project_standards` | **已做**：同一掃描器與 DiffEngine，比較兩個已開啟文件；同步到目標模型留待受控寫入 |
+| 參數比對複製 | `Cmd_ProjectCompareCopy` | 比對＝唯讀；複製＝寫入 | `parameters.compare` / `compare_parameters`（**已做**）＋`parameters.copy`（階段 4） | 比對用同一個 `CompareAnalyzer`；複製走受控寫入 |
 | AI 模型分析 | `Cmd_AIAssistant` | 介面＋外部 LLM | 不建立 | 見 4.5，建議下架 |
 | Agent 中心 | `Cmd_HotAgentCenter` | 背景 worker 啟動 | 保留，改由 MCP 列出／觸發已核准 worker | worker 已有 SHA-256 白名單，不改授權 |
 | Google 登入／問題與反饋／檢查更新 | `LoginCommand`、`FeedbackCommand`、`CheckUpdateCommand` | 純介面／系統 | 不建立 | 留給人；agent 只回報「需登入」 |

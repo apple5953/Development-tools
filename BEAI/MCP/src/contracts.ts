@@ -5,7 +5,9 @@ export type RealityTool =
   | "element.query"
   | "element.get_parameters"
   | "code_check.run"
-  | "rebar.check";
+  | "rebar.check"
+  | "project_standards.compare"
+  | "parameters.compare";
 
 export interface RealityRequest {
   requestId: string;

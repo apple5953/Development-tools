@@ -15,6 +15,8 @@ namespace DevelopmentTools.AgentTools
         {
             Try(CodeCheckAgentTool.Register, CodeCheckAgentTool.ToolName, log);
             Try(RebarCheckAgentTool.Register, RebarCheckAgentTool.ToolName, log);
+            Try(ProjectStandardsAgentTool.Register, ProjectStandardsAgentTool.ToolName, log);
+            Try(ParameterCompareAgentTool.Register, ParameterCompareAgentTool.ToolName, log);
         }
 
         private static void Try(Action register, string name, Action<string> log)

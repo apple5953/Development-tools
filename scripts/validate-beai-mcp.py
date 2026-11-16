@@ -16,6 +16,8 @@ EXPECTED_MCP_TOOLS = {
     "get_element_parameters",
     "run_code_check",
     "check_rebar",
+    "compare_project_standards",
+    "compare_parameters",
 }
 
 # Module analysis tools served through the same Reality Bridge registry. Each must be registered by
@@ -23,6 +25,8 @@ EXPECTED_MCP_TOOLS = {
 EXPECTED_MODULE_TOOLS = {
     "code_check.run": "RealityModelEffect.TemporaryRollback",
     "rebar.check": "RealityModelEffect.None",
+    "project_standards.compare": "RealityModelEffect.None",
+    "parameters.compare": "RealityModelEffect.None",
 }
 
 

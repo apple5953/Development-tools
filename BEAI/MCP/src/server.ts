@@ -181,6 +181,55 @@ export function createBeaiServer(gateway = new BridgeGateway()): McpServer {
     },
   );
 
+  server.registerTool(
+    "compare_project_standards",
+    {
+      title: "專案標準比對",
+      description:
+        "Compare project standards (shared/project parameters, view templates, view filters, line styles and patterns, families, schedules, levels, worksets, …) " +
+        "between a master standards document and a target document. Both must already be open in Revit; target defaults to the active document. " +
+        "Returns per-category counts and differing items, highest risk first. Read-only: it never opens, closes or changes files.",
+      inputSchema: z.object({
+        master: z.string().min(1),
+        target: z.string().min(1).optional(),
+        maxItems: z.number().int().min(1).max(2000).default(200),
+        includeEqual: z.boolean().default(false),
+      }),
+      annotations: readOnlyAnnotations,
+    },
+    async (args) => {
+      try {
+        const response = await gateway.call("project_standards.compare", args);
+        return toolResult({ ...(response.data as Record<string, unknown>), bridgeWarnings: response.warnings });
+      }
+      catch (error) { return toolError(error); }
+    },
+  );
+
+  server.registerTool(
+    "compare_parameters",
+    {
+      title: "參數比對",
+      description:
+        "Compare view templates, schedules, project parameters, line styles and materials from a source document to a target document. " +
+        "Both must already be open in Revit; target defaults to the active document. Returns items only in the source and items whose parameters differ. Read-only.",
+      inputSchema: z.object({
+        source: z.string().min(1),
+        target: z.string().min(1).optional(),
+        maxItems: z.number().int().min(1).max(2000).default(200),
+        includeIdentical: z.boolean().default(false),
+      }),
+      annotations: readOnlyAnnotations,
+    },
+    async (args) => {
+      try {
+        const response = await gateway.call("parameters.compare", args);
+        return toolResult({ ...(response.data as Record<string, unknown>), bridgeWarnings: response.warnings });
+      }
+      catch (error) { return toolError(error); }
+    },
+  );
+
   return server;
 }
 
