@@ -73,6 +73,13 @@ class PipelineTests(unittest.TestCase):
                          prepare_failed_at_pr_step=[6])
         self.assertEqual(sorted(codes(core.evaluate_pipeline(snap, NOW))), ["RELEASE_PR_MISSING", "RELEASE_PR_NOT_CREATED"])
 
+    def test_old_failed_prepare_runs_ignored_after_release(self):
+        snap = base_snap(latest_release={"tag_name": "v3.2.20", "published_at": "2026-11-17T02:40:00Z"},
+                         prepare_runs=[{"id": 6, "status": "completed", "conclusion": "failure", "created_at": "2026-11-17T02:00:00Z"},
+                                       {"id": 4, "status": "completed", "conclusion": "failure", "created_at": "2026-10-01T02:00:00Z"}],
+                         prepare_failed_at_pr_step=[6, 4])
+        self.assertEqual(core.evaluate_pipeline(snap, NOW), [])
+
     def test_release_pr_open(self):
         snap = base_snap(open_prs=[{"number": 37, "headRefName": "release/v3.2.21-run-77", "url": "pr37"}],
                          release_branches=["release/v3.2.21-run-77"])
