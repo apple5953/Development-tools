@@ -1,12 +1,12 @@
 {
-  "latest_version": "3.2.18",
-  "published_at": "2026-10-28T11:23:31.101528Z",
-  "product_name": "Room Tile System v3",
-  "release_url": "https://github.com/apple5953/Development-tools/releases/download/v3.2.18/DevelopmentTools_v3.2.18.zip",
-  "force_update": false,
   "app_id": "development_tools",
-  "sha256": "a6e0ecd1bb934679977bdeebe15f2b9c27486f08eecf023ea686abf0b94afc89",
+  "force_update": false,
   "channel": "stable",
-  "release_note": "修正舊版 BEAI Runtime Revit 註冊殘留造成的 TypeLoadException；更新時自動清理錯誤 DevelopmentTools.Addin.App manifest，並重建 Revit 2024 正確註冊。",
-  "minimum_supported_version": "1.0.0"
+  "latest_version": "3.2.20",
+  "published_at": "2026-11-17T02:37:52.787317Z",
+  "release_url": "https://github.com/apple5953/Development-tools/releases/download/v3.2.20/DevelopmentTools_v3.2.20.zip",
+  "product_name": "Room Tile System v3",
+  "release_note": "修正智慧剖面框（Adaptive Region）在其他外掛切換視圖或開關文件時跳出「外部事件執行異常」錯誤的問題。",
+  "minimum_supported_version": "1.0.0",
+  "sha256": "8fa1c2364dfc7f93833b47e122e12fea667482c21b84bcdf31ad1ef1816b3b25"
 }

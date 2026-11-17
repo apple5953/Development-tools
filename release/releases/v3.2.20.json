@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "version": "3.2.20",
+  "sourceSha": "5c66300cb8fb8da7b68c0eaa25e2f19b9491befe",
+  "runId": "43991801696",
+  "artifactName": "development-tools-candidate-v3.2.20-5c66300",
+  "zipName": "DevelopmentTools_v3.2.20.zip",
+  "zipSha256": "8fa1c2364dfc7f93833b47e122e12fea667482c21b84bcdf31ad1ef1816b3b25",
+  "installerName": "DevelopmentTools_Setup.exe",
+  "installerSha256": "cfa29f746ae5cc864d8d44df8100d548868e69e1c3e8ba4709336d8c9e6ed850",
+  "generatedAtUtc": "2026-11-17T02:11:33.794389Z",
+  "revitVersions": [
+    "2024"
+  ],
+  "modules": [
+    {
+      "id": "example-agent",
+      "version": "0.1.0",
+      "assembly": "ExampleAgent.dll",
+      "toolId": "DT_ExampleAgent"
+    },
+    {
+      "id": "rfi-deck-agent",
+      "version": "0.4.0",
+      "assembly": "RfiDeckAgent.dll",
+      "toolId": "DT_RfiDeckAgent"
+    }
+  ],
+  "releaseNotes": "修正智慧剖面框（Adaptive Region）在其他外掛切換視圖或開關文件時跳出「外部事件執行異常」錯誤的問題。",
+  "approvedAtUtc": "2026-11-17T02:37:52.787467Z"
+}
