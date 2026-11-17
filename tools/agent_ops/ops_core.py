@@ -109,7 +109,10 @@ def evaluate_pipeline(snap, now=None):
             "檢查 Publish approved production release 的執行紀錄；失敗就 `gh run rerun`，仍失敗回報董事長。"))
 
     # 4. 等董事長核准 production
+    released_at = parse_time((snap.get("latest_release") or {}).get("published_at"))
     for run in snap.get("prepare_runs") or []:
+        if released_at and parse_time(run.get("created_at")) and parse_time(run.get("created_at")) <= released_at:
+            continue  # 之後已經有正式版發佈，這次準備流程已經處理完
         if run.get("status") == "waiting":
             waited = minutes_between(run.get("created_at"), now) or 0
             problems.append(problem(
