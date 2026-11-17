@@ -35,7 +35,7 @@ namespace DevelopmentTools.Commands
                     pane.Show();
                     
                     // 同步當前文件並載入數據
-                    Modules.AdaptiveSectionBox.ViewModels.RegionManagerViewModel.Instance.SetDocument(uidoc);
+                    Modules.AdaptiveSectionBox.ViewModels.RegionManagerViewModel.Instance.SetDocument(uidoc, fromCommand: true);
                 }
 
                 return Result.Succeeded;

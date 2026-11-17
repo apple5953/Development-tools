@@ -162,48 +162,86 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
             ZoomCommand = new RelayCommand(o => SelectAndZoomRegion(SelectedRegion), o => SelectedRegion != null);
         }
 
-        public void SetDocument(UIDocument uidoc)
+        /// <summary>
+        /// 由 ViewActivated 全域事件與 Cmd_AdaptiveRegion 呼叫。
+        /// 全域事件時只在面板開著時才同步，而且只「讀取」區域清單，不開交易、不切換視圖、不建立代理量體，
+        /// 避免在其他外掛（例如簡報外掛）切換視圖或開關文件時被牽動而報錯。
+        /// </summary>
+        public void SetDocument(UIDocument uidoc, bool fromCommand = false)
         {
-            if (uidoc == null) return;
-
-            bool docChanged = _doc == null || _doc.PathName != uidoc.Document.PathName;
-            _uidoc = uidoc;
-            _doc = uidoc.Document;
-
-            if (docChanged)
+            try
             {
-                LoadCurrentDocRegions();
-            }
-            else
-            {
-                // 若只是切換視窗，且切換到了 3D 視圖，則自動為目前選中區域啟用預覽
-                if (_selectedRegion != null && uidoc.ActiveView is View3D)
+                if (uidoc == null) return;
+
+                Document doc = uidoc.Document;
+                if (!AdaptiveRegionGuard.IsUsable(doc)) return;
+
+                if (!fromCommand && !IsPaneShown(doc)) return;
+
+                bool docChanged = !AdaptiveRegionGuard.SameDocument(_doc, doc);
+                if ((docChanged || fromCommand) && IsEditMode)
                 {
-                    StartEditing();
+                    StopEditing();
                 }
+
+                _uidoc = uidoc;
+                _doc = doc;
+
+                if (docChanged || fromCommand)
+                {
+                    LoadCurrentDocRegions();
+                }
+            }
+            catch (Exception ex)
+            {
+                AdaptiveRegionGuard.Log("SetDocument 失敗: " + ex.Message);
+            }
+        }
+
+        private static bool IsPaneShown(Document doc)
+        {
+            try
+            {
+                var uiapp = new UIApplication(doc.Application);
+                var pane = uiapp.GetDockablePane(new DockablePaneId(DevelopmentTools.Commands.Cmd_AdaptiveRegion.PaneGuid));
+                return pane != null && pane.IsShown();
+            }
+            catch
+            {
+                return false;
             }
         }
 
         private void LoadCurrentDocRegions()
         {
-            if (_doc == null)
-            {
-                Regions.Clear();
-                return;
-            }
-
+            List<AdaptiveRegion> loaded = new List<AdaptiveRegion>();
             try
             {
-                var loaded = RegionStorageService.Instance.LoadRegions(_doc);
-                Regions = new ObservableCollection<AdaptiveRegion>(loaded);
-                SelectedRegion = Regions.FirstOrDefault();
+                if (_doc != null)
+                {
+                    loaded = RegionStorageService.Instance.LoadRegions(_doc);
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[RegionVM] LoadRegions 失敗: {ex.Message}");
-                Regions = new ObservableCollection<AdaptiveRegion>();
-                SelectedRegion = null;
+                AdaptiveRegionGuard.Log("LoadRegions 失敗: " + ex.Message);
             }
+
+            Regions = new ObservableCollection<AdaptiveRegion>(loaded);
+            // 載入時只選取、不自動剖切或切換視圖；使用者在面板上點選時才會剖切定位
+            SetSelectedRegionSilently(Regions.FirstOrDefault());
+        }
+
+        private void SetSelectedRegionSilently(AdaptiveRegion region)
+        {
+            _selectedRegion = region;
+            OnPropertyChanged(nameof(SelectedRegion));
+            OnPropertyChanged(nameof(DetailsVisibility));
+            OnPropertyChanged(nameof(GuideVisibility));
+            OnPropertyChanged(nameof(ZMin));
+            OnPropertyChanged(nameof(ZMax));
+            OnPropertyChanged(nameof(BasePointsList));
+            EditingName = _selectedRegion?.Name;
         }
 
         private void CreateNewRegion()
@@ -272,19 +310,22 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
 
         private void SaveAndSelectNewRegion(AdaptiveRegion newRegion)
         {
-            ExternalHandler.Raise(app =>
-            {
-                using (var trans = new Transaction(_doc, "新建多邊形剖面區域"))
-                {
-                    trans.Start();
-                    var list = Regions.ToList();
-                    list.Add(newRegion);
-                    RegionStorageService.Instance.SaveRegions(_doc, list);
-                    trans.Commit();
-                }
+            var doc = _doc;
+            if (doc == null || newRegion == null) return;
+            var list = Regions.ToList();
+            list.Add(newRegion);
 
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            ExternalHandler?.Raise(app =>
+            {
+                bool ok = AdaptiveRegionGuard.RunTransaction(doc, "新建多邊形剖面區域", () =>
                 {
+                    RegionStorageService.Instance.SaveRegions(doc, list);
+                });
+                if (!ok) return;
+
+                AdaptiveRegionGuard.RunOnUi(() =>
+                {
+                    if (!AdaptiveRegionGuard.SameDocument(_doc, doc)) return;
                     Regions.Add(newRegion);
                     SelectedRegion = newRegion;
                 });
@@ -293,21 +334,22 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
 
         private void DeleteSelectedRegion()
         {
-            if (_doc == null || SelectedRegion == null) return;
+            var doc = _doc;
+            if (doc == null || SelectedRegion == null) return;
 
             var target = SelectedRegion;
-            ExternalHandler.Raise(app =>
+            var list = Regions.Where(r => r.Id != target.Id).ToList();
+            ExternalHandler?.Raise(app =>
             {
-                using (var trans = new Transaction(_doc, "刪除多邊形剖面區域"))
+                bool ok = AdaptiveRegionGuard.RunTransaction(doc, "刪除多邊形剖面區域", () =>
                 {
-                    trans.Start();
-                    var list = Regions.Where(r => r.Id != target.Id).ToList();
-                    RegionStorageService.Instance.SaveRegions(_doc, list);
-                    trans.Commit();
-                }
+                    RegionStorageService.Instance.SaveRegions(doc, list);
+                });
+                if (!ok) return;
 
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                AdaptiveRegionGuard.RunOnUi(() =>
                 {
+                    if (!AdaptiveRegionGuard.SameDocument(_doc, doc)) return;
                     Regions.Remove(target);
                     SelectedRegion = Regions.FirstOrDefault();
                 });
@@ -316,59 +358,69 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
 
         private void RenameSelectedRegion()
         {
-            if (_doc == null || SelectedRegion == null || string.IsNullOrWhiteSpace(EditingName)) return;
+            var doc = _doc;
+            if (doc == null || SelectedRegion == null || string.IsNullOrWhiteSpace(EditingName)) return;
 
             var target = SelectedRegion;
             string newName = EditingName;
 
-            ExternalHandler.Raise(app =>
+            ExternalHandler?.Raise(app =>
             {
-                using (var trans = new Transaction(_doc, "重新命名多邊形剖面區域"))
+                bool ok = AdaptiveRegionGuard.RunTransaction(doc, "重新命名多邊形剖面區域", () =>
                 {
-                    trans.Start();
-                    var loaded = RegionStorageService.Instance.LoadRegions(_doc);
+                    var loaded = RegionStorageService.Instance.LoadRegions(doc);
                     var existing = loaded.FirstOrDefault(r => r.Id == target.Id);
                     if (existing != null)
                     {
                         existing.Name = newName;
                     }
-                    RegionStorageService.Instance.SaveRegions(_doc, loaded);
-                    trans.Commit();
-                }
+                    RegionStorageService.Instance.SaveRegions(doc, loaded);
+                });
+                if (!ok) return;
 
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                AdaptiveRegionGuard.RunOnUi(() =>
                 {
                     target.Name = newName;
-                    // 觸發重整屬性
-                    LoadCurrentDocRegions();
+                    if (AdaptiveRegionGuard.SameDocument(_doc, doc))
+                    {
+                        // 觸發重整屬性
+                        LoadCurrentDocRegions();
+                    }
                 });
             });
         }
 
         private void StartEditing()
         {
-            if (_uidoc == null || SelectedRegion == null) return;
+            var doc = _doc;
+            var region = SelectedRegion;
+            if (_uidoc == null || doc == null || region == null) return;
 
-            ExternalHandler.Raise(app =>
+            ExternalHandler?.Raise(app =>
             {
-                var view3D = app.ActiveUIDocument.ActiveView as View3D;
+                var activeUiDoc = app.ActiveUIDocument;
+                // 使用者已切到別的專案，或文件不可編輯（唯讀、族群、其他外掛交易中）時就不啟動
+                if (activeUiDoc == null || !AdaptiveRegionGuard.SameDocument(activeUiDoc.Document, doc)) return;
+                if (!AdaptiveRegionGuard.CanModify(doc)) return;
+
+                var view3D = activeUiDoc.ActiveView as View3D;
                 if (view3D == null)
                 {
-                    view3D = GetOrCreateActiveView3D(app.ActiveUIDocument);
-                    if (view3D != null)
+                    view3D = GetOrCreateActiveView3D(activeUiDoc);
+                    if (view3D == null) return;
+                    try
                     {
-                        app.ActiveUIDocument.ActiveView = view3D;
+                        activeUiDoc.ActiveView = view3D;
+                    }
+                    catch (Exception ex)
+                    {
+                        AdaptiveRegionGuard.Log("切換 3D 視圖失敗: " + ex.Message);
+                        return;
                     }
                 }
 
-                if (view3D != null)
-                {
-                    InteractionService.Instance.Start(app.ActiveUIDocument, SelectedRegion);
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        IsEditMode = true;
-                    });
-                }
+                InteractionService.Instance.Start(activeUiDoc, region);
+                AdaptiveRegionGuard.RunOnUi(() => { IsEditMode = true; });
             });
         }
 
@@ -380,14 +432,14 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
 
         private void AdjustHeight(object param)
         {
-            if (SelectedRegion == null || param == null) return;
+            if (SelectedRegion?.Geometry == null || param == null) return;
 
             string s = param.ToString();
             string[] parts = s.Split(':');
             if (parts.Length != 2) return;
 
             string type = parts[0];
-            double offset = double.Parse(parts[1]);
+            if (!double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double offset)) return;
 
             var geometry = SelectedRegion.Geometry;
             if (type == "ZMin")
@@ -405,17 +457,21 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
 
         private void CommitGeometryChange()
         {
+            if (SelectedRegion == null || _doc == null) return;
+
             var regionToSave = SelectedRegion.Clone();
             var doc = _doc;
 
-            ExternalHandler.Raise(app =>
+            ExternalHandler?.Raise(app =>
             {
-                var view3D = app.ActiveUIDocument.ActiveView as View3D;
-                if (view3D != null)
+                var activeUiDoc = app.ActiveUIDocument;
+                if (activeUiDoc == null || !AdaptiveRegionGuard.SameDocument(activeUiDoc.Document, doc)) return;
+
+                var view3D = activeUiDoc.ActiveView as View3D;
+                if (view3D != null && !view3D.IsTemplate)
                 {
-                    using (var trans = new Transaction(doc, "微調剖面區域高度"))
+                    AdaptiveRegionGuard.RunTransaction(doc, "微調剖面區域高度", () =>
                     {
-                        trans.Start();
                         view3D.CropBoxActive = false;
                         view3D.CropBoxVisible = false;
                         view3D.SetSectionBox(regionToSave.Geometry.GetBoundingBox());
@@ -427,18 +483,17 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
                             existing.Geometry = regionToSave.Geometry;
                         }
                         RegionStorageService.Instance.SaveRegions(doc, loaded);
-                        trans.Commit();
-                    }
+                    });
                 }
-                RefreshProperties();
+                AdaptiveRegionGuard.RunOnUi(RefreshProperties);
             });
         }
 
         private void Update3DPreviewOnly()
         {
-            if (_uidoc != null && _selectedRegion != null)
+            // 只有使用者正在編輯時才更新代理量體；沒在編輯就不要動模型
+            if (_uidoc != null && _selectedRegion != null && IsEditMode && InteractionService.Instance.IsEditModeActive)
             {
-                // 用於在拖動 WPF 滑桿或微調高度時，僅更新 3D 著色，暫不提交 Transaction，提供高流暢度
                 InteractionService.Instance.Start(_uidoc, _selectedRegion);
             }
         }
@@ -452,31 +507,42 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
 
         private void SelectAndZoomRegion(AdaptiveRegion region)
         {
-            if (_uidoc == null || region == null) return;
+            var doc = _doc;
+            if (_uidoc == null || doc == null || region?.Geometry == null) return;
 
-            ExternalHandler.Raise(app =>
+            ExternalHandler?.Raise(app =>
             {
-                var view3D = app.ActiveUIDocument.ActiveView as View3D;
+                var activeUiDoc = app.ActiveUIDocument;
+                if (activeUiDoc == null || !AdaptiveRegionGuard.SameDocument(activeUiDoc.Document, doc)) return;
+                if (!AdaptiveRegionGuard.CanModify(doc)) return;
+
+                var view3D = activeUiDoc.ActiveView as View3D;
                 if (view3D == null)
                 {
-                    view3D = GetOrCreateActiveView3D(_uidoc);
-                    if (view3D != null) app.ActiveUIDocument.ActiveView = view3D;
-                }
-
-                if (view3D != null)
-                {
-                    using (var trans = new Transaction(_doc, "剖切定位空間區域"))
+                    view3D = GetOrCreateActiveView3D(activeUiDoc);
+                    if (view3D == null) return;
+                    try
                     {
-                        trans.Start();
-                        view3D.CropBoxActive = false;
-                        view3D.CropBoxVisible = false;
-                        view3D.SetSectionBox(region.Geometry.GetBoundingBox());
-                        trans.Commit();
+                        activeUiDoc.ActiveView = view3D;
+                    }
+                    catch (Exception ex)
+                    {
+                        AdaptiveRegionGuard.Log("切換 3D 視圖失敗: " + ex.Message);
+                        return;
                     }
                 }
 
+                if (view3D.IsTemplate) return;
+
+                bool ok = AdaptiveRegionGuard.RunTransaction(doc, "剖切定位空間區域", () =>
+                {
+                    view3D.CropBoxActive = false;
+                    view3D.CropBoxVisible = false;
+                    view3D.SetSectionBox(region.Geometry.GetBoundingBox());
+                });
+
                 // 啟動著色預覽
-                StartEditing();
+                if (ok) StartEditing();
             });
         }
 
@@ -515,7 +581,9 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
 
         private View3D GetOrCreateActiveView3D(UIDocument uidoc)
         {
-            var doc = uidoc.Document;
+            var doc = uidoc?.Document;
+            if (doc == null) return null;
+
             var activeView = uidoc.ActiveView as View3D;
             if (activeView != null) return activeView;
 
@@ -526,16 +594,19 @@ namespace DevelopmentTools.Modules.AdaptiveSectionBox.ViewModels
 
             if (view3D != null) return view3D;
 
-            using (var trans = new Transaction(doc, "建立預設 3D 視圖"))
+            var viewFamilyType = new FilteredElementCollector(doc)
+                .OfClass(typeof(ViewFamilyType))
+                .Cast<ViewFamilyType>()
+                .FirstOrDefault(v => v.ViewFamily == ViewFamily.ThreeDimensional);
+            if (viewFamilyType == null) return null;
+
+            View3D created = null;
+            AdaptiveRegionGuard.RunTransaction(doc, "建立預設 3D 視圖", () =>
             {
-                trans.Start();
-                var collector = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType));
-                var viewFamilyType = collector.Cast<ViewFamilyType>().FirstOrDefault(v => v.ViewFamily == ViewFamily.ThreeDimensional);
-                view3D = View3D.CreateIsometric(doc, viewFamilyType.Id);
-                view3D.Name = "{3D} - 智慧空間區域";
-                trans.Commit();
-            }
-            return view3D;
+                created = View3D.CreateIsometric(doc, viewFamilyType.Id);
+                try { created.Name = "{3D} - 智慧空間區域"; } catch { }
+            });
+            return created != null && created.IsValidObject ? created : null;
         }
 
         protected void OnPropertyChanged([CallerMemberName] string name = null)
