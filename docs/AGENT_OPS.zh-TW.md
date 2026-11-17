@@ -41,7 +41,18 @@
 3. 所有 CI 檢查成功。
 4. 在這個分支第一筆 commit 前 6 小時內，有一次 `Prepare production release` 由 `apple5953` 核准 production。
 
-任何一條不成立就不合併，回傳原因，交給董事長。功能與修正 PR 一律由董事長合併，agent 只開 PR。
+任何一條不成立就不合併，回傳原因，交給董事長。
+
+## 董事長授權：維運 agent 可以合併修正 PR
+
+董事長（apple5953）於 2026-11-17 授權 Paperclip 10F「外掛維運工程師」推送分支並合併**它自己開的修正 PR**，條件全部成立才可合併：
+
+1. PR 由維運 agent 開，分支是 `fix/<簡述>`，目標 `main`。
+2. 所有 CI 檢查成功（含 Core-change disclosure 與 Trusted maintainer gate）。
+3. 外掛測試員在 Revit 2024 實測通過，1F 獨立 QA 驗收通過，兩者的紀錄連結寫在 PR 留言。
+4. 沒有改 `.github/`、`release/`、`installer/`、`DevelopmentTools.Updater/`、授權（`CommandAccessGuard`、ToolId）與 RealityBridge 邊界。改到這些仍要董事長自己合併。
+
+production 環境核准仍由董事長本人在 GitHub 按，agent 不能代按。其他 AI（模組開發用的 Codex／Claude Code）仍照 CLAUDE.md：只開 PR，不合併。
 
 ## 錯誤記錄分診（`triage-log`）
 
