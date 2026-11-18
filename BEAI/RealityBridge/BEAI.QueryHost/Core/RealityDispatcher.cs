@@ -77,7 +77,11 @@ namespace BEAI.QueryHost.Core
                             RealityTools.LevelList,
                             RealityTools.ElementQuery,
                             RealityTools.ElementGetParameters
-                        },
+                        }.Concat(RealityToolRegistry.List().Select(delegate(RealityToolDescriptor d) { return d.Name; })).ToArray(),
+                        moduleTools = RealityToolRegistry.List().Select(delegate(RealityToolDescriptor d)
+                        {
+                            return new { name = d.Name, title = d.Title, modelEffect = d.ModelEffect, timeoutSeconds = d.TimeoutSeconds };
+                        }).ToArray(),
                         limits = new { maxElementsPerQuery = MaxElements, maxElementsPerParameterRequest = MaxElementsForParameters }
                     }, stopwatch);
                 }
@@ -150,6 +154,33 @@ namespace BEAI.QueryHost.Core
                         response.Warnings.Add(string.Format("Elements not found: {0}", string.Join(", ", missing)));
                     }
                     return response;
+                }
+
+                RealityToolDescriptor moduleTool;
+                Func<UIApplication, Document, string, RealityToolResult> moduleHandler;
+                if (RealityToolRegistry.TryGet(tool, out moduleTool, out moduleHandler))
+                {
+                    // Module analysis tools stay off until a human enables "analysis" in Config/feature-flags.json.
+                    if (!flags.Analysis)
+                    {
+                        return Fail(requestId, "BEAI_PERMISSION_DENIED",
+                            string.Format("Analysis tool '{0}' is registered but the 'analysis' feature flag is disabled.", tool), stopwatch);
+                    }
+                    RealityToolResult result = moduleHandler(app, doc, request.Args != null ? request.Args.ToString(Newtonsoft.Json.Formatting.None) : "{}");
+                    if (result == null || !result.Success)
+                    {
+                        RealityResponse failed = Fail(requestId,
+                            result != null && !string.IsNullOrEmpty(result.ErrorCode) ? result.ErrorCode : "BEAI_REVIT_API_ERROR",
+                            result != null && !string.IsNullOrEmpty(result.ErrorMessage) ? result.ErrorMessage : "The module tool could not complete.",
+                            stopwatch);
+                        if (result != null) failed.Warnings.AddRange(result.Warnings);
+                        return failed;
+                    }
+                    RealityResponse moduleResponse = Ok(requestId, result.Data, stopwatch);
+                    moduleResponse.Warnings.AddRange(result.Warnings);
+                    if (moduleTool.ModelEffect == RealityModelEffect.TemporaryRollback)
+                        moduleResponse.Warnings.Add("Scratch elements were created inside a transaction that was rolled back; the saved model is unchanged.");
+                    return moduleResponse;
                 }
 
                 return Fail(requestId, "BEAI_NOT_SUPPORTED", string.Format("Tool '{0}' is not supported by V0.1.", tool), stopwatch);

@@ -171,7 +171,8 @@ namespace BEAI.QueryHost.Core
                 queryRequest.HttpMethod = request.HttpMethod;
                 queryRequest.Path = request.Url.AbsolutePath;
                 queryRequest.Body = body;
-                queryRequest.Cts = new CancellationTokenSource(TimeSpan.FromSeconds(RequestTimeoutSeconds));
+                int timeoutSeconds = RealityToolRegistry.TimeoutForBody(body);
+                queryRequest.Cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
 
                 foreach (string key in request.QueryString.AllKeys)
                 {
@@ -188,7 +189,7 @@ namespace BEAI.QueryHost.Core
                     BeaiQueryExternalEventHandler.EnqueueRequest(queryRequest);
 
                     // Wait synchronously on ThreadPool thread
-                    bool completed = queryRequest.CompletionSource.Task.Wait(TimeSpan.FromSeconds(RequestTimeoutSeconds));
+                    bool completed = queryRequest.CompletionSource.Task.Wait(TimeSpan.FromSeconds(timeoutSeconds));
                     if (completed)
                     {
                         queryResponse = queryRequest.CompletionSource.Task.Result;
@@ -198,7 +199,7 @@ namespace BEAI.QueryHost.Core
                         queryRequest.Cts.Cancel();
                         queryResponse = BeaiQueryResponse.Json(
                             JsonConvert.SerializeObject(ApiResponse<object>.Fail(ErrorCodes.QueryTimeout,
-                                "Request timed out (30s). Revit may be busy, displaying a modal dialog, or in element edit mode.")),
+                                string.Format("Request timed out ({0}s). Revit may be busy, displaying a modal dialog, or in element edit mode.", timeoutSeconds))),
                             (int)HttpStatusCode.RequestTimeout);
                     }
                 }

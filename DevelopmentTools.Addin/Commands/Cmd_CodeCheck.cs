@@ -93,37 +93,9 @@ namespace DevelopmentTools.Commands
                         if (!EditSources(win)) return null;
                     }
 
-                    // 暫時連結模型檔、3D 視圖、平面圖、行走路徑全部在此交易中完成後回復，不留下任何變更。
-                    using (var t = new Transaction(doc, "法規檢討（暫存）"))
-                    {
-                        var fho = t.GetFailureHandlingOptions();
-                        fho.SetFailuresPreprocessor(new QuietFailures());
-                        fho.SetClearAfterRollback(true);
-                        t.SetFailureHandlingOptions(fho);
-                        t.Start();
-                        try
-                        {
-                            var notes = new List<string>();
-                            List<ModelSource> sources = ModelSources.Build(doc, entries, notes, progress);
-                            if (sources.Count == 0) throw new InvalidOperationException("檢討範圍內沒有可讀取的模型，請在「檢討範圍（模型）」中勾選。");
-                            doc.Regenerate();
-                            View3D v3 = Get3DView(doc, sources);
-                            bool single = sources.Count == 1 && sources[0].IsHost;
-                            if (single) EnsurePlans(doc, settings);
-                            doc.Regenerate();
-                            var facts = new ModelFacts(doc, sources, settings, keywords, v3, progress);
-                            facts.Notes.AddRange(notes);
-                            facts.Collect();
-                            var engine = new CodeCheckEngine(data, facts, settings);
-                            engine.Run(progress);
-                            lastNotes = facts.Notes;
-                            return engine;
-                        }
-                        finally
-                        {
-                            t.RollBack();
-                        }
-                    }
+                    CodeCheckRunner.Outcome outcome = CodeCheckRunner.Run(doc, data, settings, keywords, entries, progress);
+                    lastNotes = outcome.Notes;
+                    return outcome.Engine;
                 };
                 win.Export = articles =>
                 {
@@ -153,41 +125,6 @@ namespace DevelopmentTools.Commands
                 TaskDialog.Show("法規檢討", "執行失敗：" + ex.Message);
                 return Result.Failed;
             }
-        }
-
-        /// <summary>
-        /// 建立暫時的 3D 視圖供淨高射線使用：不套樣板、不開剖面框，避免既有視圖隱藏了天花板或連結；
-        /// 未納入檢討的連結模型在此視圖中隱藏，不影響量測。
-        /// </summary>
-        private static View3D Get3DView(Document doc, List<ModelSource> sources)
-        {
-            var vft = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType)).Cast<ViewFamilyType>()
-                .FirstOrDefault(t => t.ViewFamily == ViewFamily.ThreeDimensional);
-            View3D v = null;
-            if (vft != null)
-            {
-                try
-                {
-                    v = View3D.CreateIsometric(doc, vft.Id);
-                    if (v.ViewTemplateId != ElementId.InvalidElementId) v.ViewTemplateId = ElementId.InvalidElementId;
-                    if (v.IsSectionBoxActive) v.IsSectionBoxActive = false;
-                }
-                catch { v = null; }
-            }
-            if (v == null)
-            {
-                v = new FilteredElementCollector(doc).OfClass(typeof(View3D)).Cast<View3D>()
-                    .FirstOrDefault(x => !x.IsTemplate && !x.IsPerspective && !x.IsSectionBoxActive);
-                return v;
-            }
-            try
-            {
-                var used = new HashSet<ElementId>(sources.Where(s => s.LinkInstanceId != ElementId.InvalidElementId).Select(s => s.LinkInstanceId));
-                var hide = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).ToElementIds().Where(id => !used.Contains(id)).ToList();
-                if (hide.Count > 0) v.HideElements(hide);
-            }
-            catch { }
-            return v;
         }
 
         /// <summary>在模型中選取結果元素：目前檔案直接選取；連結模型中的元素以連結參照選取；暫時連結的模型檔無法選取，提示元素 ID。</summary>
@@ -247,23 +184,6 @@ namespace DevelopmentTools.Commands
             if (tempInfo.Count > 0)
                 msg += $"另有 {tempInfo.Count} 個元素位於未連結的模型檔，請開啟該檔以 ID 選取：" + string.Join("、", tempInfo.Distinct().Take(6)) + (tempInfo.Count > 6 ? "…" : "");
             return msg == "" ? "沒有可選取的元素。" : msg;
-        }
-
-        /// <summary>沒有平面圖的樓層暫時建立平面圖（交易回復後即消失），供行走路徑計算。</summary>
-        private static void EnsurePlans(Document doc, ProjectSettings s)
-        {
-            if (!s.TravelDistance) return;
-            var plans = new FilteredElementCollector(doc).OfClass(typeof(ViewPlan)).Cast<ViewPlan>()
-                .Where(v => !v.IsTemplate && v.ViewType == ViewType.FloorPlan && v.GenLevel != null)
-                .Select(v => v.GenLevel.Id).ToHashSet();
-            var vft = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType)).Cast<ViewFamilyType>()
-                .FirstOrDefault(t => t.ViewFamily == ViewFamily.FloorPlan);
-            if (vft == null) return;
-            foreach (Level l in new FilteredElementCollector(doc).OfClass(typeof(Level)).Cast<Level>())
-            {
-                if (plans.Contains(l.Id)) continue;
-                try { ViewPlan.Create(doc, vft.Id, l.Id); } catch { }
-            }
         }
     }
 }

@@ -439,6 +439,16 @@ namespace DevelopmentTools
                     ? "BEAI 模型查詢服務已整合啟動。"
                     : "BEAI 模型查詢服務啟動失敗，Room Tile 其餘功能仍可使用。");
 
+                // AI agent 工具：外掛功能以無介面工具註冊到同一個 Reality Bridge（不另開服務）。
+                try
+                {
+                    DevelopmentTools.CodeCheck.CodeCheckAgentTool.Register();
+                }
+                catch (Exception ex)
+                {
+                    Log("AI agent 工具註冊失敗：" + ex.Message);
+                }
+
                 RibbonCatalog.Build(application, assemblyPath, TrackedPanels, msg => Log(msg));
 
                 // 3. 註冊 DMU Updater

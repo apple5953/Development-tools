@@ -7,7 +7,18 @@ const ALLOWED_TOOLS = new Set<RealityTool>([
   "level.list",
   "element.query",
   "element.get_parameters",
+  "code_check.run",
 ]);
+
+// Module tools run whole analyses on the Revit UI thread; the bridge allows them a longer declared
+// timeout, so the gateway waits a little longer than the bridge before giving up.
+const TOOL_TIMEOUT_MS: Partial<Record<RealityTool, number>> = {
+  "code_check.run": 310_000,
+};
+
+export function timeoutFor(tool: RealityTool, defaultTimeoutMs: number): number {
+  return Math.max(defaultTimeoutMs, TOOL_TIMEOUT_MS[tool] ?? 0);
+}
 
 export interface GatewayOptions {
   bridgeUrl?: string;
@@ -62,7 +73,8 @@ export class BridgeGateway {
     };
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeoutMs = timeoutFor(tool, this.timeoutMs);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const started = performance.now();
 
     try {
@@ -89,7 +101,7 @@ export class BridgeGateway {
     } catch (error) {
       if (error instanceof BridgeGatewayError) throw error;
       if (error instanceof Error && error.name === "AbortError") {
-        throw new BridgeGatewayError(`Bridge request timed out after ${this.timeoutMs}ms.`, "BEAI_TIMEOUT");
+        throw new BridgeGatewayError(`Bridge request timed out after ${timeoutMs}ms.`, "BEAI_TIMEOUT");
       }
       throw new BridgeGatewayError("BEAI Reality Bridge is unavailable. Start Revit 2024 and verify the add-in is enabled.", "BEAI_BRIDGE_UNAVAILABLE");
     } finally {
